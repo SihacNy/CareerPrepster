@@ -129,10 +129,7 @@ Git Spec Kit is designed from the ground up for **cross-team, multi-AI collabora
 
 Spec Kit allows you to install multiple AI assistant configurations side-by-side in the same repository. When installed, Spec Kit generates the corresponding editor rules, slash commands, and prompt files for each tool.
 
-To see all supported coding assistants:
-```bash
-specify integration list
-```
+To see all supported coding assistants: run `specify integration list` in your terminal.
 
 To add support for your teammates' AI assistants, run the appropriate command from the repository root:
 
