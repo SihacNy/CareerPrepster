@@ -94,7 +94,23 @@ As an applicant preparing job submissions, I want an automated, universal ATS sc
 
 ---
 
-### User Story 6 - High-Fidelity ATS-Compliant PDF Export & Cloud Save (Priority: P4)
+### User Story 6 - 1-Click Social Sign-In (Google & GitHub OAuth) (Priority: P3)
+
+As a student, I want to sign in with my existing Google (or GitHub) account with one click, so that I never have to remember or manage passwords, while keeping my personal resumes, contact details, and ATS scores private and accessible across my devices.
+
+**Why this priority**: Implements Principle 4 (Student Privacy & Data Minimization) while eliminating password friction and account creation drop-off.
+
+**Independent Test**: Can be tested by clicking "Sign in with Google", completing OAuth consent, and confirming an authenticated session is established in the editor with their profile name and avatar.
+
+**Acceptance Scenarios**:
+
+1. **Given** an unauthenticated user, **When** they click "Sign in with Google" or "Sign in with GitHub", **Then** they complete provider consent, are redirected back to the editor, and their session is established securely.
+2. **Given** an authenticated user, **When** they return to the app, **Then** their session is automatically recognized without re-prompting.
+3. **Given** an authenticated user, **When** they log out, **Then** the session cookie is cleared and local draft storage is removed.
+
+---
+
+### User Story 7 - High-Fidelity ATS-Compliant PDF Export & Cloud Save (Priority: P4)
 
 As a finished user, I want to save my completed CV to my account in MySQL and download it as an ATS-optimized, selectable-text PDF, so that I can securely store my document and upload it to job portals.
 

@@ -18,6 +18,7 @@ All services are containerized via Docker and backed by MySQL with Prisma ORM, u
 **Frontend Framework**: Next.js 14+ (App Router), React 18, Tailwind CSS  
 **Backend Framework**: Node.js + Express.js  
 **Database & ORM**: MySQL 8.0, Prisma ORM 5.x  
+**Authentication & Security**: Google & GitHub OAuth 2.0 (passwordless), JWT in `HttpOnly, Secure, SameSite=Lax` Cookie, `cookie-parser`  
 **Validation**: Zod 3.x (shared client & server contracts)  
 **File Parsing & Upload**: `multer` (streaming uploads, 5MB limit), `pdf-parse` (PDF text layer), `mammoth` (Word DOCX text)  
 **AI Service Integration**: Google Gemini 1.5 Flash API (structured JSON output for resume parsing & STAR/XYZ wording)  
@@ -26,12 +27,14 @@ All services are containerized via Docker and backed by MySQL with Prisma ORM, u
 **Testing**: Jest, Supertest (API), React Testing Library  
 **Target Platform**: Linux containers, Desktop web (modern evergreen browsers)  
 **Performance Goals**: 
+- Auth check (cookie verification) < 1ms
 - Resume PDF/DOCX parsing < 3.0s (p95)
 - Role autocomplete search < 150ms
 - In-line AI wording generation < 3.0s
 - Full ATS score scan < 2.0s
 - Document preview rendering < 100ms
 **Constraints**: 
+- All passwords cryptographically salted before storage
 - All external API payloads strictly validated with Zod
 - Resumes strictly constrained to ATS-safe single-column layout templates
 
@@ -63,6 +66,7 @@ specs/001-cv-editor/
 ├── data-model.md        # Database schema & Prisma models
 ├── quickstart.md        # End-to-end validation guide
 ├── contracts/           # API contracts & Zod schemas
+│   ├── auth-api.md      # User authentication (register, login, logout)
 │   ├── cv-api.md        # CRUD CV operations
 │   ├── import-cv-api.md # PDF/DOCX file upload & parsing
 │   ├── job-roles-api.md # Autocomplete & starter bullet library
@@ -87,6 +91,7 @@ CareerPrepster/
 │   └── src/
 │       ├── index.ts
 │       └── schemas/
+│           ├── auth.schema.ts     # Register & login validation
 │           ├── cv.schema.ts       # CV, Section, & Bullet schemas
 │           ├── import.schema.ts   # Upload & extracted data schemas
 │           ├── job-role.schema.ts # Job role & starter bullet schemas
@@ -103,17 +108,20 @@ CareerPrepster/
 │   └── src/
 │       ├── index.ts               # Express server entrypoint
 │       ├── routes/
+│       │   ├── auth.routes.ts     # Register, Login, Logout, Me endpoints
 │       │   ├── cv.routes.ts       # CRUD endpoints
 │       │   ├── import.routes.ts   # POST /api/cvs/import (multer upload)
 │       │   ├── job-role.routes.ts # GET /api/job-roles (autocomplete & bullets)
 │       │   ├── ai.routes.ts       # Bullet enhancement endpoint
 │       │   └── ats.routes.ts      # ATS scoring engine endpoint
 │       ├── services/
+│       │   ├── auth.service.ts    # OAuth token verification & HttpOnly JWT cookie issuance
 │       │   ├── parser.service.ts  # PDF/DOCX text extraction + Gemini structuring
 │       │   ├── ai.service.ts      # Gemini API STAR/XYZ prompt client
 │       │   ├── ats.service.ts     # 4-pillar scoring algorithm
 │       │   └── pdf.service.ts     # ATS PDF exporter
 │       └── middlewares/
+│           ├── requireAuth.ts     # HttpOnly cookie JWT verification middleware
 │           ├── validate.ts        # Zod request validation middleware
 │           └── errorHandler.ts
 │

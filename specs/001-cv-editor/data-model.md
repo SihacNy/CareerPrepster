@@ -37,12 +37,13 @@
 ## 2. Entities & Schema Definitions
 
 ### 2.1. `User`
-Represents the authenticated student/job seeker account.
+Represents the authenticated student/job seeker account (authenticated via Google or GitHub OAuth).
 - `id` (`VARCHAR(36)`, Primary Key, UUID)
 - `email` (`VARCHAR(255)`, Unique, Indexed)
-- `passwordHash` (`VARCHAR(255)`)
-- `firstName` (`VARCHAR(100)`)
-- `lastName` (`VARCHAR(100)`)
+- `googleId` (`VARCHAR(100)`, Unique, Optional, Indexed)
+- `githubId` (`VARCHAR(100)`, Unique, Optional, Indexed)
+- `name` (`VARCHAR(150)`): Full name provided by OAuth profile
+- `avatarUrl` (`VARCHAR(255)`, Optional)
 - `createdAt` (`DATETIME(3)`, Default `NOW()`)
 - `updatedAt` (`DATETIME(3)`, Auto-update)
 - *Relations*:
@@ -192,15 +193,16 @@ generator client {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  firstName    String
-  lastName     String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(uuid())
+  email     String   @unique
+  googleId  String?  @unique
+  githubId  String?  @unique
+  name      String   @db.VarChar(150)
+  avatarUrl String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  cvs          CV[]
+  cvs       CV[]
 
   @@map("users")
 }
