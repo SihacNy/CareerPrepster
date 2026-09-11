@@ -118,3 +118,36 @@ Once features are created, your repository structure will look like:
     - **`tasks.md`**: Ordered checklist of implementation tasks
 - **`SPEC_GUIDE.md`**: This guide
 - **`src/`** *(or root modules)*: Frontend, Backend, Schemas (built in Phase 5)
+
+---
+
+## 6. Multi-AI Team Setup (Cursor, Claude Code, Copilot, etc.)
+
+Git Spec Kit is designed from the ground up for **cross-team, multi-AI collaboration**. Team members do **not** have to use the same AI assistant. The core artifacts (`constitution.md`, `spec.md`, `plan.md`, `tasks.md`) are platform-agnostic Markdown files that any AI or developer can read.
+
+### Installing Additional AI Integrations
+
+Spec Kit allows you to install multiple AI assistant configurations side-by-side in the same repository. When installed, Spec Kit generates the corresponding editor rules, slash commands, and prompt files for each tool.
+
+To see all supported coding assistants:
+```bash
+specify integration list
+```
+
+To add support for your teammates' AI assistants, run the appropriate command from the repository root:
+
+| Teammate's AI Tool | Installation Command | Generated Configuration |
+| :--- | :--- | :--- |
+| **Cursor** | `specify integration install cursor-agent` | `.cursor/rules/` |
+| **Claude Code** | `specify integration install claude` | `.claude/` commands & prompts |
+| **GitHub Copilot** | `specify integration install copilot --force` | Copilot workspace prompts |
+| **Cline** | `specify integration install cline` | `.cline/` workflows |
+| **Gemini CLI** | `specify integration install gemini` | Gemini CLI workspace configuration |
+| **Mistral Vibe** | `specify integration install vibe` | Vibe configuration |
+| **Generic / Web LLM** | `specify integration install generic` | Plain prompt templates for ChatGPT / Claude web |
+
+### How It Works for the Team:
+1. **Run the install command** for the assistants your team uses.
+2. **Commit and push** the generated configuration folders and the updated `.specify/integration.json` to Git.
+3. When teammates pull the repo, their respective AI editors will automatically detect the Spec Kit rules and slash commands—no extra setup required on their machines!
+
