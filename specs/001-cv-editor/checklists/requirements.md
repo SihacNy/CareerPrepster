@@ -18,18 +18,18 @@
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
 - [x] All acceptance scenarios are defined
-- [x] Edge cases are identified
+- [x] Edge cases are identified (including image-only PDFs and uncataloged job roles)
 - [x] Scope is clearly bounded
 - [x] Dependencies and assumptions identified
 
 ## Feature Readiness
 
-- [x] All functional requirements have clear acceptance criteria
-- [x] User scenarios cover primary flows
-- [x] Feature meets measurable outcomes defined in Success Criteria
+- [x] All functional requirements (FR-001 to FR-020) have clear acceptance criteria
+- [x] User scenarios cover primary flows (Onboarding Fork, CV Import, Template Selection, Job Role Autocomplete, Starter Bullets, AI Refinement, ATS Scoring, PDF Export)
+- [x] Feature meets measurable outcomes defined in Success Criteria (SC-001 to SC-007)
 - [x] No implementation details leak into specification
 
 ## Notes
 
-- All 15 functional requirements and 4 prioritized user stories pass quality validation.
-- The feature is fully scoped and ready for technical planning (`/speckit-plan`).
+- Feature spec now includes the Onboarding Entry Fork and Existing CV File Import flow.
+- All criteria verified. Ready for technical plan update (`/speckit-plan`).
