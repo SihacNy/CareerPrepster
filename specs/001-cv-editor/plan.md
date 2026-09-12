@@ -134,24 +134,37 @@ CareerPrepster/
         │   ├── layout.tsx
         │   ├── page.tsx           # Landing / Dashboard
         │   └── editor/
-        │       └── page.tsx       # Dual-pane CV Editor
+        │       ├── page.tsx       # Stage 1: Dual-pane CV Editor (Form + Live Preview + "Continue" bar)
+        │       └── ats/
+        │           └── page.tsx   # Stage 2: Dedicated ATS Scoring Stage (Audit, 4 Pillars, JD matcher)
         ├── components/
+        │   ├── navigation/
+        │   │   ├── EditorStepper.tsx     # Progress indicator: [1. Author CV] -> [2. ATS Review] -> [3. Export]
+        │   │   └── Header.tsx            # Logo, Draft Status indicator, User Profile / Auth Modal trigger
+        │   ├── auth/
+        │   │   └── AuthModal.tsx         # 1-Click Google & GitHub OAuth popover
         │   ├── onboarding/
         │   │   ├── OnboardingModal.tsx   # "Create from Scratch" vs "Upload Existing"
         │   │   └── UploadDropzone.tsx    # Drag-and-drop PDF/DOCX file uploader
         │   ├── editor/
-        │   │   ├── CVForm.tsx            # Structured inputs (Education, Projects, etc.)
+        │   │   ├── CVForm.tsx            # Structured inputs (Education, Projects, Skills)
         │   │   ├── RoleAutocomplete.tsx  # Target role search & selection
         │   │   ├── TemplateBulletDrawer.tsx # Browse & import role-specific starter bullets
-        │   │   ├── BulletInput.tsx
-        │   │   └── AIEnhanceModal.tsx    # STAR/XYZ suggestion review
+        │   │   ├── BulletInput.tsx       # Achievement bullet row with AI trigger
+        │   │   ├── AIEnhanceModal.tsx    # STAR/XYZ suggestion review & accept modal
+        │   │   └── ContinueActionBar.tsx # Sticky bottom bar: [Save Draft] and [Continue to ATS Review →]
         │   ├── preview/
-        │   │   ├── LivePreview.tsx       # Live rendered resume
+        │   │   ├── LivePreview.tsx       # Live rendered resume viewport
         │   │   └── templates/            # ATS-compliant layout templates
         │   │       ├── ClassicAts.tsx
         │   │       └── ModernCompact.tsx
         │   └── ats/
-        │       └── ATSReportDrawer.tsx    # Score & categorized findings UI
+        │       ├── ATSScoringStage.tsx    # Main Stage 2 review layout
+        │       ├── ScoreGauge.tsx         # 0-100 animated score ring
+        │       ├── PillarBreakdown.tsx    # 4-pillar cards (Parsability, Impact, Skills, Readability)
+        │       ├── JobDescriptionInput.tsx# Target JD text input & keyword matcher
+        │       ├── ActionableFindingsList.tsx # Categorized issues (Critical, Suggestions, Passed)
+        │       └── StageActions.tsx       # [← Back to Edit] and [Download ATS PDF →]
         └── lib/
             ├── api.ts                    # Fetch client for backend
             └── store.ts                  # Client CV state & localStorage draft caching
@@ -159,6 +172,70 @@ CareerPrepster/
 
 ---
 
+## Frontend UI/UX Design System & Styling Guidelines
+
+To ensure a modern, polished, and student-friendly experience, the frontend adheres to the following curated design system:
+
+### 1. Visual Aesthetics & Theme
+- **Style Concept**: Sleek, high-trust SaaS aesthetic (inspired by modern developer tools like Linear and Vercel) with crisp borders, subtle backdrop blurs, and generous white space.
+- **Color Palette**:
+  - **Canvas Background**: Neutral Slate (`bg-slate-50` in light / `bg-[#0B0F19]` in dark)
+  - **Surface / Card**: Pure White (`bg-white` with `border-slate-200`) or Midnight Slate (`bg-[#131B2E]` with `border-slate-800`)
+  - **Primary Brand Accent**: Vibrant Indigo/Electric Violet (`#4F46E5` / `#6366F1`) for primary actions, active stepper tabs, and AI highlights.
+  - **ATS Health Tiers**:
+    - **Passed / High (80-100)**: Emerald (`text-emerald-600 bg-emerald-50 border-emerald-200`)
+    - **Warning / Suggestion (50-79)**: Amber (`text-amber-600 bg-amber-50 border-amber-200`)
+    - **Critical Risk (0-49)**: Rose (`text-rose-600 bg-rose-50 border-rose-200`)
+
+### 2. Typography
+- **Primary Font**: `Inter` or `Plus Jakarta Sans` via Next.js Google Fonts for maximum legibility.
+- **Weights**: Regular (400) for body text, Medium (500) for labels, SemiBold (600) for section titles and button actions.
+- **Monospace**: `JetBrains Mono` or `font-mono` for metrics, dates, and ATS keyword chips.
+
+### 3. Progressive Workflows & Stage Transitions
+
+The platform supports two distinct user onboarding pathways with seamless transitions:
+
+#### Flow A: "Create from Scratch" (Author-First Flow)
+```text
+[Landing / Onboarding]
+   │  Select "Create from Scratch"
+   ▼
+[Stage 1: CV Editor (/editor)]
+   │  Fill sections, explore role starter bullets, AI STAR/XYZ re-writing
+   │  User clicks sticky bottom action "Continue to ATS Check →"
+   ▼
+[Stage 2: Dedicated ATS Review (/editor/ats)]
+   │  Review 0-100 Score Gauge, 4 Pillar breakdown, optional JD matcher
+   │  Use "Fix in Editor" or "← Back to Editor" if adjustments needed
+   ▼
+[Stage 3: Export & Save]
+   │  Click "Download ATS-Friendly PDF"
+```
+
+#### Flow B: "Upload Existing Resume" (Audit-First Diagnostic Flow)
+```text
+[Landing / Onboarding]
+   │  Drop existing PDF / DOCX file
+   │  Backend parses text + computes baseline 4-pillar ATS audit
+   ▼
+[Stage 2: Instant ATS Diagnostic (/editor/ats?from=upload)]
+   │  Immediate gratification: Student sees current score (e.g. 58/100)
+   │  See parsing health, weak impact verbs, and missing sections
+   │  User clicks primary CTA: "Improve & Edit in ATS Template →"
+   ▼
+[Stage 1: CV Editor (/editor)]
+   │  All extracted resume data is pre-populated in structured fields
+   │  Student enhances bullets, updates metrics, and adjusts layout
+   │  User clicks "Continue to ATS Check →" (Score updates, e.g. 58 -> 88!)
+   ▼
+[Stage 3: Export & Save]
+   │  Click "Download ATS-Friendly PDF"
+```
+
+---
+
 ## Complexity Tracking
 
 > Zero constitution violations detected. Architecture strictly adheres to Principles 1 through 5.
+

@@ -18,14 +18,15 @@ As a student without a resume, I want to start from scratch, so that I can be gu
 
 **Why this priority**: Eliminates massive user friction at the front door. Users with existing resumes get instant value in seconds, while new users are guided cleanly without confusion.
 
-**Independent Test**: Can be tested by navigating to `/editor/new`, selecting "Upload Existing Resume", uploading a sample student PDF, and verifying that personal details, education, experience, and skills are extracted and populated into the chosen ATS template within 3 seconds.
+**Independent Test**: Can be tested by navigating to `/editor/new`, selecting "Upload Existing Resume", uploading a sample student PDF, and verifying that the system immediately presents an ATS diagnostic score report before transitioning to the structured editor with pre-populated fields.
 
 **Acceptance Scenarios**:
 
 1. **Given** a user initiates CV creation, **When** they land on the creation modal, **Then** they are presented with a clear choice: **"Create from Scratch"** or **"Upload Existing Resume (PDF/DOCX)"**.
-2. **Given** the user selects "Upload Existing Resume", **When** they drop a PDF or DOCX file (up to 5MB), **Then** the system extracts contact info, education, experience, projects, and skills into structured data and prompts them to select their preferred ATS template.
-3. **Given** a template is selected for the imported data, **When** the editor opens, **Then** all extracted sections are pre-populated in the form and rendered live in the preview pane.
-4. **Given** the user selects "Create from Scratch", **When** they proceed, **Then** they are taken to template selection and role setup with a fresh, clean editor.
+2. **Given** the user selects "Upload Existing Resume", **When** they upload their PDF or DOCX file (up to 5MB), **Then** the system extracts structured sections (personal info, education, experience, projects, skills) and immediately performs a baseline 4-pillar ATS audit.
+3. **Given** the extraction and initial scan are complete, **When** the upload finishes, **Then** the user is directed first to the **ATS Scoring Stage (`/editor/ats`)** to review their current document score (0–100), detected formatting bottlenecks, and keyword health.
+4. **Given** the initial ATS audit review, **When** the user clicks **"Improve in Editor →"** (or clicks a specific "Fix in Editor" recommendation), **Then** they transition into the dual-pane CV Editor with all extracted data pre-populated into their chosen ATS-compliant template.
+5. **Given** the user selects "Create from Scratch", **When** they proceed, **Then** they are taken directly to template selection and role setup in the CV Editor, with the ATS review occurring when they click "Continue".
 
 ---
 
@@ -80,17 +81,18 @@ As a student with imported template bullets or raw draft notes, I want an in-lin
 
 ### User Story 5 - Universal ATS Compatibility Scoring & Explainable Feedback (Priority: P3)
 
-As an applicant preparing job submissions, I want an automated, universal ATS scoring scan that evaluates my CV across parsability, action verb density, quantifiable metrics, and section health, so that I can eliminate filter-rejection risks before applying.
+As an applicant preparing job submissions, I want the system to guide me through an ATS scoring review stage after I finish my CV, so that when I click "Continue" I can see an explainable audit across parsability, impact verbs, metrics, and keyword matching before exporting.
 
-**Why this priority**: Gives students confidence and actionable guidance on how applicant tracking bots and human screeners will interpret their document.
+**Why this priority**: Gives students confidence and actionable guidance on how applicant tracking bots and human screeners will interpret their document before final submission.
 
-**Independent Test**: Can be tested by running the ATS score check on a completed CV (whether created from scratch or imported), verifying a 0–100 overall score is generated along with categorized actionable findings (Critical Issues, Suggestions, and Passed Checks).
+**Independent Test**: Can be tested by completing a CV draft, clicking "Continue to ATS Review", and verifying the user is transitioned to the ATS Scoring Stage with a 0–100 overall score and categorized actionable findings (Critical Issues, Suggestions, and Passed Checks).
 
 **Acceptance Scenarios**:
 
-1. **Given** an active CV draft, **When** the user requests an ATS check, **Then** the system evaluates the CV across 4 pillars: Parsability & Section Structure (25 pts), Impact & Action-Oriented Phrasing (30 pts), Skills Depth & Categorization (25 pts), and Readability & Length (20 pts).
-2. **Given** an ATS score report, **When** issues are identified (e.g., weak passive verbs, missing metrics, unformatted skills), **Then** each issue is highlighted with specific remediation advice and links directly to the offending section in the editor.
-3. **Given** optional job description text provided by the user, **When** the ATS scan runs in Targeted Mode, **Then** the system extracts keyword frequency from the job post, calculates a keyword match percentage, and lists missing critical skills.
+1. **Given** an active CV draft in the editor, **When** the user clicks "Continue", **Then** the draft is automatically saved and the application transitions to the dedicated ATS Scoring Stage.
+2. **Given** the ATS Scoring Stage, **When** the audit loads, **Then** the system presents an overall score (0–100) and scores across 4 pillars: Parsability & Section Structure (25 pts), Impact & Action-Oriented Phrasing (30 pts), Skills Depth & Categorization (25 pts), and Readability & Length (20 pts).
+3. **Given** identified issues (e.g., weak passive verbs, missing metrics, unformatted skills), **When** reviewing the findings, **Then** each issue is categorized (Critical, Suggestion, Passed) with specific remediation advice and a "Back to Edit" link to jump directly to the relevant section.
+4. **Given** optional job description text provided by the user in the ATS stage, **When** the scan runs in Targeted Mode, **Then** the system calculates a keyword match percentage and highlights missing critical skills.
 
 ---
 

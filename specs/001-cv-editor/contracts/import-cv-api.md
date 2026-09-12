@@ -95,6 +95,18 @@ Parses an uploaded existing resume (PDF or DOCX), extracts text layers, uses Gem
             ]
           }
         ]
+      },
+      "baselineAtsReport": {
+        "overallScore": 62,
+        "breakdown": {
+          "parsabilityScore": 18,
+          "impactScore": 16,
+          "skillsScore": 15,
+          "brevityScore": 13
+        },
+        "criticalCount": 2,
+        "suggestionCount": 4,
+        "passedCount": 6
       }
     }
   }
