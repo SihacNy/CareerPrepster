@@ -43,6 +43,7 @@ As a graduating university student, I want to select a clean, ATS-compliant CV t
 1. **Given** an open CV, **When** the user views the template picker, **Then** they see a gallery of structured, single-column, ATS-friendly templates and can switch active templates with instant layout updates without losing entered data.
 2. **Given** an active form, **When** the user edits personal info, education, work experience, projects, or skills, **Then** the form validates inputs, updates the preview in real-time (< 100ms), and preserves active draft state in local storage.
 3. **Given** an existing section, **When** the user reorders entries (e.g. moves projects above work experience) or adds custom bullet points, **Then** the preview reflects the adjusted hierarchy immediately.
+4. **Given** a mobile viewport (< 1024px), **When** viewing the editor, **Then** the system switches to single-pane focus mode with a mobile toggle (`[ Edit Form ]` vs `[ Live Preview ]`) enabling comfortable typing and 1-tap full-resume inspection.
 
 ---
 

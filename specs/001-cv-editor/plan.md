@@ -150,8 +150,9 @@ CareerPrepster/
         │   │   ├── CVForm.tsx            # Structured inputs (Education, Projects, Skills)
         │   │   ├── RoleAutocomplete.tsx  # Target role search & selection
         │   │   ├── TemplateBulletDrawer.tsx # Browse & import role-specific starter bullets
-        │   │   ├── BulletInput.tsx       # Achievement bullet row with AI trigger
+        │   │   ├── BulletInput.tsx       # Achievement bullet row with explicit 'Refine with AI' button
         │   │   ├── AIEnhanceModal.tsx    # STAR/XYZ suggestion review & accept modal
+        │   │   ├── MobileViewToggle.tsx  # Mobile switcher: [ Edit Form ] vs [ Live Preview ]
         │   │   └── ContinueActionBar.tsx # Sticky bottom bar: [Save Draft] and [Continue to ATS Review →]
         │   ├── preview/
         │   │   ├── LivePreview.tsx       # Live rendered resume viewport
@@ -176,23 +177,42 @@ CareerPrepster/
 
 To ensure a modern, polished, and student-friendly experience, the frontend adheres to the following curated design system:
 
-### 1. Visual Aesthetics & Theme
-- **Style Concept**: Sleek, high-trust SaaS aesthetic (inspired by modern developer tools like Linear and Vercel) with crisp borders, subtle backdrop blurs, and generous white space.
-- **Color Palette**:
-  - **Canvas Background**: Neutral Slate (`bg-slate-50` in light / `bg-[#0B0F19]` in dark)
-  - **Surface / Card**: Pure White (`bg-white` with `border-slate-200`) or Midnight Slate (`bg-[#131B2E]` with `border-slate-800`)
-  - **Primary Brand Accent**: Vibrant Indigo/Electric Violet (`#4F46E5` / `#6366F1`) for primary actions, active stepper tabs, and AI highlights.
-  - **ATS Health Tiers**:
-    - **Passed / High (80-100)**: Emerald (`text-emerald-600 bg-emerald-50 border-emerald-200`)
-    - **Warning / Suggestion (50-79)**: Amber (`text-amber-600 bg-amber-50 border-amber-200`)
-    - **Critical Risk (0-49)**: Rose (`text-rose-600 bg-rose-50 border-rose-200`)
+### 1. Visual Aesthetics & Strict Design Rules
+- **Core Aesthetic**: Clean, professional, academic & modern tech aesthetic. Crisp, flat-to-subtle borders, high contrast, and generous whitespace.
+- **Strict Anti-Cliché Rules**:
+  - **NEVER USE EMOJIS FOR ICONS**: Strictly banned from using Unicode emojis (e.g., 🚀, 🤖, ✨, 📝, 💡, ❌, ✅, etc.) for UI buttons, section headers, list bullets, or status indicators. Emojis render inconsistently across OSs and degrade professional credibility.
+  - **NO glowing effects**: Strictly no neon blurs, no glowing box-shadows, and no high-intensity illumination.
+  - **NO colorful "AI-looking" motifs**: Strictly no rainbow gradients, no purple/pink magic sparkles, and no holographic or psychedelic badges. AI suggestions are treated as serious, editorial writing tools (clean light-blue accents, crisp monochrome badges).
+- **Color Palette (White & Light Blue)**:
+  - **Base Canvas**: Clean Crisp White (`#FFFFFF`) and Soft Slate canvas (`#F8FAFC`)
+  - **Card / Container Surfaces**: Pure White (`#FFFFFF`) with subtle 1px border (`border-slate-200` / `#E2E8F0`)
+  - **Primary Brand Accent**: Light Sky Blue (`#0284C7` / `#0EA5E9` / Tailwind `sky-600` / `sky-500`) for primary buttons, active steps, and links.
+  - **Secondary Accent & Background Fills**: Ice Blue (`#E0F2FE` / `#F0F9FF` / Tailwind `sky-100` / `sky-50`) for active tabs, selected states, and gentle highlight chips.
+  - **Text Hierarchy**: Dark Slate (`#0F172A` / `text-slate-900`) for headings, Muted Slate (`#475569` / `text-slate-600`) for body/labels, Light Slate (`#94A3B8`) for placeholders.
+  - **ATS Health Indicators (Clean Flat Badges, No Glow)**:
+    - **Passed (80–100)**: Clean Emerald (`text-emerald-700 bg-emerald-50 border-emerald-200`)
+    - **Suggestion (50–79)**: Clean Amber (`text-amber-700 bg-amber-50 border-amber-200`)
+    - **Critical (0–49)**: Clean Rose (`text-rose-700 bg-rose-50 border-rose-200`)
 
 ### 2. Typography
-- **Primary Font**: `Inter` or `Plus Jakarta Sans` via Next.js Google Fonts for maximum legibility.
-- **Weights**: Regular (400) for body text, Medium (500) for labels, SemiBold (600) for section titles and button actions.
-- **Monospace**: `JetBrains Mono` or `font-mono` for metrics, dates, and ATS keyword chips.
+- **Khmer & Primary Font**: `Kantumruy Pro` (Google Fonts: Modern, elegant bilingual Khmer + Latin sans-serif font standard for academic and tech platforms in Cambodia)
+- **Secondary / Fallback Sans-Serif**: `Inter` / `Plus Jakarta Sans`
+- **Typographic Rules**:
+  - Headings: `font-semibold` / `font-medium`, tight letter-spacing (`tracking-tight`)
+  - Body & Form Inputs: Regular (400), clean line height (`leading-relaxed`)
+  - Metrics & Dates: Tabular numbers / clean sans-serif for alignment consistency
 
-### 3. Progressive Workflows & Stage Transitions
+### 3. Icons & Symbol System
+- **Library Standard**: Exclusively use **`lucide-react`** vector SVG icons with a consistent stroke width (`strokeWidth={1.75}`).
+- **Key Icon Mappings**:
+  - Upload / Dropzone: `<UploadCloud />`, `<FileText />`
+  - ATS Health Status: `<CheckCircle2 />` (Passed), `<AlertTriangle />` (Suggestion), `<XCircle />` (Critical)
+  - Navigation / Actions: `<ArrowRight />`, `<ArrowLeft />`, `<Download />`, `<Plus />`, `<Trash2 />`
+  - AI Assistant: `<PenLine />` or `<Wand2 />` (styled in clean sky blue, no rainbow effect)
+  - Search / Filter: `<Search />`, `<Check />`
+- **Missing / Custom Icons**: Never substitute a missing icon with an emoji. Always use a proper SVG icon from `lucide-react` or prompt the user for an approved asset.
+
+### 4. Progressive Workflows & Stage Transitions
 
 The platform supports two distinct user onboarding pathways with seamless transitions:
 
@@ -232,6 +252,19 @@ The platform supports two distinct user onboarding pathways with seamless transi
 [Stage 3: Export & Save]
    │  Click "Download ATS-Friendly PDF"
 ```
+
+### 5. Responsive Design & Mobile Screen Adaptation
+
+Because resumes require high horizontal precision and mobile screens have limited viewport width:
+- **Desktop & Large Tablets (`lg:` breakpoint / >= 1024px)**:
+  - Simultaneous dual-pane layout: Left 55% scrollable structured form inputs; Right 45% sticky live document preview.
+- **Mobile & Small Screens (`< 1024px`)**:
+  - **Single-Pane Focus Mode**: Replaces the cramped dual-pane with a full-width interface.
+  - **Segmented View Switcher (`MobileViewToggle.tsx`)**:
+    - Sticky top bar or bottom floating pill control: `[ Edit Form ]` vs `[ Live Preview ]`.
+    - **Edit Mode**: Full-width comfortable touch targets for input fields, section reordering, and bullet creation without horizontal scrolling.
+    - **Preview Mode**: The resume preview dynamically scales to fit the mobile device width (with clean pinch/zoom) so students can inspect layout fidelity on the go.
+  - **1-Tap Quick Switch**: Floating badge button (`<Eye /> Preview` while editing, `<PenLine /> Edit Form` while previewing) allows instant switching with zero state loss.
 
 ---
 
