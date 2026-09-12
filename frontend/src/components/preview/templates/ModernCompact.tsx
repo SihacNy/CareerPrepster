@@ -21,9 +21,7 @@ export function ModernCompact({ data }: TemplateProps) {
         <div className="mt-1 flex flex-wrap items-center gap-x-2 text-[11.5px] text-slate-600 font-mono">
           {personalInfo.phone && <span>{personalInfo.phone}</span>}
           {personalInfo.phone && personalInfo.email && <span>|</span>}
-          {personalInfo.email && (
-            <span className="text-slate-900 font-medium">{personalInfo.email}</span>
-          )}
+          {personalInfo.email && <span>{personalInfo.email}</span>}
           {personalInfo.location && <span>|</span>}
           {personalInfo.location && <span>{personalInfo.location}</span>}
           {personalInfo.linkedinUrl && <span>|</span>}

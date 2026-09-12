@@ -21,9 +21,7 @@ export function ClassicAts({ data }: TemplateProps) {
         <div className="mt-1 flex flex-wrap items-center justify-center gap-x-2 text-[12px] text-slate-700">
           {personalInfo.phone && <span>{personalInfo.phone}</span>}
           {personalInfo.phone && personalInfo.email && <span>•</span>}
-          {personalInfo.email && (
-            <span className="font-medium text-slate-900">{personalInfo.email}</span>
-          )}
+          {personalInfo.email && <span>{personalInfo.email}</span>}
           {personalInfo.location && <span>•</span>}
           {personalInfo.location && <span>{personalInfo.location}</span>}
           {personalInfo.linkedinUrl && <span>•</span>}

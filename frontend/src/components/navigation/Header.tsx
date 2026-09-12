@@ -31,6 +31,7 @@ export function Header({ currentStage = 1 }: HeaderProps) {
           {/* Right Actions */}
           <div className="flex items-center space-x-3">
             <button
+              type="button"
               onClick={() => setIsAuthModalOpen(true)}
               className="inline-flex items-center px-3.5 py-1.5 text-xs font-medium rounded-lg text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
             >

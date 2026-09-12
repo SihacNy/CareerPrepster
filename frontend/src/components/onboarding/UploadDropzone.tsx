@@ -6,9 +6,10 @@ import { UploadCloud, FileText, AlertCircle, Loader2 } from "lucide-react";
 interface UploadDropzoneProps {
   onFileSelected: (file: File) => void;
   isLoading?: boolean;
+  serverError?: string | null;
 }
 
-export function UploadDropzone({ onFileSelected, isLoading = false }: UploadDropzoneProps) {
+export function UploadDropzone({ onFileSelected, isLoading = false, serverError }: UploadDropzoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -115,10 +116,10 @@ export function UploadDropzone({ onFileSelected, isLoading = false }: UploadDrop
         )}
       </div>
 
-      {errorMessage && (
+      {(errorMessage || serverError) && (
         <div className="mt-3 flex items-center space-x-2 text-xs text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-lg">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{errorMessage}</span>
+          <span>{errorMessage || serverError}</span>
         </div>
       )}
     </div>
