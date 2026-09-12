@@ -16,23 +16,23 @@ export function ExportStage() {
   return (
     <div className="w-full pb-16">
       {/* Top Header & Breadcrumbs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
-          <div className="flex items-center space-x-2.5 text-xs sm:text-sm font-medium text-slate-500 mb-1.5">
+          <div className="flex items-center space-x-2 text-[11px] sm:text-xs font-medium text-slate-500 mb-1">
             <Link href="/editor/ats" className="hover:text-sky-600 flex items-center transition-colors">
-              <ArrowLeft className="w-4 h-4 mr-1.5 text-slate-400" />
+              <ArrowLeft className="w-3 h-3 mr-1 text-slate-400" />
               <span>Back to ATS Review</span>
             </Link>
             <span className="text-slate-300">•</span>
             <Link href="/editor" className="hover:text-sky-600 flex items-center transition-colors">
-              <PenLine className="w-3.5 h-3.5 mr-1.5 text-slate-400" />
+              <PenLine className="w-3 h-3 mr-1 text-slate-400" />
               <span>Edit CV Form</span>
             </Link>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
             Final Review &amp; Export
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-1 leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
             Review your final formatted draft deliverable and download your ATS-ready vector PDF.
           </p>
         </div>

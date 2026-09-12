@@ -28,11 +28,31 @@ export default function LandingPage() {
       <main className="flex-grow">
         {/* Hero Section */}
         <section className="relative overflow-hidden py-16 sm:py-24 border-b border-slate-200 bg-white">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          {/* Left Side Hire Illustration (Zero Layout Impact) */}
+          <div className="hidden lg:block absolute left-[-30px] xl:left-6 2xl:left-16 top-1/2 -translate-y-1/2 w-56 xl:w-72 2xl:w-80 pointer-events-none select-none z-0 opacity-40 xl:opacity-90 transition-opacity">
+            <img
+              src="/illustrations/hire.svg"
+              alt=""
+              aria-hidden="true"
+              className="w-full h-auto object-contain drop-shadow-sm"
+            />
+          </div>
+
+          {/* Right Side Resume Illustration (Zero Layout Impact) */}
+          <div className="hidden lg:block absolute right-[-30px] xl:right-6 2xl:right-16 top-1/2 -translate-y-1/2 w-56 xl:w-72 2xl:w-80 pointer-events-none select-none z-0 opacity-40 xl:opacity-90 transition-opacity">
+            <img
+              src="/illustrations/resume.svg"
+              alt=""
+              aria-hidden="true"
+              className="w-full h-auto object-contain drop-shadow-sm"
+            />
+          </div>
+
+          <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
               Craft High-Impact CVs That Pass Every{" "}
-              <span className="text-sky-600 underline decoration-sky-300 underline-offset-4">
+              <span className="text-sky-600 underline decoration-yellow-300 underline-offset-4">
                 ATS Screener
               </span>
             </h1>

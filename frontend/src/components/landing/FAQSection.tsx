@@ -56,7 +56,7 @@ const FAQ_ITEMS: FAQItem[] = [
 ];
 
 export function FAQSection() {
-  const [openId, setOpenId] = useState<string | null>("faq-1");
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const toggleFAQ = (id: string) => {
     setOpenId((prev) => (prev === id ? null : id));
