@@ -1,13 +1,23 @@
 "use client";
 
-import React from "react";
-import { Cpu, Plus, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { Cpu, Plus, Trash2, ChevronDown } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { SkillCategory } from "@/types/cv";
 
-export function SkillsSection() {
+export function SkillsSection({
+  isOpen,
+  onToggle,
+}: {
+  isOpen?: boolean;
+  onToggle?: () => void;
+} = {}) {
   const { cvData, setCVData } = useCV();
   const { skills } = cvData;
+  const [internalOpen, setInternalOpen] = useState(true);
+
+  const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
+  const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
 
   const handleAddCategory = () => {
     const newCat: SkillCategory = {
@@ -51,30 +61,54 @@ export function SkillsSection() {
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 mb-5">
-      <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-4">
-        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-          <Cpu className="w-4 h-4 text-sky-600" />
-          Categorized Technical Skills
-        </h3>
-        <button
-          type="button"
-          onClick={handleAddCategory}
-          className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Add Category
-        </button>
+    <div id="section-skills" className="bg-white p-5 rounded-xl border border-slate-200 mb-5 scroll-mt-24 transition-all">
+      <div
+        onClick={toggleSection}
+        className={`flex items-center justify-between cursor-pointer select-none ${
+          isSectionOpen ? "pb-2 border-b border-slate-100 mb-4" : "mb-0"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+              isSectionOpen ? "" : "-rotate-90"
+            }`}
+          />
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            <Cpu className="w-4 h-4 text-sky-600" />
+            <span>Categorized Technical Skills</span>
+            <span className="text-xs text-slate-400 font-normal">
+              ({skills.length})
+            </span>
+          </h3>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddCategory();
+              if (!isSectionOpen) toggleSection();
+            }}
+            title="Add Category"
+            aria-label="Add Category"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-600 hover:bg-sky-700 text-white flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 flex-shrink-0"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-4">
+      {isSectionOpen && (
+        <div className="space-y-4">
         {skills.map((cat) => (
           <div
             key={cat.id}
             className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center gap-3 text-xs"
           >
             <div className="w-full sm:w-48 flex-shrink-0">
-              <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                 Category Name
               </label>
               <input
@@ -82,12 +116,12 @@ export function SkillsSection() {
                 value={cat.categoryName}
                 onChange={(e) => handleUpdateCategoryName(cat.id, e.target.value)}
                 placeholder="e.g. Languages"
-                className="w-full text-xs font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full text-sm font-semibold text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
 
             <div className="flex-1">
-              <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                 Skills (comma separated)
               </label>
               <input
@@ -95,7 +129,7 @@ export function SkillsSection() {
                 value={cat.skills.join(", ")}
                 onChange={(e) => handleUpdateSkillsList(cat.id, e.target.value)}
                 placeholder="e.g. TypeScript, React, Docker, Python, SQL"
-                className="w-full text-xs text-slate-800 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-sky-500"
+                className="w-full text-sm text-slate-800 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
               />
             </div>
 
@@ -111,7 +145,8 @@ export function SkillsSection() {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

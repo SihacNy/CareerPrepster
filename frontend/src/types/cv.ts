@@ -84,6 +84,7 @@ export interface ATSFinding {
   pillar: "parsability" | "impact" | "skills" | "brevity";
   message: string;
   recommendation: string;
+  suggestedFix?: string;
   sectionTarget?: "personalInfo" | "education" | "experience" | "projects" | "skills";
 }
 

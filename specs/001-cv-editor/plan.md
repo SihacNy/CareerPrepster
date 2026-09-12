@@ -133,6 +133,10 @@ CareerPrepster/
         ├── app/
         │   ├── layout.tsx
         │   ├── page.tsx           # Landing / Dashboard
+        │   ├── api/
+        │   │   └── cvs/
+        │   │       └── import/
+        │   │           └── route.ts  # [TEMP] Server-side PDF/DOCX text extraction (migrates to Express)
         │   └── editor/
         │       ├── page.tsx       # Stage 1: Dual-pane CV Editor (Form + Live Preview + "Continue" bar)
         │       └── ats/
@@ -265,6 +269,20 @@ Because resumes require high horizontal precision and mobile screens have limite
     - **Edit Mode**: Full-width comfortable touch targets for input fields, section reordering, and bullet creation without horizontal scrolling.
     - **Preview Mode**: The resume preview dynamically scales to fit the mobile device width (with clean pinch/zoom) so students can inspect layout fidelity on the go.
   - **1-Tap Quick Switch**: Floating badge button (`<Eye /> Preview` while editing, `<PenLine /> Edit Form` while previewing) allows instant switching with zero state loss.
+
+---
+
+## Implementation Notes
+
+### Resume Import: Phased Backend Migration
+
+The resume import parsing pipeline (`POST /api/cvs/import`) is being implemented in two phases:
+
+**Phase 1 (Current)**: Text extraction via `pdf-parse` (PDF) and `mammoth` (DOCX) is implemented as a **Next.js API Route** at `frontend/src/app/api/cvs/import/route.ts`. This is a temporary location since the Express backend does not exist yet. The regex-based structurer in `frontend/src/lib/cvParser.ts` maps the extracted text to `CVData`.
+
+**Phase 2 (Express Migration)**: When the Express backend is added, the parsing logic should be migrated to `backend/src/routes/import.routes.ts` + `backend/src/services/parser.service.ts` as outlined in the project structure above. The Gemini structured schema parsing replaces the regex structurer at that time. The client call in `cvParser.ts` only needs its URL updated (or use `next.config.js` rewrites to proxy `/api/*` → Express).
+
+**Phase 3 (Gemini)**: Replace the regex-based `parseResumeTextToCVData()` with Gemini structured output parsing using a strict Zod `responseSchema` for semantic section identification. This happens on the Express backend.
 
 ---
 

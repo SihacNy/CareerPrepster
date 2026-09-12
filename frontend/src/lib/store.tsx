@@ -16,10 +16,13 @@ interface CVContextType {
   setTargetJobDescription: (jd: string) => void;
   mobileView: "form" | "preview";
   setMobileView: (view: "form" | "preview") => void;
+  desktopView: "dual" | "editor" | "preview";
+  setDesktopView: (view: "dual" | "editor" | "preview") => void;
   lastSaved: Date | null;
   isDirty: boolean;
   saveDraft: () => void;
   resetDraft: () => void;
+  clearAll: () => void;
 }
 
 const CVContext = createContext<CVContextType | null>(null);
@@ -28,6 +31,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
   const [cvData, setCVDataState] = useState<CVData>(INITIAL_EMPTY_CV);
   const [targetJobDescription, setTargetJobDescription] = useState<string>("");
   const [mobileView, setMobileView] = useState<"form" | "preview">("form");
+  const [desktopView, setDesktopView] = useState<"dual" | "editor" | "preview">("dual");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
@@ -93,11 +97,79 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const resetDraft = () => {
-    setCVDataState(INITIAL_EMPTY_CV);
-    localStorage.removeItem(STORAGE_KEY);
-    setLastSaved(null);
+  const clearAll = () => {
+    const blankCV: CVData = {
+      id: `cv-draft-${Date.now()}`,
+      title: "My Resume",
+      templateId: cvData.templateId || "classic",
+      targetRole: "",
+      personalInfo: {
+        fullName: "",
+        email: "",
+        phone: "",
+        location: "",
+        linkedinUrl: "",
+        githubUrl: "",
+        summary: "",
+      },
+      education: [
+        {
+          id: `edu-${Date.now()}`,
+          institution: "",
+          degree: "",
+          location: "",
+          startDate: "",
+          endDate: "",
+          isCurrent: false,
+          gpa: "",
+          bulletPoints: [""],
+        },
+      ],
+      experience: [
+        {
+          id: `exp-${Date.now()}`,
+          company: "",
+          role: "",
+          location: "",
+          startDate: "",
+          endDate: "",
+          isCurrent: false,
+          bulletPoints: [""],
+        },
+      ],
+      projects: [
+        {
+          id: `proj-${Date.now()}`,
+          name: "",
+          role: "",
+          techStack: [],
+          linkUrl: "",
+          startDate: "",
+          endDate: "",
+          bulletPoints: [""],
+        },
+      ],
+      skills: [
+        {
+          id: `skill-${Date.now()}`,
+          categoryName: "Technical Skills",
+          skills: [],
+        },
+      ],
+      updatedAt: new Date().toISOString(),
+    };
+    setCVDataState(blankCV);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(blankCV));
+    } catch (e) {
+      console.error("Save error during clear:", e);
+    }
+    setLastSaved(new Date());
     setIsDirty(false);
+  };
+
+  const resetDraft = () => {
+    clearAll();
   };
 
   return (
@@ -112,10 +184,13 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         setTargetJobDescription,
         mobileView,
         setMobileView,
+        desktopView,
+        setDesktopView,
         lastSaved,
         isDirty,
         saveDraft,
         resetDraft,
+        clearAll,
       }}
     >
       {children}

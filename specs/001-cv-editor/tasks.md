@@ -44,6 +44,9 @@
 - [x] T012 [P] [US1] Build drag-and-drop resume uploader with PDF/DOCX format validation in `frontend/src/components/onboarding/UploadDropzone.tsx`
 - [x] T013 [US1] Build onboarding fork modal ("Create from Scratch" vs "Upload Existing Resume") in `frontend/src/components/onboarding/OnboardingModal.tsx`
 - [x] T014 [US1] Wire onboarding state transitions to route to `/editor` (Scratch) or `/editor/ats?from=upload` (Upload Diagnostic) in `frontend/src/app/page.tsx`
+- [x] T014a [P] [US1] Build client-side CV file parser and structural normalizer mapping extracted PDF/DOCX text to `CVData` in `frontend/src/lib/cvParser.ts`
+- [x] T014b [US1] Integrate structural CV parser into `OnboardingModal.tsx` and `UploadDropzone.tsx` to populate full sections (`personalInfo`, `education`, `experience`, `projects`, `skills`)
+- [x] T014c [US1] Compute baseline ATS diagnostic report from imported CV content and route seamlessly to `/editor/ats?from=upload` or `/editor`
 
 **Checkpoint**: Two-path onboarding modal fully operational.
 

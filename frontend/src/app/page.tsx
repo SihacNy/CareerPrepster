@@ -2,19 +2,21 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { 
-  FileText, 
-  ArrowRight, 
-  CheckCircle2, 
-  UploadCloud, 
-  PenLine, 
-  ShieldCheck, 
-  Layers, 
+import {
+  FileText,
+  ArrowRight,
+  CheckCircle2,
+  UploadCloud,
+  PenLine,
+  ShieldCheck,
+  Layers,
   Sparkles,
   BarChart3
 } from "lucide-react";
 import { Header } from "@/components/navigation/Header";
+import { Footer } from "@/components/navigation/Footer";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
+import { FAQSection } from "@/components/landing/FAQSection";
 
 export default function LandingPage() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
@@ -77,25 +79,35 @@ export default function LandingPage() {
         </section>
 
         {/* Feature Pillars Grid */}
-        <section className="py-16 bg-slate-50">
+        <section className="py-16 sm:py-20 bg-slate-50 border-b border-slate-200">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                Everything You Need from Blank Page to Job Offer
+            <div className="text-center mb-6">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
+                How Do You Turn a Blank Page into a Top Job Offer?
               </h2>
-              <p className="text-xs text-slate-600 mt-1">
-                Engineered around the requirements of top university career services.
+              <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-xl mx-auto leading-relaxed">
+                Built around the rigorous screening requirements of enterprise ATS platforms and top university career guidelines.
               </p>
+            </div>
+
+            {/* Illustration */}
+            <div className="flex justify-center my-8 sm:my-10">
+              <div className="w-full max-w-sm sm:max-w-md px-4">
+                <img
+                  src="/illustrations/question.svg"
+                  alt="Career and resume guidance illustration"
+                  className="w-full h-auto max-h-60 sm:max-h-72 object-contain mx-auto"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Card 1 */}
-              <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-card flex flex-col justify-between">
+              <div className="group relative p-6 rounded-xl bg-white border border-slate-200/90 shadow-card hover:shadow-xl hover:shadow-sky-500/10 hover:border-sky-300 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div>
-                  <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center mb-4">
-                    <Layers className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-semibold text-slate-900 text-base">
+                  <Layers className="w-7 h-7 text-sky-600 mb-3.5 group-hover:scale-110 group-hover:text-sky-500 transition-transform duration-300" />
+                  <h3 className="font-semibold text-slate-900 group-hover:text-sky-950 text-base transition-colors">
                     ATS Layout Templates
                   </h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
@@ -105,12 +117,11 @@ export default function LandingPage() {
               </div>
 
               {/* Card 2 */}
-              <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-card flex flex-col justify-between">
+              <div className="group relative p-6 rounded-xl bg-white border border-slate-200/90 shadow-card hover:shadow-xl hover:shadow-sky-500/10 hover:border-sky-300 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div>
-                  <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center mb-4">
-                    <PenLine className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-semibold text-slate-900 text-base">
+                  <PenLine className="w-7 h-7 text-sky-600 mb-3.5 group-hover:scale-110 group-hover:text-sky-500 transition-transform duration-300" />
+                  <h3 className="font-semibold text-slate-900 group-hover:text-sky-950 text-base transition-colors">
                     STAR/XYZ Refine with AI
                   </h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
@@ -120,12 +131,11 @@ export default function LandingPage() {
               </div>
 
               {/* Card 3 */}
-              <div className="p-6 rounded-xl bg-white border border-slate-200 shadow-card flex flex-col justify-between">
+              <div className="group relative p-6 rounded-xl bg-white border border-slate-200/90 shadow-card hover:shadow-xl hover:shadow-sky-500/10 hover:border-sky-300 hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 <div>
-                  <div className="w-10 h-10 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center mb-4">
-                    <BarChart3 className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-semibold text-slate-900 text-base">
+                  <BarChart3 className="w-7 h-7 text-sky-600 mb-3.5 group-hover:scale-110 group-hover:text-sky-500 transition-transform duration-300" />
+                  <h3 className="font-semibold text-slate-900 group-hover:text-sky-950 text-base transition-colors">
                     Universal ATS Scoring
                   </h3>
                   <p className="text-xs text-slate-600 mt-2 leading-relaxed">
@@ -136,12 +146,13 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* Interactive FAQ Section */}
+        <FAQSection />
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
-        <p>&copy; {new Date().getFullYear()} CareerPrepster. Built for university students.</p>
-      </footer>
+      {/* Rich Multi-Column Footer */}
+      <Footer />
 
       {/* Onboarding Dialog */}
       <OnboardingModal

@@ -31,3 +31,4 @@ Thumbs.db
 
 # Specify Cache
 .specify/integrations/.cache/
+*.tsbuildinfo

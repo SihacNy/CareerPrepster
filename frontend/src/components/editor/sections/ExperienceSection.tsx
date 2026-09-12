@@ -1,13 +1,16 @@
 "use client";
 
-import React from "react";
-import { Briefcase, Plus, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { Briefcase, Plus, Trash2, ChevronDown } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { ExperienceItem } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
+import { DateRangePicker } from "../DateRangePicker";
 
 interface ExperienceSectionProps {
   onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
 const EXPERIENCE_SUGGESTIONS = [
@@ -19,9 +22,13 @@ const EXPERIENCE_SUGGESTIONS = [
   "Collaborated in an Agile scrum team of 6 engineers, participating in bi-weekly sprints, code reviews, and retrospectives.",
 ];
 
-export function ExperienceSection({ onRefineBullet }: ExperienceSectionProps) {
+export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: ExperienceSectionProps) {
   const { cvData, setCVData } = useCV();
   const { experience } = cvData;
+  const [internalOpen, setInternalOpen] = useState(true);
+
+  const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
+  const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
 
   const handleAddEntry = () => {
     const newEntry: ExperienceItem = {
@@ -98,23 +105,47 @@ export function ExperienceSection({ onRefineBullet }: ExperienceSectionProps) {
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 mb-5">
-      <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-4">
-        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-          <Briefcase className="w-4 h-4 text-sky-600" />
-          Work &amp; Internship Experience
-        </h3>
-        <button
-          type="button"
-          onClick={handleAddEntry}
-          className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Add Experience
-        </button>
+    <div id="section-experience" className="bg-white p-5 rounded-xl border border-slate-200 mb-5 scroll-mt-24 transition-all">
+      <div
+        onClick={toggleSection}
+        className={`flex items-center justify-between cursor-pointer select-none ${
+          isSectionOpen ? "pb-2 border-b border-slate-100 mb-4" : "mb-0"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+              isSectionOpen ? "" : "-rotate-90"
+            }`}
+          />
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            <Briefcase className="w-4 h-4 text-sky-600" />
+            <span>Work &amp; Internship Experience</span>
+            <span className="text-xs text-slate-400 font-normal">
+              ({experience.length})
+            </span>
+          </h3>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddEntry();
+              if (!isSectionOpen) toggleSection();
+            }}
+            title="Add Experience"
+            aria-label="Add Experience"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-600 hover:bg-sky-700 text-white flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 flex-shrink-0"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-6">
+      {isSectionOpen && (
+        <div className="space-y-6">
         {experience.map((exp) => (
           <div
             key={exp.id}
@@ -129,61 +160,54 @@ export function ExperienceSection({ onRefineBullet }: ExperienceSectionProps) {
               <Trash2 className="w-4 h-4" />
             </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Company / Organization *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Company / Organization <span className="text-red-500 font-semibold">*</span>
+                </label>
                 <input
                   type="text"
                   value={exp.company}
                   onChange={(e) => handleUpdateEntry(exp.id, "company", e.target.value)}
-                  placeholder="e.g. Google, TechNova, Ministry of Education"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  placeholder="e.g. Acme Tech Solutions"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Job Title / Role *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Job Title / Role <span className="text-red-500 font-semibold">*</span>
+                </label>
                 <input
                   type="text"
                   value={exp.role}
                   onChange={(e) => handleUpdateEntry(exp.id, "role", e.target.value)}
-                  placeholder="e.g. Software Engineering Intern"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  placeholder="e.g. Junior Frontend Developer"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Location</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
                 <input
                   type="text"
                   value={exp.location}
                   onChange={(e) => handleUpdateEntry(exp.id, "location", e.target.value)}
-                  placeholder="e.g. Remote or Phnom Penh"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  placeholder="e.g. Phnom Penh, Cambodia (or Remote)"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <label className="block font-medium text-slate-700 mb-1">Start Date</label>
-                  <input
-                    type="text"
-                    value={exp.startDate}
-                    onChange={(e) => handleUpdateEntry(exp.id, "startDate", e.target.value)}
-                    placeholder="Jun 2025"
-                    className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block font-medium text-slate-700 mb-1">End Date</label>
-                  <input
-                    type="text"
-                    value={exp.endDate}
-                    onChange={(e) => handleUpdateEntry(exp.id, "endDate", e.target.value)}
-                    placeholder="Aug 2025"
-                    className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
-                  />
-                </div>
+              <div className="col-span-2">
+                <DateRangePicker
+                  startDate={exp.startDate}
+                  endDate={exp.endDate}
+                  isCurrent={exp.isCurrent}
+                  onStartDateChange={(val) => handleUpdateEntry(exp.id, "startDate", val)}
+                  onEndDateChange={(val) => handleUpdateEntry(exp.id, "endDate", val)}
+                  onIsCurrentChange={(isCurrent) => handleUpdateEntry(exp.id, "isCurrent", isCurrent)}
+                  currentLabel="I currently work here"
+                />
               </div>
             </div>
 
@@ -199,7 +223,8 @@ export function ExperienceSection({ onRefineBullet }: ExperienceSectionProps) {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

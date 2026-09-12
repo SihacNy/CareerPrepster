@@ -101,10 +101,10 @@ export function TemplateBulletDrawer({
                   className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:border-sky-300 transition-all text-left flex flex-col justify-between group"
                 >
                   <div className="mb-2">
-                    <span className="text-[10px] font-semibold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 uppercase tracking-wider">
+                    <span className="text-xs font-semibold text-sky-800 bg-sky-50 px-2 py-0.5 rounded border border-sky-200 uppercase tracking-wider">
                       {bullet.category}
                     </span>
-                    <p className="text-xs text-slate-800 mt-2 leading-relaxed">
+                    <p className="text-sm text-slate-800 mt-2 leading-relaxed">
                       {bullet.text}
                     </p>
                   </div>
@@ -116,7 +116,7 @@ export function TemplateBulletDrawer({
                       className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
                         isAdded
                           ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          : "bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200"
+                          : "bg-white text-sky-700 hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600"
                       }`}
                     >
                       {isAdded ? (

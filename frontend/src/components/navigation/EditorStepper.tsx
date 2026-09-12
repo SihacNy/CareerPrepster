@@ -35,54 +35,58 @@ export function EditorStepper({ currentStage }: EditorStepperProps) {
 
   return (
     <div className="w-full bg-white border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav aria-label="Progress" className="py-3">
-          <ol className="flex items-center justify-between sm:justify-center sm:space-x-8">
+      <div className="max-w-3xl mx-auto px-3 sm:px-6 lg:px-8">
+        <nav aria-label="Progress" className="py-2.5 sm:py-3.5">
+          <ol className="flex items-center justify-between w-full">
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = currentStage === step.id;
               const isCompleted = currentStage > step.id;
 
               return (
-                <li key={step.id} className="flex items-center">
+                <React.Fragment key={step.id}>
                   {index > 0 && (
                     <div
-                      className={`hidden sm:block w-12 h-0.5 mr-8 transition-colors ${
+                      className={`flex-1 h-0.5 mx-1.5 sm:mx-4 transition-colors ${
                         currentStage >= step.id ? "bg-sky-600" : "bg-slate-200"
                       }`}
                       aria-hidden="true"
                     />
                   )}
 
-                  <Link
-                    href={step.href}
-                    className={`flex items-center space-x-2.5 text-xs font-medium transition-colors ${
-                      isActive
-                        ? "text-sky-700"
-                        : isCompleted
-                        ? "text-slate-800 hover:text-sky-600"
-                        : "text-slate-400 hover:text-slate-600"
-                    }`}
-                  >
-                    <span
-                      className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${
+                  <li className="flex items-center flex-shrink-0">
+                    <Link
+                      href={step.href}
+                      className={`flex items-center space-x-1.5 sm:space-x-2.5 text-xs sm:text-sm font-medium transition-colors ${
                         isActive
-                          ? "bg-sky-600 text-white"
+                          ? "text-sky-700"
                           : isCompleted
-                          ? "bg-sky-100 text-sky-700 border border-sky-300"
-                          : "bg-slate-100 text-slate-400 border border-slate-200"
+                          ? "text-slate-800 hover:text-sky-600"
+                          : "text-slate-400 hover:text-slate-600"
                       }`}
                     >
-                      <Icon className="w-3.5 h-3.5" />
-                    </span>
-                    <div className="text-left">
-                      <div className="font-semibold">{step.name}</div>
-                      <div className="text-[10px] text-slate-500 hidden md:block">
-                        {step.description}
+                      <span
+                        className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
+                          isActive
+                            ? "bg-sky-600 text-white shadow-xs"
+                            : isCompleted
+                            ? "bg-sky-100 text-sky-700 border border-sky-300"
+                            : "bg-slate-100 text-slate-400 border border-slate-200"
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                      </span>
+                      <div className="text-left">
+                        <div className="font-semibold text-xs sm:text-sm leading-tight whitespace-nowrap">
+                          {step.name}
+                        </div>
+                        <div className="text-xs text-slate-500 hidden md:block">
+                          {step.description}
+                        </div>
                       </div>
-                    </div>
-                  </Link>
-                </li>
+                    </Link>
+                  </li>
+                </React.Fragment>
               );
             })}
           </ol>

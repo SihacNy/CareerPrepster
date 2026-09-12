@@ -56,20 +56,20 @@ export function ExportPdfButton({
       type="button"
       onClick={handleDownload}
       disabled={isGenerating}
-      className={`inline-flex items-center justify-center font-semibold rounded-lg text-xs transition-colors shadow-subtle ${
+      className={`inline-flex items-center justify-center font-semibold rounded-lg transition-all shadow-sm ${
         isPrimary
-          ? "bg-sky-600 text-white hover:bg-sky-700 px-4 py-2"
-          : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-3.5 py-1.5"
+          ? "bg-sky-600 text-white hover:bg-sky-700 px-4 py-2 sm:px-4.5 sm:py-2 text-xs sm:text-sm"
+          : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-3.5 py-1.5 text-xs"
       } ${className}`}
     >
       {isGenerating ? (
         <>
-          <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           <span>Generating PDF...</span>
         </>
       ) : (
         <>
-          <Download className="w-3.5 h-3.5 mr-1.5" />
+          <Download className="w-4 h-4 mr-2" />
           <span>Download ATS PDF</span>
         </>
       )}

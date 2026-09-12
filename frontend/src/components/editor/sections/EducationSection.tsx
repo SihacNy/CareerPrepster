@@ -1,13 +1,16 @@
 "use client";
 
-import React from "react";
-import { GraduationCap, Plus, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { GraduationCap, Plus, Trash2, ChevronDown } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { EducationItem } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
+import { DateRangePicker } from "../DateRangePicker";
 
 interface EducationSectionProps {
   onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
 const EDUCATION_SUGGESTIONS = [
@@ -18,9 +21,13 @@ const EDUCATION_SUGGESTIONS = [
   "Organized collegiate hackathon with 200+ participants across 12 universities.",
 ];
 
-export function EducationSection({ onRefineBullet }: EducationSectionProps) {
+export function EducationSection({ onRefineBullet, isOpen, onToggle }: EducationSectionProps) {
   const { cvData, setCVData } = useCV();
   const { education } = cvData;
+  const [internalOpen, setInternalOpen] = useState(true);
+
+  const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
+  const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
 
   const handleAddEntry = () => {
     const newEntry: EducationItem = {
@@ -98,23 +105,47 @@ export function EducationSection({ onRefineBullet }: EducationSectionProps) {
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 mb-5">
-      <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-4">
-        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-          <GraduationCap className="w-4 h-4 text-sky-600" />
-          Education
-        </h3>
-        <button
-          type="button"
-          onClick={handleAddEntry}
-          className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Add Degree
-        </button>
+    <div id="section-education" className="bg-white p-5 rounded-xl border border-slate-200 mb-5 scroll-mt-24 transition-all">
+      <div
+        onClick={toggleSection}
+        className={`flex items-center justify-between cursor-pointer select-none ${
+          isSectionOpen ? "pb-2 border-b border-slate-100 mb-4" : "mb-0"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+              isSectionOpen ? "" : "-rotate-90"
+            }`}
+          />
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            <GraduationCap className="w-4 h-4 text-sky-600" />
+            <span>Education</span>
+            <span className="text-xs text-slate-400 font-normal">
+              ({education.length})
+            </span>
+          </h3>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddEntry();
+              if (!isSectionOpen) toggleSection();
+            }}
+            title="Add Degree"
+            aria-label="Add Degree"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-600 hover:bg-sky-700 text-white flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 flex-shrink-0"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-6">
+      {isSectionOpen && (
+        <div className="space-y-6">
         {education.map((edu) => (
           <div
             key={edu.id}
@@ -129,46 +160,46 @@ export function EducationSection({ onRefineBullet }: EducationSectionProps) {
               <Trash2 className="w-4 h-4" />
             </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">
-                  University / College *
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  University / College <span className="text-red-500 font-semibold">*</span>
                 </label>
                 <input
                   type="text"
                   value={edu.institution}
                   onChange={(e) => handleUpdateEntry(edu.id, "institution", e.target.value)}
                   placeholder="e.g. CamTech University / State University"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">
-                  Degree &amp; Major *
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Degree &amp; Major <span className="text-red-500 font-semibold">*</span>
                 </label>
                 <input
                   type="text"
                   value={edu.degree}
                   onChange={(e) => handleUpdateEntry(edu.id, "degree", e.target.value)}
                   placeholder="e.g. B.S. in Computer Science"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Location</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
                 <input
                   type="text"
                   value={edu.location}
                   onChange={(e) => handleUpdateEntry(edu.id, "location", e.target.value)}
                   placeholder="e.g. Phnom Penh, Cambodia"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   GPA (Optional)
                 </label>
                 <input
@@ -176,31 +207,20 @@ export function EducationSection({ onRefineBullet }: EducationSectionProps) {
                   value={edu.gpa || ""}
                   onChange={(e) => handleUpdateEntry(edu.id, "gpa", e.target.value)}
                   placeholder="e.g. 3.85 / 4.00"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Start Date</label>
-                <input
-                  type="text"
-                  value={edu.startDate}
-                  onChange={(e) => handleUpdateEntry(edu.id, "startDate", e.target.value)}
-                  placeholder="Sep 2022"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">
-                  Graduation / End Date
-                </label>
-                <input
-                  type="text"
-                  value={edu.endDate}
-                  onChange={(e) => handleUpdateEntry(edu.id, "endDate", e.target.value)}
-                  placeholder="Jun 2026"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+              <div className="col-span-2">
+                <DateRangePicker
+                  startDate={edu.startDate}
+                  endDate={edu.endDate}
+                  isCurrent={edu.isCurrent}
+                  onStartDateChange={(val) => handleUpdateEntry(edu.id, "startDate", val)}
+                  onEndDateChange={(val) => handleUpdateEntry(edu.id, "endDate", val)}
+                  onIsCurrentChange={(isCurrent) => handleUpdateEntry(edu.id, "isCurrent", isCurrent)}
+                  endLabel="Graduation / End Date"
+                  currentLabel="I am currently enrolled / studying here"
                 />
               </div>
             </div>
@@ -217,7 +237,8 @@ export function EducationSection({ onRefineBullet }: EducationSectionProps) {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

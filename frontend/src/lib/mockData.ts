@@ -196,6 +196,7 @@ export function calculateMockAtsReport(cv: CVData, targetJobDescription?: string
       pillar: "impact",
       message: "Quantify More Educational & Project Outcomes",
       recommendation: "Add measurable numbers (e.g. users impacted, latency reduced, percentage improved) to 1 additional bullet point.",
+      suggestedFix: "Re-engineered caching layer with Redis and connection pooling, accelerating API throughput by 42% for 15,000+ daily requests.",
       sectionTarget: "projects",
     },
     {
@@ -204,6 +205,7 @@ export function calculateMockAtsReport(cv: CVData, targetJobDescription?: string
       pillar: "skills",
       message: "Cloud & Container Keywords Enhancement",
       recommendation: "Consider listing explicit cloud provider familiarity (e.g. AWS, GCP, Azure) under your developer tools section.",
+      suggestedFix: "Add 'Docker, AWS (EC2, S3), CI/CD (GitHub Actions)' to your Developer Tools category.",
       sectionTarget: "skills",
     },
     {

@@ -1,13 +1,16 @@
 "use client";
 
-import React from "react";
-import { FolderGit2, Plus, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { FolderGit2, Plus, Trash2, ChevronDown } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { ProjectItem } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
+import { DateRangePicker } from "../DateRangePicker";
 
 interface ProjectsSectionProps {
   onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
 const PROJECT_SUGGESTIONS = [
@@ -19,9 +22,13 @@ const PROJECT_SUGGESTIONS = [
   "Designed responsive interactive analytics dashboards utilizing Next.js, Tailwind CSS, and Recharts.",
 ];
 
-export function ProjectsSection({ onRefineBullet }: ProjectsSectionProps) {
+export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSectionProps) {
   const { cvData, setCVData } = useCV();
   const { projects } = cvData;
+  const [internalOpen, setInternalOpen] = useState(true);
+
+  const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
+  const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
 
   const handleAddEntry = () => {
     const newEntry: ProjectItem = {
@@ -98,23 +105,47 @@ export function ProjectsSection({ onRefineBullet }: ProjectsSectionProps) {
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl border border-slate-200 mb-5">
-      <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-4">
-        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-          <FolderGit2 className="w-4 h-4 text-sky-600" />
-          Academic &amp; Capstone Projects
-        </h3>
-        <button
-          type="button"
-          onClick={handleAddEntry}
-          className="inline-flex items-center px-2.5 py-1 text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-lg border border-sky-200 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5 mr-1" />
-          Add Project
-        </button>
+    <div id="section-projects" className="bg-white p-5 rounded-xl border border-slate-200 mb-5 scroll-mt-24 transition-all">
+      <div
+        onClick={toggleSection}
+        className={`flex items-center justify-between cursor-pointer select-none ${
+          isSectionOpen ? "pb-2 border-b border-slate-100 mb-4" : "mb-0"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <ChevronDown
+            className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${
+              isSectionOpen ? "" : "-rotate-90"
+            }`}
+          />
+          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+            <FolderGit2 className="w-4 h-4 text-sky-600" />
+            <span>Academic &amp; Capstone Projects</span>
+            <span className="text-xs text-slate-400 font-normal">
+              ({projects.length})
+            </span>
+          </h3>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAddEntry();
+              if (!isSectionOpen) toggleSection();
+            }}
+            title="Add Project"
+            aria-label="Add Project"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-600 hover:bg-sky-700 text-white flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 flex-shrink-0"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-6">
+      {isSectionOpen && (
+        <div className="space-y-6">
         {projects.map((proj) => (
           <div
             key={proj.id}
@@ -129,20 +160,22 @@ export function ProjectsSection({ onRefineBullet }: ProjectsSectionProps) {
               <Trash2 className="w-4 h-4" />
             </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Project Name *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Project Name <span className="text-red-500 font-semibold">*</span>
+                </label>
                 <input
                   type="text"
                   value={proj.name}
                   onChange={(e) => handleUpdateEntry(proj.id, "name", e.target.value)}
                   placeholder="e.g. Distributed Task Queue / E-Commerce App"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Technologies Used (comma separated)
                 </label>
                 <input
@@ -156,42 +189,33 @@ export function ProjectsSection({ onRefineBullet }: ProjectsSectionProps) {
                     )
                   }
                   placeholder="e.g. React, Node.js, TypeScript, Docker"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Repository / Demo Link</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Repository / Demo Link</label>
                 <input
                   type="text"
                   value={proj.linkUrl || ""}
                   onChange={(e) => handleUpdateEntry(proj.id, "linkUrl", e.target.value)}
                   placeholder="github.com/username/project"
-                  className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
+                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
                 />
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <label className="block font-medium text-slate-700 mb-1">Start Date</label>
-                  <input
-                    type="text"
-                    value={proj.startDate || ""}
-                    onChange={(e) => handleUpdateEntry(proj.id, "startDate", e.target.value)}
-                    placeholder="Jan 2025"
-                    className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block font-medium text-slate-700 mb-1">End Date</label>
-                  <input
-                    type="text"
-                    value={proj.endDate || ""}
-                    onChange={(e) => handleUpdateEntry(proj.id, "endDate", e.target.value)}
-                    placeholder="May 2025"
-                    className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500"
-                  />
-                </div>
+              <div className="col-span-2">
+                <DateRangePicker
+                  startDate={proj.startDate || ""}
+                  endDate={proj.endDate || ""}
+                  isCurrent={proj.endDate?.toLowerCase() === "present"}
+                  onStartDateChange={(val) => handleUpdateEntry(proj.id, "startDate", val)}
+                  onEndDateChange={(val) => handleUpdateEntry(proj.id, "endDate", val)}
+                  onIsCurrentChange={(isCurrent) => {
+                    handleUpdateEntry(proj.id, "endDate", isCurrent ? "Present" : "");
+                  }}
+                  currentLabel="Ongoing project"
+                />
               </div>
             </div>
 
@@ -207,7 +231,8 @@ export function ProjectsSection({ onRefineBullet }: ProjectsSectionProps) {
             </div>
           </div>
         ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Bold, Italic, Underline, Strikethrough, PenLine, Sparkles, Plus, Check } from "lucide-react";
+import { Bold, Italic, Underline, Strikethrough, PenLine, Sparkles, Plus, Check, Undo2, Redo2 } from "lucide-react";
 
 interface RichBulletEditorProps {
   label: string;
@@ -100,6 +100,8 @@ const DEFAULT_SUGGESTIONS = [
   "Designed and implemented automated CI/CD pipelines with GitHub Actions, reducing deployment cycle times to 8 minutes.",
 ];
 
+const UL_BULLET_CLASS = "list-disc pl-5 space-y-1.5 outline-none text-sm text-slate-900 leading-relaxed";
+
 export function RichBulletEditor({
   label,
   bullets,
@@ -111,6 +113,94 @@ export function RichBulletEditor({
   const isInternalChange = useRef(false);
   const [addedIndex, setAddedIndex] = useState<number | null>(null);
 
+  // History state for Undo & Redo
+  const [history, setHistory] = useState<string[][]>(() => [bullets && bullets.length > 0 ? bullets : [""]]);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  const pushHistory = (newBullets: string[], immediate: boolean = false) => {
+    const current = history[historyIndex];
+    if (current && JSON.stringify(current) === JSON.stringify(newBullets)) {
+      return;
+    }
+
+    if (immediate) {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+      setHistory((prev) => {
+        const sliced = prev.slice(0, historyIndex + 1);
+        return [...sliced, newBullets].slice(-50);
+      });
+      setHistoryIndex((prev) => Math.min(prev + 1, 49));
+    } else {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      debounceTimerRef.current = setTimeout(() => {
+        setHistory((prev) => {
+          const sliced = prev.slice(0, historyIndex + 1);
+          return [...sliced, newBullets].slice(-50);
+        });
+        setHistoryIndex((prev) => Math.min(prev + 1, 49));
+      }, 350);
+    }
+  };
+
+  const handleUndo = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    if (historyIndex <= 0) return;
+
+    const nextIndex = historyIndex - 1;
+    const previousBullets = history[nextIndex];
+    if (!previousBullets) return;
+
+    setHistoryIndex(nextIndex);
+
+    const editor = editorRef.current;
+    if (editor) {
+      const html = `<ul class="${UL_BULLET_CLASS}">${previousBullets
+        .map((b) => `<li>${markdownToHtml(b)}</li>`)
+        .join("")}</ul>`;
+      editor.innerHTML = html;
+      isInternalChange.current = true;
+      onChange(previousBullets);
+    }
+  };
+
+  const handleRedo = () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    if (historyIndex >= history.length - 1) return;
+
+    const nextIndex = historyIndex + 1;
+    const nextBullets = history[nextIndex];
+    if (!nextBullets) return;
+
+    setHistoryIndex(nextIndex);
+
+    const editor = editorRef.current;
+    if (editor) {
+      const html = `<ul class="${UL_BULLET_CLASS}">${nextBullets
+        .map((b) => `<li>${markdownToHtml(b)}</li>`)
+        .join("")}</ul>`;
+      editor.innerHTML = html;
+      isInternalChange.current = true;
+      onChange(nextBullets);
+    }
+  };
+
   const activeSuggestions = suggestions && suggestions.length > 0 ? suggestions : DEFAULT_SUGGESTIONS;
 
   const handleInsertSuggestion = (suggestionText: string, idx: number) => {
@@ -119,7 +209,7 @@ export function RichBulletEditor({
 
     let ul = editor.querySelector("ul");
     if (!ul) {
-      editor.innerHTML = `<ul class="list-disc pl-5 space-y-1 outline-none font-sans text-xs text-slate-800 leading-relaxed"><li><br></li></ul>`;
+      editor.innerHTML = `<ul class="${UL_BULLET_CLASS}"><li><br></li></ul>`;
       ul = editor.querySelector("ul");
     }
 
@@ -136,7 +226,7 @@ export function RichBulletEditor({
 
     setAddedIndex(idx);
     setTimeout(() => setAddedIndex(null), 1200);
-    handleInput();
+    handleInput(true);
   };
 
   // Synchronize HTML with incoming bullets prop when changed externally (or on mount)
@@ -150,11 +240,21 @@ export function RichBulletEditor({
     if (!editor) return;
 
     const items = bullets && bullets.length > 0 ? bullets : [""];
-    const html = `<ul class="list-disc pl-5 space-y-1 outline-none font-sans text-xs text-slate-800 leading-relaxed">${items
+    const html = `<ul class="${UL_BULLET_CLASS}">${items
       .map((b) => `<li>${markdownToHtml(b)}</li>`)
       .join("")}</ul>`;
 
     editor.innerHTML = html;
+
+    // Synchronize history if incoming bullets differ from current head
+    setHistory((prev) => {
+      const current = prev[historyIndex];
+      if (!current || JSON.stringify(current) !== JSON.stringify(items)) {
+        return [items];
+      }
+      return prev;
+    });
+    setHistoryIndex(0);
   }, [bullets]);
 
   // Helper to accurately determine if caret is at the start (offset 0) of an LI
@@ -195,7 +295,7 @@ export function RichBulletEditor({
 
       if (hasRogueNodes) {
         if (!ul) {
-          editor.innerHTML = `<ul class="list-disc pl-5 space-y-1 outline-none font-sans text-xs text-slate-800 leading-relaxed"><li><br></li></ul>`;
+          editor.innerHTML = `<ul class="${UL_BULLET_CLASS}"><li><br></li></ul>`;
           ul = editor.querySelector("ul");
         }
 
@@ -263,7 +363,7 @@ export function RichBulletEditor({
     let ul = editor.querySelector("ul");
     if (!ul) {
       const currentContent = editor.innerHTML;
-      editor.innerHTML = `<ul class="list-disc pl-5 space-y-1 outline-none font-sans text-xs text-slate-800 leading-relaxed"><li>${
+      editor.innerHTML = `<ul class="${UL_BULLET_CLASS}"><li>${
         currentContent.trim() ? currentContent : "<br>"
       }</li></ul>`;
       return;
@@ -302,7 +402,7 @@ export function RichBulletEditor({
     }
   };
 
-  const handleInput = () => {
+  const handleInput = (immediate: boolean = false) => {
     const editor = editorRef.current;
     if (!editor) return;
 
@@ -310,6 +410,7 @@ export function RichBulletEditor({
 
     isInternalChange.current = true;
     const extracted = extractBulletsFromEditor(editor);
+    pushHistory(extracted, immediate);
     onChange(extracted);
   };
 
@@ -320,7 +421,7 @@ export function RichBulletEditor({
 
     editor.focus();
     document.execCommand(command, false);
-    handleInput();
+    handleInput(true);
   };
 
   // Trigger Refine with AI for current line or selection
@@ -362,7 +463,7 @@ export function RichBulletEditor({
           ul.appendChild(newLi);
         }
       }
-      handleInput();
+      handleInput(true);
     });
   };
 
@@ -370,6 +471,21 @@ export function RichBulletEditor({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const editor = editorRef.current;
     if (!editor) return;
+
+    // Handle Undo (Ctrl+Z) and Redo (Ctrl+Y or Ctrl+Shift+Z)
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
+      e.preventDefault();
+      handleUndo();
+      return;
+    }
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))
+    ) {
+      e.preventDefault();
+      handleRedo();
+      return;
+    }
 
     const sel = window.getSelection();
     if (!sel || !sel.anchorNode) return;
@@ -546,7 +662,7 @@ export function RichBulletEditor({
     <div className="w-full">
       {/* Header with Title and "Refine with AI" on the right */}
       <div className="flex items-center justify-between pb-1.5 mb-2">
-        <span className="text-[11px] font-semibold text-slate-700">
+        <span className="text-sm font-semibold text-slate-700">
           {label}
         </span>
 
@@ -554,10 +670,10 @@ export function RichBulletEditor({
         <button
           type="button"
           onClick={handleTriggerRefine}
-          className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 transition-colors shadow-subtle cursor-pointer"
+          className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold text-sky-700 bg-white hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600 transition-colors shadow-subtle cursor-pointer"
           title="Highlight a bullet and refine with AI STAR/XYZ frameworks"
         >
-          <PenLine className="w-3 h-3 mr-1 text-sky-600" />
+          <PenLine className="w-3.5 h-3.5 mr-1" />
           <span>Refine with AI</span>
         </button>
       </div>
@@ -566,6 +682,7 @@ export function RichBulletEditor({
       <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-subtle focus-within:border-sky-500 focus-within:ring-1 focus-within:ring-sky-500 transition-all">
         {/* Rich Formatting Toolbar */}
         <div className="flex items-center space-x-1 px-3 py-1.5 bg-slate-50 border-b border-slate-200 text-slate-600 text-xs select-none">
+          {/* Formatting tools */}
           <button
             type="button"
             onMouseDown={(e) => {
@@ -575,7 +692,7 @@ export function RichBulletEditor({
             className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
             title="Bold (Ctrl+B)"
           >
-            <Bold className="w-3.5 h-3.5" />
+            <Bold className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -586,7 +703,7 @@ export function RichBulletEditor({
             className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
             title="Italic (Ctrl+I)"
           >
-            <Italic className="w-3.5 h-3.5" />
+            <Italic className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -597,7 +714,7 @@ export function RichBulletEditor({
             className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
             title="Underline (Ctrl+U)"
           >
-            <Underline className="w-3.5 h-3.5" />
+            <Underline className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -608,7 +725,46 @@ export function RichBulletEditor({
             className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
             title="Strikethrough"
           >
-            <Strikethrough className="w-3.5 h-3.5" />
+            <Strikethrough className="w-4 h-4" />
+          </button>
+
+          {/* Divider */}
+          <div className="h-4 w-px bg-slate-200 mx-1" />
+
+          {/* Undo */}
+          <button
+            type="button"
+            disabled={!canUndo}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleUndo();
+            }}
+            className={`p-1.5 rounded transition-colors ${
+              canUndo
+                ? "hover:bg-white hover:text-slate-900 cursor-pointer text-slate-700"
+                : "text-slate-300 cursor-not-allowed opacity-40"
+            }`}
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="w-4 h-4" />
+          </button>
+
+          {/* Redo */}
+          <button
+            type="button"
+            disabled={!canRedo}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              handleRedo();
+            }}
+            className={`p-1.5 rounded transition-colors ${
+              canRedo
+                ? "hover:bg-white hover:text-slate-900 cursor-pointer text-slate-700"
+                : "text-slate-300 cursor-not-allowed opacity-40"
+            }`}
+            title="Redo (Ctrl+Y)"
+          >
+            <Redo2 className="w-4 h-4" />
           </button>
         </div>
 
@@ -617,7 +773,7 @@ export function RichBulletEditor({
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          onInput={handleInput}
+          onInput={() => handleInput(false)}
           onKeyDown={handleKeyDown}
           onKeyUp={() => sanitizeEditor()}
           onBlur={() => sanitizeEditor()}
@@ -659,28 +815,28 @@ export function RichBulletEditor({
               }
             }
           }}
-          className="w-full p-3 min-h-[90px] outline-none cursor-text"
+          className="w-full p-3.5 min-h-[105px] outline-none cursor-text text-sm text-slate-900 leading-relaxed [&_li]:text-sm [&_li]:text-slate-900 [&_li]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5"
         />
       </div>
 
       {/* Vertical Scroll-down Suggestion Bullets at the bottom */}
       {activeSuggestions.length > 0 && (
-        <div className="mt-2.5 pt-2 border-t border-slate-100">
-          <div className="flex items-center justify-between mb-2 px-0.5">
-            <span className="text-[11px] font-semibold text-slate-600 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-sky-500" />
+        <div className="mt-3 pt-2.5 border-t border-slate-100">
+          <div className="flex items-center justify-between mb-2.5 px-0.5">
+            <span className="text-xs sm:text-sm font-semibold text-slate-700 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-sky-500" />
               Suggested Bullets
             </span>
           </div>
 
-          <div className="overflow-y-auto max-h-44 pr-1.5 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
+          <div className="overflow-y-auto max-h-52 pr-1.5 space-y-2 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
             {activeSuggestions.map((item, idx) => {
               const isAdded = addedIndex === idx;
               return (
                 <div
                   key={idx}
                   onClick={() => handleInsertSuggestion(item, idx)}
-                  className={`group w-full p-2.5 rounded-lg border text-left cursor-pointer transition-all flex items-start justify-between gap-3 ${
+                  className={`group w-full p-3 rounded-lg border text-left cursor-pointer transition-all flex items-start justify-between gap-3 ${
                     isAdded
                       ? "bg-sky-50 border-sky-400 ring-1 ring-sky-300"
                       : "bg-white hover:bg-sky-50/40 border-slate-200 hover:border-sky-300 shadow-2xs"
@@ -688,28 +844,24 @@ export function RichBulletEditor({
                   title="Click to insert this bullet into your CV"
                 >
                   <div className="flex-1">
-                    <p className="text-[11.5px] text-slate-700 leading-snug">
+                    <p className="text-sm text-slate-700 leading-relaxed">
                       {item}
                     </p>
                   </div>
                   <button
                     type="button"
-                    className={`flex-shrink-0 px-2 py-1 rounded-md text-[10px] font-semibold flex items-center gap-1 transition-colors ${
+                    title={isAdded ? "Added to CV" : "Add to CV"}
+                    aria-label={isAdded ? "Added to CV" : "Add to CV"}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-2xs ${
                       isAdded
-                        ? "bg-sky-600 text-white"
-                        : "bg-sky-50 text-sky-700 group-hover:bg-sky-100 border border-sky-200"
+                        ? "bg-emerald-600 text-white"
+                        : "bg-sky-600 hover:bg-sky-700 text-white hover:scale-105 active:scale-95"
                     }`}
                   >
                     {isAdded ? (
-                      <>
-                        <Check className="w-3 h-3" />
-                        <span>Added</span>
-                      </>
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                     ) : (
-                      <>
-                        <Plus className="w-3 h-3 text-sky-600" />
-                        <span>Add</span>
-                      </>
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                     )}
                   </button>
                 </div>

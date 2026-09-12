@@ -10,12 +10,12 @@ export function MobileViewToggle() {
   return (
     <>
       {/* Top Segmented Control (Visible only on mobile/tablet < 1024px) */}
-      <div className="lg:hidden w-full bg-white border-b border-slate-200 px-4 py-2 sticky top-16 z-30 flex items-center justify-center">
-        <div className="flex w-full max-w-sm bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
+      <div className="lg:hidden w-full bg-white border-b border-slate-200 px-3 py-1.5 sticky top-14 sm:top-16 z-30 flex items-center justify-center">
+        <div className="flex w-full max-w-sm bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
           <button
             type="button"
             onClick={() => setMobileView("form")}
-            className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 rounded-md font-semibold transition-all ${
+            className={`flex-1 flex items-center justify-center space-x-1.5 py-1 rounded-md font-semibold transition-all ${
               mobileView === "form"
                 ? "bg-white text-sky-700 shadow-subtle border border-slate-200"
                 : "text-slate-600 hover:text-slate-900"
@@ -27,7 +27,7 @@ export function MobileViewToggle() {
           <button
             type="button"
             onClick={() => setMobileView("preview")}
-            className={`flex-1 flex items-center justify-center space-x-1.5 py-1.5 rounded-md font-semibold transition-all ${
+            className={`flex-1 flex items-center justify-center space-x-1.5 py-1 rounded-md font-semibold transition-all ${
               mobileView === "preview"
                 ? "bg-white text-sky-700 shadow-subtle border border-slate-200"
                 : "text-slate-600 hover:text-slate-900"
