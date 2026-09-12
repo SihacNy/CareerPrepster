@@ -18,11 +18,8 @@ export function Header({ currentStage = 1 }: HeaderProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo & Title */}
           <Link href="/" className="flex items-center space-x-2.5 group">
-            <div className="w-9 h-9 rounded-lg bg-sky-600 flex items-center justify-center text-white transition-colors group-hover:bg-sky-700">
-              <FileText className="w-5 h-5" />
-            </div>
             <div>
-              <span className="font-semibold text-lg text-slate-900 tracking-tight">
+              <span className="font-semibold text-2xl text-slate-900 tracking-tight">
                 CareerPrepster
               </span>
             </div>
