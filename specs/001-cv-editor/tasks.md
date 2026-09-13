@@ -145,19 +145,24 @@
 - [x] T041 [P] [US7] Implement `@react-pdf/renderer` document definition for `ModernCompact` layout in `frontend/src/lib/pdf/ModernPdfDocument.tsx`
 - [x] T042 [US7] Build client-side PDF download trigger component with loading feedback in `frontend/src/components/export/ExportPdfButton.tsx`
 - [x] T043 [US7] Wire export trigger into `Header.tsx` and `StageActions.tsx`
+- [x] T043a [US7] Create dedicated Stage 3 final review & export page at `frontend/src/app/editor/export/page.tsx` and `frontend/src/components/export/ExportStage.tsx`
+- [x] T043b [US7] Build fullscreen interactive draft view modal with zoom controls and print support in `frontend/src/components/export/DraftViewModal.tsx`
 
-**Checkpoint**: Client-side vector PDF generation working across both templates.
+**Checkpoint**: Client-side vector PDF generation working across both templates with dedicated Stage 3 export screen and full-page preview modal.
 
 ---
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-**Purpose**: Responsive polish, accessibility, keyboard navigation, and demo validation.
+**Purpose**: Responsive polish, accessibility, keyboard navigation, landing page features, and demo validation.
 
 - [x] T044 [P] Verify responsive viewport styling across mobile (375px), tablet (768px), and desktop (1280px+)
 - [x] T045 [P] Audit all icons to ensure zero Unicode emojis are used and all icons originate from `lucide-react`
 - [x] T046 Verify color consistency across all screens (pure white cards, `#0284C7` light blue accents, no glow effects)
 - [x] T047 Test end-to-end user journeys for both Flow A (Scratch) and Flow B (Upload & Audit) with sample data
+- [x] T048 [P] Build interactive FAQ accordion in `frontend/src/components/landing/FAQSection.tsx` with brand theme and collapsed default state
+- [x] T049 [P] Build multi-column responsive footer in `frontend/src/components/navigation/Footer.tsx`
+- [x] T050 [P] Enhance landing page with symmetrical hero illustrations (`hire.svg`, `resume.svg`) and interactive 3-pillar feature cards in `frontend/src/app/page.tsx`
 
 ---
 

@@ -132,26 +132,32 @@ CareerPrepster/
     └── src/
         ├── app/
         │   ├── layout.tsx
-        │   ├── page.tsx           # Landing / Dashboard
+        │   ├── page.tsx           # Landing / Dashboard with symmetrical hero illustrations & FAQ
         │   ├── api/
         │   │   └── cvs/
         │   │       └── import/
         │   │           └── route.ts  # [TEMP] Server-side PDF/DOCX text extraction (migrates to Express)
         │   └── editor/
         │       ├── page.tsx       # Stage 1: Dual-pane CV Editor (Form + Live Preview + "Continue" bar)
-        │       └── ats/
-        │           └── page.tsx   # Stage 2: Dedicated ATS Scoring Stage (Audit, 4 Pillars, JD matcher)
+        │       ├── ats/
+        │       │   └── page.tsx   # Stage 2: Dedicated ATS Scoring Stage (Audit, 4 Pillars, JD matcher)
+        │       └── export/
+        │           └── page.tsx   # Stage 3: Dedicated Final Review & Vector PDF Export Stage
         ├── components/
         │   ├── navigation/
-        │   │   ├── EditorStepper.tsx     # Progress indicator: [1. Author CV] -> [2. ATS Review] -> [3. Export]
-        │   │   └── Header.tsx            # Logo, Draft Status indicator, User Profile / Auth Modal trigger
+        │   │   ├── EditorStepper.tsx     # Progress indicator: [1. Author CV] -> [2. ATS Review] -> [3. Export PDF]
+        │   │   ├── Header.tsx            # Logo, Draft Status indicator, Profile & Primary Sign In button
+        │   │   └── Footer.tsx            # Multi-column footer with brand, resources, and privacy guarantees
         │   ├── auth/
-        │   │   └── AuthModal.tsx         # 1-Click Google & GitHub OAuth popover
+        │   │   └── AuthModal.tsx         # 1-Click Google & GitHub OAuth modal with clean ShieldCheck icon
         │   ├── onboarding/
         │   │   ├── OnboardingModal.tsx   # "Create from Scratch" vs "Upload Existing"
         │   │   └── UploadDropzone.tsx    # Drag-and-drop PDF/DOCX file uploader
+        │   ├── landing/
+        │   │   └── FAQSection.tsx        # Interactive FAQ accordion with ambient dark theme
         │   ├── editor/
         │   │   ├── CVForm.tsx            # Structured inputs (Education, Projects, Skills)
+        │   │   ├── DateRangePicker.tsx   # Standardized date picker with "Present" toggle
         │   │   ├── RoleAutocomplete.tsx  # Target role search & selection
         │   │   ├── TemplateBulletDrawer.tsx # Browse & import role-specific starter bullets
         │   │   ├── BulletInput.tsx       # Achievement bullet row with explicit 'Refine with AI' button
@@ -159,20 +165,28 @@ CareerPrepster/
         │   │   ├── MobileViewToggle.tsx  # Mobile switcher: [ Edit Form ] vs [ Live Preview ]
         │   │   └── ContinueActionBar.tsx # Sticky bottom bar: [Save Draft] and [Continue to ATS Review →]
         │   ├── preview/
-        │   │   ├── LivePreview.tsx       # Live rendered resume viewport
+        │   │   ├── LivePreview.tsx       # Live rendered resume viewport with template switcher
         │   │   └── templates/            # ATS-compliant layout templates
         │   │       ├── ClassicAts.tsx
         │   │       └── ModernCompact.tsx
-        │   └── ats/
-        │       ├── ATSScoringStage.tsx    # Main Stage 2 review layout
-        │       ├── ScoreGauge.tsx         # 0-100 animated score ring
-        │       ├── PillarBreakdown.tsx    # 4-pillar cards (Parsability, Impact, Skills, Readability)
-        │       ├── JobDescriptionInput.tsx# Target JD text input & keyword matcher
-        │       ├── ActionableFindingsList.tsx # Categorized issues (Critical, Suggestions, Passed)
-        │       └── StageActions.tsx       # [← Back to Edit] and [Download ATS PDF →]
+        │   ├── ats/
+        │   │   ├── ATSScoringStage.tsx    # Main Stage 2 review layout
+        │   │   ├── ScoreGauge.tsx         # 0-100 animated score ring
+        │   │   ├── PillarBreakdown.tsx    # 4-pillar cards (Parsability, Impact, Skills, Brevity)
+        │   │   ├── JobDescriptionInput.tsx# Target JD text input & keyword matcher
+        │   │   ├── ActionableFindingsList.tsx # Categorized issues (Critical, Suggestions, Passed)
+        │   │   └── StageActions.tsx       # [← Back to Edit] and [Continue to Export PDF →]
+        │   └── export/
+        │       ├── ExportStage.tsx        # Stage 3 final draft sheet layout & actions
+        │       ├── ExportPdfButton.tsx    # @react-pdf client generator with loading state
+        │       └── DraftViewModal.tsx     # Fullscreen interactive draft modal with zoom & print
         └── lib/
             ├── api.ts                    # Fetch client for backend
-            └── store.ts                  # Client CV state & localStorage draft caching
+            ├── auth.tsx                  # Client auth state & OAuth mock/live integration
+            ├── store.tsx                 # Client CV state & localStorage draft caching
+            └── pdf/
+                ├── ClassicPdfDocument.tsx # Vector PDF layout for Harvard Classic
+                └── ModernPdfDocument.tsx  # Vector PDF layout for Jake's Tech
 ```
 
 ---
@@ -233,8 +247,9 @@ The platform supports two distinct user onboarding pathways with seamless transi
    │  Review 0-100 Score Gauge, 4 Pillar breakdown, optional JD matcher
    │  Use "Fix in Editor" or "← Back to Editor" if adjustments needed
    ▼
-[Stage 3: Export & Save]
-   │  Click "Download ATS-Friendly PDF"
+[Stage 3: Final Review & Export (/editor/export)]
+   │  Inspect full-screen draft preview sheet with zoom & print
+   │  Click "Download ATS PDF" for selectable-text vector PDF output
 ```
 
 #### Flow B: "Upload Existing Resume" (Audit-First Diagnostic Flow)
@@ -253,8 +268,9 @@ The platform supports two distinct user onboarding pathways with seamless transi
    │  Student enhances bullets, updates metrics, and adjusts layout
    │  User clicks "Continue to ATS Check →" (Score updates, e.g. 58 -> 88!)
    ▼
-[Stage 3: Export & Save]
-   │  Click "Download ATS-Friendly PDF"
+[Stage 3: Final Review & Export (/editor/export)]
+   │  Inspect full-screen draft preview sheet with zoom & print
+   │  Click "Download ATS PDF" for selectable-text vector PDF output
 ```
 
 ### 5. Responsive Design & Mobile Screen Adaptation
