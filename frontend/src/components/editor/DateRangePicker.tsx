@@ -85,14 +85,14 @@ function CustomDropdown({ value, options, placeholder, onChange }: CustomDropdow
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full h-[42px] flex items-center justify-between text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 outline-none hover:border-slate-300 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
+        className="w-full h-[34px] flex items-center justify-between text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 outline-none hover:border-slate-300 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
         aria-expanded={isOpen}
       >
         <span className={value ? "font-medium text-slate-900 truncate" : "text-slate-400 truncate"}>
           {value || placeholder}
         </span>
         <ChevronDown
-          className={`w-4 h-4 shrink-0 text-slate-400 transition-transform duration-150 ml-1.5 ${
+          className={`w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform duration-150 ml-1 ${
             isOpen ? "rotate-180 text-sky-600" : ""
           }`}
         />
@@ -105,7 +105,7 @@ function CustomDropdown({ value, options, placeholder, onChange }: CustomDropdow
               onChange("");
               setIsOpen(false);
             }}
-            className="px-3.5 py-2 text-sm text-slate-400 hover:bg-slate-50 cursor-pointer italic"
+            className="px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-50 cursor-pointer italic"
           >
             Clear
           </div>
@@ -116,8 +116,8 @@ function CustomDropdown({ value, options, placeholder, onChange }: CustomDropdow
                 onChange(opt);
                 setIsOpen(false);
               }}
-              className={`px-3.5 py-2 text-sm cursor-pointer hover:bg-sky-50 hover:text-sky-700 transition-colors ${
-                value === opt ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-700"
+              className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 hover:text-sky-700 transition-colors ${
+                opt === value ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-700"
               }`}
             >
               {opt}
@@ -177,11 +177,11 @@ export function DateRangePicker({
 
   return (
     <div className="w-full space-y-2.5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         {/* Start Date UI */}
         <div className="flex flex-col">
-          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5 mb-1.5">
-            <Calendar className="w-4 h-4 text-slate-400" />
+          <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <span>{startLabel}</span>
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -202,13 +202,13 @@ export function DateRangePicker({
 
         {/* End Date UI */}
         <div className="flex flex-col">
-          <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5 mb-1.5">
-            <Calendar className="w-4 h-4 text-slate-400" />
+          <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <span>{endLabel}</span>
           </label>
 
           {isCurrent ? (
-            <div className="w-full h-[42px] text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3.5 flex items-center shadow-2xs">
+            <div className="w-full h-[34px] text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 flex items-center shadow-2xs">
               <span>Present (Ongoing)</span>
             </div>
           ) : (
@@ -236,12 +236,12 @@ export function DateRangePicker({
           <button
             type="button"
             onClick={handleToggleCurrent}
-            className="flex items-center space-x-2 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors select-none focus:outline-none"
+            className="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 transition-colors select-none focus:outline-none cursor-pointer"
           >
             {isCurrent ? (
-              <CheckSquare className="w-4 h-4 text-sky-600" />
+              <CheckSquare className="w-3.5 h-3.5 text-sky-600" />
             ) : (
-              <Square className="w-4 h-4 text-slate-400" />
+              <Square className="w-3.5 h-3.5 text-slate-400" />
             )}
             <span>{currentLabel}</span>
           </button>

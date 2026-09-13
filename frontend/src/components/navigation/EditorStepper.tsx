@@ -34,7 +34,7 @@ export function EditorStepper({ currentStage }: EditorStepperProps) {
   ];
 
   return (
-    <div className="w-full bg-white border-b border-slate-200">
+    <div className="relative z-20 w-full bg-white border-b border-slate-200">
       <div className="max-w-3xl mx-auto px-3 sm:px-6 lg:px-8">
         <nav aria-label="Progress" className="py-2.5 sm:py-3.5">
           <ol className="flex items-center justify-between w-full">

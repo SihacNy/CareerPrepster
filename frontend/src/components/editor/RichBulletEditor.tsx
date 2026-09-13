@@ -17,7 +17,7 @@ interface RichBulletEditorProps {
 function markdownToHtml(bullet: string): string {
   if (!bullet) return "<br>";
   let clean = bullet.replace(/^[•\-\*]\s*/, "");
-  
+
   // Escape HTML entities first
   clean = clean
     .replace(/&/g, "&amp;")
@@ -363,9 +363,8 @@ export function RichBulletEditor({
     let ul = editor.querySelector("ul");
     if (!ul) {
       const currentContent = editor.innerHTML;
-      editor.innerHTML = `<ul class="${UL_BULLET_CLASS}"><li>${
-        currentContent.trim() ? currentContent : "<br>"
-      }</li></ul>`;
+      editor.innerHTML = `<ul class="${UL_BULLET_CLASS}"><li>${currentContent.trim() ? currentContent : "<br>"
+        }</li></ul>`;
       return;
     }
 
@@ -662,7 +661,7 @@ export function RichBulletEditor({
     <div className="w-full">
       {/* Header with Title and "Refine with AI" on the right */}
       <div className="flex items-center justify-between pb-1.5 mb-2">
-        <span className="text-sm font-semibold text-slate-700">
+        <span className="text-xs font-semibold text-slate-700">
           {label}
         </span>
 
@@ -670,10 +669,10 @@ export function RichBulletEditor({
         <button
           type="button"
           onClick={handleTriggerRefine}
-          className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold text-sky-700 bg-white hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600 transition-colors shadow-subtle cursor-pointer"
+          className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold text-sky-700 bg-white hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600 transition-colors shadow-subtle cursor-pointer group"
           title="Highlight a bullet and refine with AI STAR/XYZ frameworks"
         >
-          <PenLine className="w-3.5 h-3.5 mr-1" />
+          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
           <span>Refine with AI</span>
         </button>
       </div>
@@ -692,7 +691,7 @@ export function RichBulletEditor({
             className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
             title="Bold (Ctrl+B)"
           >
-            <Bold className="w-4 h-4" />
+            <Bold className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
@@ -703,7 +702,7 @@ export function RichBulletEditor({
             className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
             title="Italic (Ctrl+I)"
           >
-            <Italic className="w-4 h-4" />
+            <Italic className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
@@ -714,7 +713,7 @@ export function RichBulletEditor({
             className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
             title="Underline (Ctrl+U)"
           >
-            <Underline className="w-4 h-4" />
+            <Underline className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
@@ -725,7 +724,7 @@ export function RichBulletEditor({
             className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
             title="Strikethrough"
           >
-            <Strikethrough className="w-4 h-4" />
+            <Strikethrough className="w-3.5 h-3.5" />
           </button>
 
           {/* Divider */}
@@ -739,14 +738,13 @@ export function RichBulletEditor({
               e.preventDefault();
               handleUndo();
             }}
-            className={`p-1.5 rounded transition-colors ${
-              canUndo
-                ? "hover:bg-white hover:text-slate-900 cursor-pointer text-slate-700"
-                : "text-slate-300 cursor-not-allowed opacity-40"
-            }`}
+            className={`p-1.5 rounded transition-colors ${canUndo
+              ? "hover:bg-white hover:text-slate-900 cursor-pointer text-slate-700"
+              : "text-slate-300 cursor-not-allowed opacity-40"
+              }`}
             title="Undo (Ctrl+Z)"
           >
-            <Undo2 className="w-4 h-4" />
+            <Undo2 className="w-3.5 h-3.5" />
           </button>
 
           {/* Redo */}
@@ -757,14 +755,13 @@ export function RichBulletEditor({
               e.preventDefault();
               handleRedo();
             }}
-            className={`p-1.5 rounded transition-colors ${
-              canRedo
-                ? "hover:bg-white hover:text-slate-900 cursor-pointer text-slate-700"
-                : "text-slate-300 cursor-not-allowed opacity-40"
-            }`}
+            className={`p-1.5 rounded transition-colors ${canRedo
+              ? "hover:bg-white hover:text-slate-900 cursor-pointer text-slate-700"
+              : "text-slate-300 cursor-not-allowed opacity-40"
+              }`}
             title="Redo (Ctrl+Y)"
           >
-            <Redo2 className="w-4 h-4" />
+            <Redo2 className="w-3.5 h-3.5" />
           </button>
         </div>
 
@@ -815,7 +812,7 @@ export function RichBulletEditor({
               }
             }
           }}
-          className="w-full p-3.5 min-h-[105px] outline-none cursor-text text-sm text-slate-900 leading-relaxed [&_li]:text-sm [&_li]:text-slate-900 [&_li]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5"
+          className="w-full p-3 min-h-[95px] outline-none cursor-text text-xs text-slate-900 leading-relaxed [&_li]:text-xs [&_li]:text-slate-900 [&_li]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5"
         />
       </div>
 
@@ -823,8 +820,8 @@ export function RichBulletEditor({
       {activeSuggestions.length > 0 && (
         <div className="mt-3 pt-2.5 border-t border-slate-100">
           <div className="flex items-center justify-between mb-2.5 px-0.5">
-            <span className="text-xs sm:text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-sky-500" />
+            <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-sky-500" />
               Suggested Bullets
             </span>
           </div>
@@ -836,15 +833,14 @@ export function RichBulletEditor({
                 <div
                   key={idx}
                   onClick={() => handleInsertSuggestion(item, idx)}
-                  className={`group w-full p-3 rounded-lg border text-left cursor-pointer transition-all flex items-start justify-between gap-3 ${
-                    isAdded
-                      ? "bg-sky-50 border-sky-400 ring-1 ring-sky-300"
-                      : "bg-white hover:bg-sky-50/40 border-slate-200 hover:border-sky-300 shadow-2xs"
-                  }`}
+                  className={`group w-full p-2.5 rounded-lg border text-left cursor-pointer transition-all flex items-start justify-between gap-3 ${isAdded
+                    ? "bg-sky-50 border-sky-400 ring-1 ring-sky-300"
+                    : "bg-white hover:bg-sky-50/40 border-slate-200 hover:border-sky-300 shadow-2xs"
+                    }`}
                   title="Click to insert this bullet into your CV"
                 >
                   <div className="flex-1">
-                    <p className="text-sm text-slate-700 leading-relaxed">
+                    <p className="text-xs text-slate-700 leading-relaxed">
                       {item}
                     </p>
                   </div>
@@ -852,11 +848,10 @@ export function RichBulletEditor({
                     type="button"
                     title={isAdded ? "Added to CV" : "Add to CV"}
                     aria-label={isAdded ? "Added to CV" : "Add to CV"}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-2xs ${
-                      isAdded
-                        ? "bg-emerald-600 text-white"
-                        : "bg-sky-600 hover:bg-sky-700 text-white hover:scale-105 active:scale-95"
-                    }`}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-2xs ${isAdded
+                      ? "bg-emerald-600 text-white"
+                      : "bg-sky-600 hover:bg-sky-700 text-white hover:scale-105 active:scale-95"
+                      }`}
                   >
                     {isAdded ? (
                       <Check className="w-3.5 h-3.5 stroke-[2.5]" />

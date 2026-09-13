@@ -167,7 +167,7 @@ export function CVForm() {
   const allOpen = Object.values(openSections).every(Boolean);
 
   return (
-    <div className="w-full pb-12">
+    <div className="w-full pb-12" style={{ zoom: 1.1 }}>
       {/* Quick Section Navigation & Accordion Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3 px-1">
         {/* Jump to section dropdown */}
@@ -240,9 +240,7 @@ export function CVForm() {
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-xl border border-slate-100 flex flex-col items-center text-center space-y-4">
-            <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center text-rose-600">
-              <Trash2 className="w-6 h-6" />
-            </div>
+            <Trash2 className="w-9 h-9 text-rose-600" />
 
             <div className="space-y-1">
               <h3 className="text-base font-bold text-slate-900">Clear all CV content?</h3>

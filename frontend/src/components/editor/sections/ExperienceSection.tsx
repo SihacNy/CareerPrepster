@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Briefcase, Plus, Trash2, ChevronDown } from "lucide-react";
+import { Briefcase, Plus, Trash2, ChevronDown, Pencil } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { ExperienceItem } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
@@ -26,6 +26,14 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
   const { cvData, setCVData } = useCV();
   const { experience } = cvData;
   const [internalOpen, setInternalOpen] = useState(true);
+  const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({});
+
+  const toggleEntryCollapse = (id: string) => {
+    setCollapsedEntries((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
   const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
   const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
@@ -45,6 +53,10 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
       ...prev,
       experience: [...prev.experience, newEntry],
     }));
+    setCollapsedEntries((prev) => ({
+      ...prev,
+      [newEntry.id]: false,
+    }));
   };
 
   const handleUpdateEntry = (id: string, field: keyof ExperienceItem, value: any) => {
@@ -60,47 +72,6 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
     setCVData((prev) => ({
       ...prev,
       experience: prev.experience.filter((item) => item.id !== id),
-    }));
-  };
-
-  const handleAddBullet = (expId: string) => {
-    setCVData((prev) => ({
-      ...prev,
-      experience: prev.experience.map((item) =>
-        item.id === expId
-          ? { ...item, bulletPoints: [...item.bulletPoints, ""] }
-          : item
-      ),
-    }));
-  };
-
-  const handleUpdateBullet = (expId: string, bulletIdx: number, val: string) => {
-    setCVData((prev) => ({
-      ...prev,
-      experience: prev.experience.map((item) =>
-        item.id === expId
-          ? {
-              ...item,
-              bulletPoints: item.bulletPoints.map((bp, i) =>
-                i === bulletIdx ? val : bp
-              ),
-            }
-          : item
-      ),
-    }));
-  };
-
-  const handleRemoveBullet = (expId: string, bulletIdx: number) => {
-    setCVData((prev) => ({
-      ...prev,
-      experience: prev.experience.map((item) =>
-        item.id === expId
-          ? {
-              ...item,
-              bulletPoints: item.bulletPoints.filter((_, i) => i !== bulletIdx),
-            }
-          : item
-      ),
     }));
   };
 
@@ -145,85 +116,134 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
       </div>
 
       {isSectionOpen && (
-        <div className="space-y-6">
-        {experience.map((exp) => (
-          <div
-            key={exp.id}
-            className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 relative group"
-          >
-            <button
-              type="button"
-              onClick={() => handleRemoveEntry(exp.id)}
-              className="absolute top-3 right-3 text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-white transition-colors"
-              title="Remove experience entry"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Company / Organization <span className="text-red-500 font-semibold">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={exp.company}
-                  onChange={(e) => handleUpdateEntry(exp.id, "company", e.target.value)}
-                  placeholder="e.g. Acme Tech Solutions"
-                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Job Title / Role <span className="text-red-500 font-semibold">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={exp.role}
-                  onChange={(e) => handleUpdateEntry(exp.id, "role", e.target.value)}
-                  placeholder="e.g. Junior Frontend Developer"
-                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Location</label>
-                <input
-                  type="text"
-                  value={exp.location}
-                  onChange={(e) => handleUpdateEntry(exp.id, "location", e.target.value)}
-                  placeholder="e.g. Phnom Penh, Cambodia (or Remote)"
-                  className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-lg px-3.5 py-2.5 outline-none focus:ring-1 focus:ring-sky-500"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <DateRangePicker
-                  startDate={exp.startDate}
-                  endDate={exp.endDate}
-                  isCurrent={exp.isCurrent}
-                  onStartDateChange={(val) => handleUpdateEntry(exp.id, "startDate", val)}
-                  onEndDateChange={(val) => handleUpdateEntry(exp.id, "endDate", val)}
-                  onIsCurrentChange={(isCurrent) => handleUpdateEntry(exp.id, "isCurrent", isCurrent)}
-                  currentLabel="I currently work here"
-                />
-              </div>
-            </div>
-
-            {/* Bullets with Sora-like Rich Formatting & Refine with AI */}
-            <div className="pt-2 border-t border-slate-200/80">
-              <RichBulletEditor
-                label="Key Achievements & Responsibilities"
-                bullets={exp.bulletPoints || []}
-                suggestions={EXPERIENCE_SUGGESTIONS}
-                onChange={(newBullets) => handleUpdateEntry(exp.id, "bulletPoints", newBullets)}
-                onRefineWithAI={onRefineBullet}
-              />
-            </div>
+        experience.length === 0 ? (
+          <div className="py-7 px-4 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+            <Briefcase className="w-8 h-8 text-slate-300 mx-auto mb-2 stroke-[1.5]" />
+            <p className="text-xs font-medium text-slate-500">
+              No work experience added yet
+            </p>
           </div>
-        ))}
-        </div>
+        ) : (
+          <div className="space-y-6">
+          {experience.map((exp, index) => {
+            const isCollapsed = !!collapsedEntries[exp.id];
+
+            return (
+              <div
+                key={exp.id}
+                className={`rounded-xl border border-slate-200 bg-slate-50/50 relative group transition-all ${
+                  isCollapsed ? "px-3 py-2 space-y-0" : "p-4 space-y-3"
+                }`}
+              >
+                {/* Entry Header: Summary title on left, Edit & Trash on right */}
+                <div
+                  className={`flex items-center justify-between ${
+                    !isCollapsed ? "pb-3 border-b border-slate-200/70" : "py-0.5"
+                  }`}
+                >
+                  <div
+                    onClick={() => toggleEntryCollapse(exp.id)}
+                    className="flex items-center gap-2 cursor-pointer select-none group/title flex-1 min-w-0 pr-2"
+                    title={isCollapsed ? "Click to edit" : "Click to collapse"}
+                  >
+                    <span className="text-xs font-medium text-slate-700 truncate group-hover/title:text-sky-600 transition-colors">
+                      {exp.company || exp.role || `Experience #${index + 1}`}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleEntryCollapse(exp.id)}
+                      className={`p-1 rounded hover:bg-white transition-colors ${
+                        !isCollapsed ? "text-sky-600" : "text-slate-400 hover:text-slate-700"
+                      }`}
+                      title={isCollapsed ? "Edit entry" : "Collapse entry"}
+                      aria-label={isCollapsed ? "Edit entry" : "Collapse entry"}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEntry(exp.id)}
+                      className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-white transition-colors"
+                      title="Remove experience entry"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {!isCollapsed && (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                          Company / Organization <span className="text-red-500 font-semibold">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={exp.company}
+                          onChange={(e) => handleUpdateEntry(exp.id, "company", e.target.value)}
+                          placeholder="e.g. Acme Tech Solutions"
+                          className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                          Job Title / Role <span className="text-red-500 font-semibold">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={exp.role}
+                          onChange={(e) => handleUpdateEntry(exp.id, "role", e.target.value)}
+                          placeholder="e.g. Junior Frontend Developer"
+                          className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Location</label>
+                        <input
+                          type="text"
+                          value={exp.location}
+                          onChange={(e) => handleUpdateEntry(exp.id, "location", e.target.value)}
+                          placeholder="e.g. Phnom Penh, Cambodia (or Remote)"
+                          className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
+                        />
+                      </div>
+
+                      <div className="col-span-2">
+                        <DateRangePicker
+                          startDate={exp.startDate}
+                          endDate={exp.endDate}
+                          isCurrent={exp.isCurrent}
+                          onStartDateChange={(val) => handleUpdateEntry(exp.id, "startDate", val)}
+                          onEndDateChange={(val) => handleUpdateEntry(exp.id, "endDate", val)}
+                          onIsCurrentChange={(isCurrent) => handleUpdateEntry(exp.id, "isCurrent", isCurrent)}
+                          currentLabel="I currently work here"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Bullets with Sora-like Rich Formatting & Refine with AI */}
+                    <div className="pt-2 border-t border-slate-200/80">
+                      <RichBulletEditor
+                        label="Key Achievements & Responsibilities"
+                        bullets={exp.bulletPoints || []}
+                        suggestions={EXPERIENCE_SUGGESTIONS}
+                        onChange={(newBullets) => handleUpdateEntry(exp.id, "bulletPoints", newBullets)}
+                        onRefineWithAI={onRefineBullet}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
+          </div>
+        )
       )}
     </div>
   );

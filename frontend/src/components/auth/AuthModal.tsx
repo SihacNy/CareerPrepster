@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, ShieldCheck, AlertCircle, LogOut } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth";
@@ -13,6 +14,11 @@ interface AuthModalProps {
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { user, loginWithProfile, logout } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -40,10 +46,10 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     },
   });
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="relative w-full max-w-md bg-white rounded-xl border border-slate-200 shadow-xl p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-150">
         {/* Close Button */}
         <button
@@ -165,6 +171,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

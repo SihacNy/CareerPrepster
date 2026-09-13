@@ -4,7 +4,7 @@ import React from "react";
 import { useCV } from "@/lib/store";
 import { ClassicAts } from "./templates/ClassicAts";
 import { ModernCompact } from "./templates/ModernCompact";
-import { Layers, Eye, Sparkles } from "lucide-react";
+import { Eye } from "lucide-react";
 
 export function LivePreview() {
   const { cvData, setTemplateId } = useCV();
@@ -23,20 +23,22 @@ export function LivePreview() {
           <button
             type="button"
             onClick={() => setTemplateId("classic")}
-            className={`px-3 py-1.5 rounded-lg transition-all ${cvData.templateId === "classic"
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              cvData.templateId === "classic"
                 ? "bg-white text-sky-700 shadow-subtle border border-slate-200/80 font-semibold"
                 : "text-slate-600 hover:text-slate-900"
-              }`}
+            }`}
           >
             Harvard Classic
           </button>
           <button
             type="button"
             onClick={() => setTemplateId("modern")}
-            className={`px-3 py-1.5 rounded-lg transition-all ${cvData.templateId === "modern"
+            className={`px-3 py-1.5 rounded-lg transition-all ${
+              cvData.templateId === "modern"
                 ? "bg-white text-sky-700 shadow-subtle border border-slate-200/80 font-semibold"
                 : "text-slate-600 hover:text-slate-900"
-              }`}
+            }`}
           >
             Jake&apos;s Tech
           </button>

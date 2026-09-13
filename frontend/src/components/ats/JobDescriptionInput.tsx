@@ -78,7 +78,7 @@ export function JobDescriptionInput({
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-card mb-6">
+    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-card mb-6" style={{ zoom: 1.1 }}>
       <div className="flex items-center space-x-2.5 pb-2.5 border-b border-slate-100 mb-3.5">
         <Target className="w-5 h-5 text-sky-600" />
         <h3 className="text-sm sm:text-base font-bold text-slate-900">

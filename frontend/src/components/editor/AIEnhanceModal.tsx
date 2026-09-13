@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Check, PenLine, Loader2, ArrowRight } from "lucide-react";
+import { X, Check, Loader2, ArrowRight } from "lucide-react";
 import { generateMockBulletEnhancements, AISuggestion } from "@/lib/mockAI";
 
 interface AIEnhanceModalProps {
@@ -52,18 +52,13 @@ export function AIEnhanceModal({
       <div className="relative w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-card p-6 sm:p-7 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-start justify-between pb-4 border-b border-slate-100">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center">
-              <PenLine className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Refine with AI (STAR &amp; XYZ Wording)
-              </h2>
-              <p className="text-xs text-slate-500">
-                Turn plain descriptions into employer-aligned quantifiable achievements.
-              </p>
-            </div>
+          <div>
+            <h2 className="text-base font-bold text-slate-900">
+              Refine with AI (STAR &amp; XYZ Wording)
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Turn plain descriptions into employer-aligned quantifiable achievements.
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -107,7 +102,7 @@ export function AIEnhanceModal({
                       onClick={() => setSelectedId(suggestion.id)}
                       className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                         isSelected
-                          ? "border-sky-500 bg-sky-50/40 ring-1 ring-sky-500"
+                          ? "border-sky-500 bg-sky-50/30"
                           : "border-slate-200 bg-white hover:border-slate-300"
                       }`}
                     >
@@ -116,8 +111,8 @@ export function AIEnhanceModal({
                           {suggestion.type}
                         </span>
                         {isSelected && (
-                          <span className="flex items-center text-[11px] font-medium text-sky-600">
-                            <Check className="w-3.5 h-3.5 mr-0.5" />
+                          <span className="flex items-center text-[11px] font-semibold text-sky-600">
+                            <Check className="w-3.5 h-3.5 mr-0.5 text-sky-600 stroke-[2.5]" />
                             Selected
                           </span>
                         )}

@@ -14,8 +14,8 @@ export default function EditorPage() {
   const { mobileView, desktopView, setDesktopView } = useCV();
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      {/* Header & Multi-stage Stepper */}
+    <div className="min-h-screen flex flex-col bg-slate-50 relative selection:bg-sky-100">
+      {/* Header & Multi-stage Stepper (Clean solid white, unaffected by backdrop patterns) */}
       <Header currentStage={1} />
       <EditorStepper currentStage={1} />
 
@@ -23,7 +23,19 @@ export default function EditorPage() {
       <MobileViewToggle />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="relative flex-1 w-full isolate">
+        {/* Subtle Workspace Micro-Grid Backdrop (Locked to content, clearly visible, scrolls naturally) */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            backgroundImage: "radial-gradient(circle, #94a3b8 1.25px, transparent 1.25px)",
+            backgroundSize: "24px 24px",
+            opacity: 0.45,
+          }}
+          aria-hidden="true"
+        />
+
+        <main className="relative z-10 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Desktop View Switcher Toolbar (Visible on lg+) */}
         <div className="hidden lg:flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
@@ -35,7 +47,7 @@ export default function EditorPage() {
             </span>
           </div>
 
-          <div className="flex items-center bg-slate-200/80 p-1 rounded-xl text-xs font-semibold shadow-2xs">
+          <div className="flex items-center bg-slate-100 border border-slate-200/80 p-1 rounded-xl text-xs font-semibold shadow-2xs">
             <button
               type="button"
               onClick={() => setDesktopView("dual")}
@@ -113,6 +125,7 @@ export default function EditorPage() {
           </div>
         </div>
       </main>
+    </div>
 
       {/* Bottom Sticky Action Bar */}
       <ContinueActionBar />
