@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, ZoomIn, ZoomOut, RotateCcw, Printer, Maximize2, FileText } from "lucide-react";
+import { X, ZoomIn, ZoomOut, Printer } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { ClassicAts } from "@/components/preview/templates/ClassicAts";
 import { ModernCompact } from "@/components/preview/templates/ModernCompact";
@@ -47,18 +47,13 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/75 backdrop-blur-xs animate-in fade-in duration-200">
       {/* Top Modal Header */}
       <div className="w-full bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shadow-subtle flex-shrink-0">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600">
-            <FileText className="w-4 h-4" />
-          </div>
-          <div>
-            <h2 className="text-xs sm:text-sm font-semibold text-slate-900">
-              {cvData.personalInfo.fullName || "CV Draft Preview"}
-            </h2>
-            <p className="text-[10px] text-slate-500">
-              {cvData.templateId === "classic" ? "Harvard Classic ATS Template" : "Jake's Tech High-Density Template"}
-            </p>
-          </div>
+        <div>
+          <h2 className="text-xs sm:text-sm font-semibold text-slate-900">
+            {cvData.personalInfo.fullName || "CV Draft Preview"}
+          </h2>
+          <p className="text-[10px] text-slate-500">
+            {cvData.templateId === "classic" ? "Harvard Classic ATS Template" : "Jake's Tech High-Density Template"}
+          </p>
         </div>
 
         {/* Center / Right Toolbar Controls */}

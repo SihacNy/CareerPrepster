@@ -89,9 +89,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           <>
             {/* Modal Header */}
             <div className="text-center mb-6">
-              <div className="w-12 h-12 rounded-xl bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center mx-auto mb-3">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
+              <ShieldCheck className="w-9 h-9 text-sky-600 mx-auto mb-3" />
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                 Save Your CV to Account
               </h2>
