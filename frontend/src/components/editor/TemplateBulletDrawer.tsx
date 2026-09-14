@@ -1,14 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, Plus, BookOpen, Check, Copy } from "lucide-react";
-import { MOCK_ROLE_BULLETS } from "@/lib/mockData";
+import React, { useState, useEffect } from "react";
+import { X, Plus, BookOpen, Check, Copy, Loader2, Info } from "lucide-react";
 import { useCV } from "@/lib/store";
+import { jobRoleApi, StarterBullet } from "@/lib/api";
 
 interface TemplateBulletDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onInsertBullet: (bulletText: string) => void;
+}
+
+interface DisplayBullet {
+  id: string;
+  category: string;
+  text: string;
 }
 
 export function TemplateBulletDrawer({
@@ -19,6 +25,59 @@ export function TemplateBulletDrawer({
   const { cvData } = useCV();
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [bullets, setBullets] = useState<DisplayBullet[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+    const loadBullets = async () => {
+      let roleId = cvData.targetRoleId;
+
+      // If roleId not directly set, attempt lookup by targetRole title
+      if (!roleId && cvData.targetRole) {
+        try {
+          const matchedRoles = await jobRoleApi.search(cvData.targetRole);
+          if (matchedRoles && matchedRoles.length > 0) {
+            roleId = matchedRoles[0].id;
+          }
+        } catch {
+          // Ignore search error
+        }
+      }
+
+      if (roleId) {
+        setIsLoading(true);
+        try {
+          const apiBullets = await jobRoleApi.getBullets(roleId);
+          if (isMounted && Array.isArray(apiBullets)) {
+            setBullets(
+              apiBullets.map((b: StarterBullet) => ({
+                id: b.id,
+                category: b.skillCategory || "Technical Implementation",
+                text: b.bulletText,
+              }))
+            );
+            return;
+          }
+        } catch (err) {
+          console.warn("Could not load role bullets from backend API:", err);
+        } finally {
+          if (isMounted) setIsLoading(false);
+        }
+      }
+
+      if (isMounted) {
+        setBullets([]);
+      }
+    };
+
+    loadBullets();
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, cvData.targetRoleId, cvData.targetRole]);
 
   if (!isOpen) return null;
 
@@ -30,7 +89,7 @@ export function TemplateBulletDrawer({
     "Problem Solving",
   ];
 
-  const filteredBullets = MOCK_ROLE_BULLETS.filter((bullet) => {
+  const filteredBullets = bullets.filter((bullet) => {
     if (selectedCategory === "All") return true;
     return bullet.category === selectedCategory;
   });
@@ -93,7 +152,27 @@ export function TemplateBulletDrawer({
 
           {/* Bullets List */}
           <div className="flex-1 overflow-y-auto p-5 space-y-3">
-            {filteredBullets.map((bullet) => {
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin text-sky-600 mb-2" />
+                <span className="text-xs font-medium">Fetching curated role bullets...</span>
+              </div>
+            ) : filteredBullets.length === 0 ? (
+              <div className="text-center py-12 px-6 text-slate-500 text-xs flex flex-col items-center">
+                <Info className="w-8 h-8 text-slate-300 mb-2" />
+                <p className="font-semibold text-slate-700">
+                  {!cvData.targetRole
+                    ? "Target Role Not Selected"
+                    : "No Bullets Found"}
+                </p>
+                <p className="mt-1 text-slate-500 max-w-xs">
+                  {!cvData.targetRole
+                    ? "Please select or type a target job role in the editor to load pre-curated achievements from the database."
+                    : "No starter bullets found in the database catalog for this category."}
+                </p>
+              </div>
+            ) : (
+              filteredBullets.map((bullet) => {
               const isAdded = copiedId === bullet.id;
               return (
                 <div
@@ -144,7 +223,7 @@ export function TemplateBulletDrawer({
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
 
           {/* Drawer Footer */}

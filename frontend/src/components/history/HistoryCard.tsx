@@ -27,13 +27,21 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
   const [isCopied, setIsCopied] = useState(false);
 
   const handleOpenEditor = () => {
-    loadFromHistory(item.snapshot);
-    router.push("/editor");
+    if (item.snapshot) {
+      loadFromHistory(item.snapshot);
+      router.push("/editor");
+    } else {
+      router.push(`/editor?id=${item.id}`);
+    }
   };
 
   const handleOpenAts = () => {
-    loadFromHistory(item.snapshot);
-    router.push("/editor/ats");
+    if (item.snapshot) {
+      loadFromHistory(item.snapshot);
+      router.push("/editor/ats");
+    } else {
+      router.push(`/editor/ats?id=${item.id}`);
+    }
   };
 
   const handleDuplicate = () => {

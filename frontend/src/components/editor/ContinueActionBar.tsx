@@ -7,17 +7,40 @@ import { useCV } from "@/lib/store";
 
 export function ContinueActionBar() {
   const router = useRouter();
-  const { saveDraft, lastSaved, isDirty } = useCV();
+  const { cvData, setCVData, saveDraft, lastSaved, isDirty } = useCV();
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
     saveDraft();
-    setTimeout(() => setIsSaving(false), 500);
+
+    try {
+      const { cvApi } = await import("@/lib/api");
+      if (cvData.id && !cvData.id.startsWith("cv-draft-")) {
+        await cvApi.update(cvData.id, cvData);
+      } else {
+        // Attempt cloud creation if logged in
+        const res = await cvApi.create(cvData);
+        if (res?.id) {
+          setCVData({ ...cvData, id: res.id });
+        }
+      }
+    } catch (err) {
+      // Offline, guest user, or network error: local draft is already preserved
+      console.info("Cloud sync note: saved locally (backend offline or unauthenticated).");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     saveDraft();
+    try {
+      const { cvApi } = await import("@/lib/api");
+      if (cvData.id && !cvData.id.startsWith("cv-draft-")) {
+        cvApi.update(cvData.id, cvData).catch(() => {});
+      }
+    } catch (e) {}
     router.push("/editor/job-match");
   };
 

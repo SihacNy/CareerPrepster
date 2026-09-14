@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { PlusCircle, UploadCloud, X, ArrowRight, CheckCircle2 } from "lucide-react";
 import { UploadDropzone } from "./UploadDropzone";
 import { useCV } from "@/lib/store";
-import { INITIAL_EMPTY_CV } from "@/lib/mockData";
+import { BLANK_CV } from "@/types/cv";
 import { importResumeFile, ResumeParseError } from "@/lib/cvParser";
 
 interface OnboardingModalProps {
@@ -25,7 +25,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   const handleCreateFromScratch = () => {
     // Reset to clean template and navigate to editor
     setCVData({
-      ...INITIAL_EMPTY_CV,
+      ...BLANK_CV,
       id: `cv-${Date.now()}`,
       title: "New Student Resume",
       updatedAt: new Date().toISOString(),

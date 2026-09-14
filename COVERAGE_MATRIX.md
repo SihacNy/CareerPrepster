@@ -22,22 +22,22 @@
 ## 2. Backend Endpoint vs. Frontend Coverage Matrix (15 Endpoints)
 
 | # | Endpoint | Method | Backend Purpose & Contract | Frontend Target Component / Route | Current Status | Integration Action Required |
-| :-: | :--- | :---: | :--- | :--- | :-: | :--- |
-| **1** | `/api/health` | `GET` | Server & MySQL health probe | — | Internal | Ready for container & CI healthchecks. |
-| **2** | `/api/auth/register` | `POST` | Email, password, & name registration | `frontend/src/components/auth/AuthModal.tsx` | ⚠️ Needs Form | Add Email/Password tab to `AuthModal.tsx`. |
-| **3** | `/api/auth/login` | `POST` | Email & password login (Sets HttpOnly JWT) | `frontend/src/components/auth/AuthModal.tsx` | ⚠️ Needs Form | Add Email/Password login inputs to `AuthModal.tsx`. |
-| **4** | `/api/auth/me` | `GET` | Returns authenticated user profile | `frontend/src/components/navigation/Header.tsx` & `frontend/src/lib/auth.tsx` | ✅ Ready | Wire to verify session on client mount. |
-| **5** | `/api/auth/logout` | `POST` | Clears HttpOnly session cookie | `frontend/src/components/navigation/Header.tsx` (Sign Out button) | ✅ Ready | Call on Sign Out button click. |
-| **6** | `/api/job-roles` | `GET` | Autocomplete role search (`?q=...`) | `frontend/src/components/editor/RoleAutocomplete.tsx` | ✅ Ready | Swap local mock catalog with API call. |
-| **7** | `/api/job-roles/:id/bullets` | `GET` | 51 starter bullet templates for role | `frontend/src/components/editor/TemplateBulletDrawer.tsx` | ✅ Ready | Fetch bullets dynamically upon role drawer open. |
-| **8** | `/api/cvs` | `GET` | List all CVs owned by user | `frontend/src/app/history/page.tsx` | ✅ Ready | Fetch saved CV list from API when user is logged in. |
-| **9** | `/api/cvs` | `POST` | Create full relational CV document | `frontend/src/app/editor/page.tsx` & `ContinueActionBar.tsx` | ✅ Ready | Send structured payload on first save / continue. |
-| **10** | `/api/cvs/:id` | `GET` | Fetch single full CV relational tree | `frontend/src/app/editor/page.tsx` | ⚠️ Needs Query Param | Support `/editor?id=[id]` to hydrate state from API. |
-| **11** | `/api/cvs/:id` | `PUT` | Atomic transaction update for CV tree | `frontend/src/app/editor/page.tsx` & `store.tsx` | ✅ Ready | Trigger auto-save `PUT` when `id` exists. |
-| **12** | `/api/cvs/:id` | `DELETE` | Cascade delete CV & all child rows | `frontend/src/components/history/HistoryCard.tsx` | ✅ Ready | Call endpoint when user confirms delete on card. |
-| **13** | `/api/ai/enhance-bullet` | `POST` | Gemini 3.6 Flash STAR/XYZ rewrite | `frontend/src/components/editor/AIEnhanceModal.tsx` | ✅ Ready | Replace `mockAI.ts` delay with live backend call. |
-| **14** | `/api/ats/score` | `POST` | 4-Pillar deterministic scoring & JD gap | `frontend/src/app/editor/ats/page.tsx` & `job-match/page.tsx` | ✅ Ready | Send active CV payload + JD text to calculate score. |
-| **15** | `/api/cvs/import` | `POST` | Multipart upload for PDF / Word parsing | `frontend/src/components/onboarding/OnboardingModal.tsx` | ✅ Ready | Post uploaded `File` object via `FormData`. |
+| :-: | :--- | :--- | :--- | :--- | :-: | :--- |
+| **1** | `/api/health` | `GET` | Server & MySQL health probe | Docker compose healthcheck | ✅ Integrated | Verified via container orchestration. |
+| **2** | `/api/auth/register` | `POST` | Email, password, & name registration | N/A (Google OAuth Policy) | 🛡️ OAuth Only | Maintained passwordless Google OAuth per directive. |
+| **3** | `/api/auth/login` | `POST` | Email & password login | N/A (Google OAuth Policy) | 🛡️ OAuth Only | Maintained passwordless Google OAuth per directive. |
+| **4** | `/api/auth/me` | `GET` | Returns authenticated user profile | `frontend/src/components/navigation/Header.tsx` & `frontend/src/lib/auth.tsx` | ✅ Integrated | Session verification on mount + profile display. |
+| **5** | `/api/auth/logout` | `POST` | Clears HttpOnly session cookie | `frontend/src/components/navigation/Header.tsx` (Sign Out button) | ✅ Integrated | Calls backend to revoke session and clears state. |
+| **6** | `/api/job-roles` | `GET` | Autocomplete role search (`?q=...`) | `frontend/src/components/editor/RoleAutocomplete.tsx` | ✅ Integrated | Queries `jobRoleApi.search()` with fallback. |
+| **7** | `/api/job-roles/:id/bullets` | `GET` | 51 starter bullet templates for role | `frontend/src/components/editor/TemplateBulletDrawer.tsx` | ✅ Integrated | Fetches bullets dynamically via `jobRoleApi.getBullets()`. |
+| **8** | `/api/cvs` | `GET` | List all CVs owned by user | `frontend/src/app/history/page.tsx` | ✅ Integrated | Syncs remote list via `cvApi.list()` with local history. |
+| **9** | `/api/cvs` | `POST` | Create full relational CV document | `frontend/src/app/editor/page.tsx` & `ContinueActionBar.tsx` | ✅ Integrated | Sends structured payload on save/continue via `cvApi.create()`. |
+| **10** | `/api/cvs/:id` | `GET` | Fetch single full CV relational tree | `frontend/src/app/editor/page.tsx` | ✅ Integrated | Hydrates state from `cvApi.getById(id)` via `?id=` param. |
+| **11** | `/api/cvs/:id` | `PUT` | Atomic transaction update for CV tree | `frontend/src/app/editor/page.tsx` & `store.tsx` | ✅ Integrated | Persists updates via `cvApi.update(id, payload)`. |
+| **12** | `/api/cvs/:id` | `DELETE` | Cascade delete CV & all child rows | `frontend/src/components/history/HistoryCard.tsx` | ✅ Integrated | Deletes remote CVs via `cvApi.delete(id)`. |
+| **13** | `/api/ai/enhance-bullet` | `POST` | Gemini 3.6 Flash STAR/XYZ rewrite | `frontend/src/components/editor/AIEnhanceModal.tsx` | ✅ Integrated | Queries `aiApi.enhanceBullet()` with local fallback. |
+| **14** | `/api/ats/score` | `POST` | 4-Pillar deterministic scoring & JD gap | `frontend/src/app/editor/ats/page.tsx` & `job-match/page.tsx` | ✅ Integrated | Computes score via `atsApi.score()` with heuristic fallback. |
+| **15** | `/api/cvs/import` | `POST` | Multipart upload for PDF / Word parsing | `frontend/src/components/onboarding/UploadDropzone.tsx` | ✅ Integrated | Uploads `File` via `importApi.uploadFile()` with fallback. |
 
 ---
 

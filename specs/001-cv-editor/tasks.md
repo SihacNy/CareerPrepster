@@ -224,16 +224,16 @@
 4. Click "ATS Review" -> calculates 4-pillar score from `/api/ats/score`.
 5. Save draft -> sends `POST /api/cvs` or `PUT /api/cvs/:id`; `/history` fetches live CV list from `/api/cvs` and deletes via `DELETE /api/cvs/:id`.
 
-- [ ] T067 [P] [US10] Create typed API client with credentials support and error boundary in `frontend/src/lib/api.ts` covering all 15 endpoints
-- [ ] T068 [US10] Connect Google OAuth flow in `frontend/src/components/auth/AuthModal.tsx` to backend token exchange endpoint to issue `HttpOnly` session cookie (Zero password forms)
-- [ ] T069 [US10] Connect `frontend/src/lib/auth.tsx` and `frontend/src/components/navigation/Header.tsx` to `/api/auth/me` and `/api/auth/logout`
-- [ ] T070 [US10] Add parametric `?id=[id]` query parameter support in `frontend/src/app/editor/page.tsx` to hydrate state from `GET /api/cvs/:id`
-- [ ] T071 [US10] Connect autosave and continue button in `frontend/src/components/editor/ContinueActionBar.tsx` to `POST /api/cvs` (create) and `PUT /api/cvs/:id` (update)
-- [ ] T072 [US10] Connect `frontend/src/components/editor/RoleAutocomplete.tsx` and `frontend/src/components/editor/TemplateBulletDrawer.tsx` to `GET /api/job-roles` and `GET /api/job-roles/:id/bullets`
-- [ ] T073 [US10] Connect `frontend/src/components/editor/AIEnhanceModal.tsx` to `POST /api/ai/enhance-bullet` (Gemini 3.6 Flash)
-- [ ] T074 [US10] Connect `frontend/src/app/editor/ats/page.tsx` and `frontend/src/app/editor/job-match/page.tsx` to `POST /api/ats/score`
-- [ ] T075 [US10] Connect `frontend/src/app/history/page.tsx` and `frontend/src/components/history/HistoryCard.tsx` to `GET /api/cvs` and `DELETE /api/cvs/:id`
-- [ ] T076 [US10] Wire resume upload in `frontend/src/components/onboarding/UploadDropzone.tsx` to `POST /api/cvs/import` via multipart `FormData`
+- [x] T067 [P] [US10] Create typed API client with credentials support and error boundary in `frontend/src/lib/api.ts` covering all 15 endpoints
+- [x] T068 [US10] Connect Google OAuth flow in `frontend/src/components/auth/AuthModal.tsx` to backend token exchange endpoint to issue `HttpOnly` session cookie (Zero password forms)
+- [x] T069 [US10] Connect `frontend/src/lib/auth.tsx` and `frontend/src/components/navigation/Header.tsx` to `/api/auth/me` and `/api/auth/logout`
+- [x] T070 [US10] Add parametric `?id=[id]` query parameter support in `frontend/src/app/editor/page.tsx` to hydrate state from `GET /api/cvs/:id`
+- [x] T071 [US10] Connect autosave and continue button in `frontend/src/components/editor/ContinueActionBar.tsx` to `POST /api/cvs` (create) and `PUT /api/cvs/:id` (update)
+- [x] T072 [US10] Connect `frontend/src/components/editor/RoleAutocomplete.tsx` and `frontend/src/components/editor/TemplateBulletDrawer.tsx` to `GET /api/job-roles` and `GET /api/job-roles/:id/bullets`
+- [x] T073 [US10] Connect `frontend/src/components/editor/AIEnhanceModal.tsx` to `POST /api/ai/enhance-bullet` (Gemini 3.6 Flash)
+- [x] T074 [US10] Connect `frontend/src/app/editor/ats/page.tsx` and `frontend/src/app/editor/job-match/page.tsx` to `POST /api/ats/score`
+- [x] T075 [US10] Connect `frontend/src/app/history/page.tsx` and `frontend/src/components/history/HistoryCard.tsx` to `GET /api/cvs` and `DELETE /api/cvs/:id`
+- [x] T076 [US10] Wire resume upload in `frontend/src/components/onboarding/UploadDropzone.tsx` to `POST /api/cvs/import` via multipart `FormData`
 
 **Checkpoint**: All 15 backend API endpoints integrated with the frontend. Full-stack end-to-end user workflow validated.
 
@@ -254,6 +254,29 @@
 
 ---
 
+## Phase 14: Eliminate Mock Data & Rely Exclusively on Live Backend APIs
+
+**Goal**: Complete removal of mock data (`mockData.ts`, `mockAI.ts`, hardcoded student profiles, client-side scoring heuristics) and transition all data flows strictly to live MySQL database and Express API endpoints.
+
+**Independent Test**:
+1. Search roles in editor -> queries live `/api/job-roles`; starter bullets query live `/api/job-roles/:id/bullets`. Zero mock fallbacks.
+2. Click "Refine with AI" -> generates rewrite from Gemini Flash via `/api/ai/enhance-bullet`. If unavailable, renders clean error/retry feedback instead of dummy text.
+3. Open `/editor/ats` -> calculates live score and findings from `/api/ats/score`.
+4. Open `/history` -> fetches live resume drafts from `/api/cvs`.
+5. Run `grep -r "mockData" frontend/src` and `grep -r "mockAI" frontend/src` -> returns 0 occurrences.
+
+- [ ] T081 [P] [US10] Define clean default `BLANK_CV` in `frontend/src/types/cv.ts` with empty fields and default section structure, eliminating reliance on hardcoded Alex Rivera mock profile
+- [ ] T082 [P] [US10] Refactor `frontend/src/components/editor/RoleAutocomplete.tsx` to query live database catalog via `jobRoleApi.search()` exclusively, removing `JOB_ROLE_PRESETS`
+- [ ] T083 [P] [US10] Refactor `frontend/src/components/editor/TemplateBulletDrawer.tsx` to fetch starter bullets strictly via `jobRoleApi.getBullets()`, removing `MOCK_ROLE_BULLETS` and handling empty/loading states
+- [ ] T084 [P] [US10] Refactor `frontend/src/components/editor/AIEnhanceModal.tsx` to generate bullet suggestions strictly via `aiApi.enhanceBullet()` (Gemini 3.6 Flash), displaying error/retry states instead of mock text
+- [ ] T085 [P] [US10] Refactor `frontend/src/components/ats/ATSScoringStage.tsx` to fetch 4-pillar ATS audit results strictly via `atsApi.score()`, displaying loading skeleton during calculation and removing `calculateMockAtsReport`
+- [ ] T086 [P] [US10] Refactor `frontend/src/lib/historyStore.ts` and `frontend/src/app/history/page.tsx` to remove hardcoded demo history snapshots, querying and managing CV documents strictly through `cvApi.list()` and `cvApi.delete()`
+- [ ] T087 [US10] Refactor `frontend/src/lib/cvParser.ts` and `frontend/src/components/onboarding/UploadDropzone.tsx` to send files strictly to `POST /api/cvs/import` via `importApi.uploadFile()`, removing client-side regex parsing fallback
+- [ ] T088 [US10] Delete obsolete mock files `frontend/src/lib/mockData.ts` and `frontend/src/lib/mockAI.ts` and update all consumer imports across `store.tsx`, `OnboardingModal.tsx`, and section components
+- [ ] T089 Verify clean Next.js production build (`npm run build`) in `frontend` and validate complete end-to-end data flow with live Express backend
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -269,6 +292,8 @@
 10. **User Story 8 (Phase 10)**: User Resume & Audit History Dashboard (consumes saved drafts & export snapshots).
 11. **User Story 9 (Phase 11)**: Frontend Generic State Refactoring (Alternative 3 - prerequisite for backend integration).
 12. **User Story 10 (Phase 12)**: Full-Stack Backend Integration (connects refactored frontend to 15 Express endpoints).
+13. **Docker Orchestration (Phase 13)**: Multi-container setup for MySQL, Backend, and Frontend.
+14. **Mock Data Elimination (Phase 14)**: Transition all data flows strictly to live backend APIs and delete all mock files.
 
 ### Parallel Opportunities per Phase
 - **Phase 1**: T004, T005, T007 can be built in parallel.
@@ -279,29 +304,20 @@
 - **Phase 10**: T051, T052, and T054 can be built in parallel.
 - **Phase 11**: T057, T059, T060, T061, T062, and T065 can be built in parallel.
 - **Phase 12**: T067 (API client) can be built in parallel with T068 (Auth forms).
+- **Phase 14**: T081, T082, T083, T084, T085, and T086 can be built in parallel.
 
 ---
 
-## Parallel Example: User Story 9 (Alternative 3 Refactoring)
+## Parallel Example: Phase 14 (Mock Data Elimination)
 
 ```bash
-# Refactor types and section components in parallel:
-Task: "Refactor TypeScript data contracts in frontend/src/types/cv.ts"
-Task: "Update frontend/src/components/editor/sections/EducationSection.tsx"
-Task: "Update frontend/src/components/editor/sections/ExperienceSection.tsx"
-Task: "Update frontend/src/components/editor/sections/ProjectsSection.tsx"
-Task: "Update frontend/src/components/editor/sections/SkillsSection.tsx"
-Task: "Update vector PDF documents in frontend/src/lib/pdf/ClassicPdfDocument.tsx"
-```
-
----
-
-## Parallel Example: User Story 10 (Backend Integration)
-
-```bash
-# Build API client and Auth session connection in parallel:
-Task: "Create typed API client with credentials support in frontend/src/lib/api.ts"
-Task: "Connect Google OAuth token flow to backend session cookie in frontend/src/components/auth/AuthModal.tsx"
+# Refactor components to eliminate mock fallbacks in parallel:
+Task: "Define clean default BLANK_CV in frontend/src/types/cv.ts"
+Task: "Refactor frontend/src/components/editor/RoleAutocomplete.tsx to rely strictly on jobRoleApi.search()"
+Task: "Refactor frontend/src/components/editor/TemplateBulletDrawer.tsx to rely strictly on jobRoleApi.getBullets()"
+Task: "Refactor frontend/src/components/editor/AIEnhanceModal.tsx to rely strictly on aiApi.enhanceBullet()"
+Task: "Refactor frontend/src/components/ats/ATSScoringStage.tsx to calculate strictly via atsApi.score()"
+Task: "Refactor frontend/src/lib/historyStore.ts to eliminate mock history seed"
 ```
 
 ---
@@ -311,4 +327,6 @@ Task: "Connect Google OAuth token flow to backend session cookie in frontend/src
 1. **Step 1 (Standalone UI MVP)**: Completed in Phases 1–10. All screens, templates, mock AI, and local history working.
 2. **Step 2 (Generic Relational State Refactor - Phase 11)**: Refactor `CVData`, `store.tsx`, and section components to generic `sections` and `skillGroups` (Alternative 3).
 3. **Step 3 (Live Backend Integration - Phase 12)**: Connect all 15 endpoints from `COVERAGE_MATRIX.md` to live MySQL + Express backend.
+4. **Step 4 (Docker Containerization - Phase 13)**: Containerize Frontend, Backend, and MySQL via Docker Compose.
+5. **Step 5 (Mock Data Elimination - Phase 14)**: Purge all mock files (`mockData.ts`, `mockAI.ts`) and transition all data consumption strictly to the backend.
 

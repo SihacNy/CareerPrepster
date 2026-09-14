@@ -10,6 +10,8 @@ export interface PersonalInfo {
   linkedinUrl: string;
   githubUrl: string;
   summary: string;
+  websiteUrl?: string;
+  portfolioUrl?: string;
 }
 
 export interface BulletPoint {
@@ -273,6 +275,94 @@ export function normalizeCVData(input: any): CVData {
   };
 }
 
+export const BLANK_CV: CVData = {
+  id: "cv-new",
+  title: "Untitled Resume",
+  templateId: "classic",
+  targetRole: "",
+  targetRoleId: undefined,
+  personalInfo: {
+    fullName: "",
+    email: "",
+    phone: "",
+    location: "",
+    linkedinUrl: "",
+    githubUrl: "",
+    summary: "",
+    websiteUrl: "",
+    portfolioUrl: "",
+  },
+  sections: [
+    {
+      id: "sec-education",
+      sectionType: "EDUCATION",
+      title: "Education",
+      orderIndex: 0,
+      isVisible: true,
+      items: [
+        {
+          id: "edu-init-1",
+          title: "",
+          subtitle: "",
+          location: "",
+          startDate: "",
+          endDate: "",
+          isCurrent: false,
+          gpa: "",
+          bulletPoints: [{ id: "bp-init-edu-1", text: "", framework: "STANDARD" }],
+        },
+      ],
+    },
+    {
+      id: "sec-experience",
+      sectionType: "EXPERIENCE",
+      title: "Work Experience",
+      orderIndex: 1,
+      isVisible: true,
+      items: [
+        {
+          id: "exp-init-1",
+          title: "",
+          subtitle: "",
+          location: "",
+          startDate: "",
+          endDate: "",
+          isCurrent: false,
+          bulletPoints: [{ id: "bp-init-exp-1", text: "", framework: "STANDARD" }],
+        },
+      ],
+    },
+    {
+      id: "sec-projects",
+      sectionType: "PROJECTS",
+      title: "Technical Projects",
+      orderIndex: 2,
+      isVisible: true,
+      items: [
+        {
+          id: "proj-init-1",
+          title: "",
+          subtitle: "",
+          url: "",
+          startDate: "",
+          endDate: "",
+          isCurrent: false,
+          bulletPoints: [{ id: "bp-init-proj-1", text: "", framework: "STANDARD" }],
+        },
+      ],
+    },
+  ],
+  skillGroups: [
+    {
+      id: "skill-group-init-1",
+      categoryName: "Technical Skills",
+      skills: [],
+      orderIndex: 0,
+    },
+  ],
+  updatedAt: new Date().toISOString(),
+};
+
 export interface JobRole {
   id: string;
   name: string;
@@ -339,5 +429,5 @@ export interface CVHistoryItem {
   status: CVHistoryStatus;
   createdAt: string;
   updatedAt: string;
-  snapshot: CVData;
+  snapshot?: CVData;
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { CVData, TemplateId, CVSection, CVItem, SkillGroup, SectionType, normalizeCVData } from "@/types/cv";
-import { INITIAL_EMPTY_CV } from "./mockData";
+import { CVData, TemplateId, CVSection, CVItem, SkillGroup, SectionType, normalizeCVData, BLANK_CV } from "@/types/cv";
 import { saveToHistory } from "./historyStore";
 
 const STORAGE_KEY = "careerprepster_cv_draft_v1";
@@ -17,7 +16,7 @@ interface CVContextType {
   updateSectionTitle: (sectionId: string, title: string) => void;
   removeSection: (sectionId: string) => void;
   setTemplateId: (id: TemplateId) => void;
-  setTargetRole: (role: string) => void;
+  setTargetRole: (role: string, roleId?: string) => void;
   targetJobDescription: string;
   setTargetJobDescription: (jd: string) => void;
   mobileView: "form" | "preview";
@@ -30,12 +29,13 @@ interface CVContextType {
   resetDraft: () => void;
   clearAll: () => void;
   loadFromHistory: (snapshot: CVData) => void;
+  loadCV: (data: Partial<CVData>) => void;
 }
 
 const CVContext = createContext<CVContextType | null>(null);
 
 export function CVProvider({ children }: { children: React.ReactNode }) {
-  const [cvData, setCVDataState] = useState<CVData>(INITIAL_EMPTY_CV);
+  const [cvData, setCVDataState] = useState<CVData>(BLANK_CV);
   const [targetJobDescription, setTargetJobDescription] = useState<string>("");
   const [mobileView, setMobileView] = useState<"form" | "preview">("form");
   const [desktopView, setDesktopView] = useState<"dual" | "editor" | "preview">("dual");
@@ -193,10 +193,11 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const setTargetRole = (role: string) => {
+  const setTargetRole = (role: string, roleId?: string) => {
     setCVData((prev) => ({
       ...prev,
       targetRole: role,
+      targetRoleId: roleId !== undefined ? roleId : prev.targetRoleId,
       updatedAt: new Date().toISOString(),
     }));
   };
@@ -223,6 +224,24 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error("Failed to sync loaded history to active draft:", e);
     }
+  };
+
+  const loadCV = (data: Partial<CVData>) => {
+    setCVDataState((prev) => {
+      const merged = normalizeCVData({
+        ...prev,
+        ...data,
+        id: data.id || prev.id || `cv-${Date.now()}`,
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      } catch (e) {
+        console.error("Failed to sync loaded CV to active draft:", e);
+      }
+      return merged;
+    });
+    setIsDirty(false);
+    setLastSaved(new Date());
   };
 
   const clearAll = () => {
@@ -349,6 +368,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         resetDraft,
         clearAll,
         loadFromHistory,
+        loadCV,
       }}
     >
       {children}

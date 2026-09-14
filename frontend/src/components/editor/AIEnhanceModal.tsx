@@ -1,8 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Check, Loader2, ArrowRight } from "lucide-react";
-import { generateMockBulletEnhancements, AISuggestion } from "@/lib/mockAI";
+import { X, Check, Loader2, ArrowRight, Sparkles, AlertCircle, RefreshCw } from "lucide-react";
+import { aiApi } from "@/lib/api";
+
+export interface AISuggestionItem {
+  id: string;
+  type: "Action-Oriented" | "Quantified Metrics (XYZ)" | "STAR Framework";
+  text: string;
+  explanation: string;
+}
 
 interface AIEnhanceModalProps {
   isOpen: boolean;
@@ -19,21 +26,47 @@ export function AIEnhanceModal({
   targetRole,
   onApply,
 }: AIEnhanceModalProps) {
-  const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<AISuggestionItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const fetchEnhancements = async () => {
+    if (!originalText) return;
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await aiApi.enhanceBullet({
+        rawBullet: originalText,
+        sectionContext: { roleTitle: targetRole },
+        framework: "AUTO",
+      });
+
+      if (res?.suggestions && res.suggestions.length > 0) {
+        const mapped: AISuggestionItem[] = res.suggestions.map((s) => ({
+          id: s.id || Math.random().toString(),
+          type: s.framework === "STAR" ? "STAR Framework" : "Quantified Metrics (XYZ)",
+          text: s.enhancedText,
+          explanation: s.explanation || "Optimized with high-impact power verb and quantifiable metric.",
+        }));
+        setSuggestions(mapped);
+        setSelectedId(mapped[0].id);
+      } else {
+        setErrorMessage("AI generation returned no suggestions. Please try again.");
+      }
+    } catch (err: any) {
+      setErrorMessage(
+        err?.message || "Failed to connect to AI assistant. Please verify backend service and GEMINI_API_KEY."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && originalText) {
-      setIsLoading(true);
-      generateMockBulletEnhancements(originalText, targetRole)
-        .then((results) => {
-          setSuggestions(results);
-          if (results.length > 0) {
-            setSelectedId(results[0].id);
-          }
-        })
-        .finally(() => setIsLoading(false));
+      fetchEnhancements();
     }
   }, [isOpen, originalText, targetRole]);
 
@@ -89,8 +122,24 @@ export function AIEnhanceModal({
               <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
                 <Loader2 className="w-6 h-6 text-sky-600 animate-spin" />
                 <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                  Analyzing bullet with Google XYZ and STAR frameworks...
+                  Analyzing bullet with Google Gemini Flash (STAR &amp; XYZ)...
                 </p>
+              </div>
+            ) : errorMessage ? (
+              <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex flex-col items-start gap-2">
+                <div className="flex items-center gap-1.5 font-semibold text-rose-900">
+                  <AlertCircle className="w-4 h-4 text-rose-600" />
+                  <span>AI Generation Notice</span>
+                </div>
+                <p>{errorMessage}</p>
+                <button
+                  type="button"
+                  onClick={fetchEnhancements}
+                  className="mt-1 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition-colors shadow-2xs"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Try Again</span>
+                </button>
               </div>
             ) : (
               <div className="space-y-3">

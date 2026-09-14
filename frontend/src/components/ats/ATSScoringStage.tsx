@@ -1,25 +1,88 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useCV } from "@/lib/store";
-import { calculateMockAtsReport } from "@/lib/mockData";
+import { ATSReport } from "@/types/cv";
+import { atsApi } from "@/lib/api";
 import { ScoreGauge } from "./ScoreGauge";
 import { PillarBreakdown } from "./PillarBreakdown";
 import { JobDescriptionInput } from "./JobDescriptionInput";
 import { ActionableFindingsList } from "./ActionableFindingsList";
 import { StageActions } from "./StageActions";
-import { FileCheck, Sparkles, AlertCircle } from "lucide-react";
+import { FileCheck, Sparkles, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 
 interface ATSScoringStageProps {
   isFromUpload?: boolean;
 }
 
+const INITIAL_REPORT: ATSReport = {
+  overallScore: 0,
+  wordCount: 0,
+  estimatedPages: 1,
+  breakdown: {
+    parsabilityScore: 0,
+    impactScore: 0,
+    skillsScore: 0,
+    brevityScore: 0,
+  },
+  findings: [],
+};
+
 export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) {
   const { cvData, targetJobDescription, setTargetJobDescription } = useCV();
+  const [report, setReport] = useState<ATSReport>(INITIAL_REPORT);
+  const [isAuditing, setIsAuditing] = useState(true);
+  const [auditError, setAuditError] = useState<string | null>(null);
 
-  // Compute 4-pillar ATS report
-  const report = useMemo(() => {
-    return calculateMockAtsReport(cvData, targetJobDescription);
+  const runAudit = async () => {
+    setIsAuditing(true);
+    setAuditError(null);
+
+    try {
+      const liveResult = await atsApi.score({
+        cvId: cvData.id && !cvData.id.startsWith("draft-") && !cvData.id.startsWith("cv-") && !cvData.id.startsWith("imported-") ? cvData.id : undefined,
+        cvData,
+        targetJobDescription,
+      });
+
+      if (liveResult && typeof liveResult.overallScore === "number") {
+        setReport({
+          overallScore: liveResult.overallScore,
+          wordCount: (liveResult as any).wordCount || 0,
+          estimatedPages: (liveResult as any).estimatedPages || 1,
+          breakdown: (liveResult as any).breakdown || {
+            parsabilityScore: liveResult.parsabilityScore ?? 0,
+            impactScore: liveResult.impactScore ?? 0,
+            skillsScore: liveResult.skillsScore ?? 0,
+            brevityScore: liveResult.brevityScore ?? 0,
+          },
+          keywordAnalysis: (liveResult as any).keywordAnalysis,
+          findings: ((liveResult.findings || []) as any[]).map((f) => ({
+            id: f.id,
+            type: (f.severity || f.type || "passed").toLowerCase() as any,
+            pillar: (f.pillar || "parsability").toLowerCase() as any,
+            message: f.message || f.title,
+            recommendation: f.recommendation || f.remediation || f.message,
+            suggestedFix: f.suggestedFix,
+            sectionTarget: f.sectionRef || f.sectionTarget,
+          })),
+        });
+      }
+    } catch (err: any) {
+      setAuditError(
+        err?.message || "Failed to calculate ATS score from server. Ensure backend API is active."
+      );
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      runAudit();
+    }, 400);
+
+    return () => clearTimeout(timer);
   }, [cvData, targetJobDescription]);
 
   return (
@@ -36,6 +99,27 @@ export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) 
               We parsed your uploaded resume and calculated your baseline ATS score. Review your findings below, then click &ldquo;Improve in Editor&rdquo; to enhance weak bullets and format with our Harvard &amp; Jake&apos;s templates.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Backend Audit Error Notification */}
+      {auditError && (
+        <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-900 flex items-start justify-between">
+          <div className="flex items-start space-x-3">
+            <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-rose-950">ATS Scoring Server Notice</h4>
+              <p className="mt-0.5 text-rose-800 leading-relaxed">{auditError}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={runAudit}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition-colors shrink-0 shadow-2xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Audit</span>
+          </button>
         </div>
       )}
 

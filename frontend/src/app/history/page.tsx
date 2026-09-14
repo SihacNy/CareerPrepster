@@ -27,6 +27,8 @@ import {
 } from "@/lib/historyStore";
 import { useCV } from "@/lib/store";
 
+import { cvApi, CVListItem } from "@/lib/api";
+
 export default function HistoryPage() {
   const router = useRouter();
   const { clearAll } = useCV();
@@ -34,11 +36,50 @@ export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<"all" | CVHistoryStatus>("all");
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isLoadingRemote, setIsLoadingRemote] = useState(false);
 
-  // Load history on client mount
+  // Load history on client mount (local storage + backend sync)
   useEffect(() => {
-    const items = getHistory();
-    setHistoryItems(items);
+    const localItems = getHistory();
+    setHistoryItems(localItems);
+
+    let isMounted = true;
+    const fetchRemoteCVs = async () => {
+      setIsLoadingRemote(true);
+      try {
+        const remoteCvs = await cvApi.list();
+        if (isMounted && Array.isArray(remoteCvs)) {
+          // Merge remote CVs with local history
+          setHistoryItems((prev) => {
+            const existingIds = new Set(prev.map((i) => i.id));
+            const newRemoteItems: CVHistoryItem[] = remoteCvs
+              .filter((rcv) => !existingIds.has(rcv.id))
+              .map((rcv) => ({
+                id: rcv.id,
+                cvId: rcv.id,
+                title: rcv.title || "Untitled CV",
+                targetRole: rcv.targetRoleId || "General",
+                fullName: rcv.fullName || "Candidate",
+                status: "draft",
+                templateId: rcv.templateId === "modern" ? "modern" : "classic",
+                createdAt: rcv.createdAt,
+                updatedAt: rcv.updatedAt,
+              }));
+
+            return [...newRemoteItems, ...prev];
+          });
+        }
+      } catch {
+        // Backend offline or guest mode; local history is already populated
+      } finally {
+        if (isMounted) setIsLoadingRemote(false);
+      }
+    }
+
+    fetchRemoteCVs();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleCreateNew = () => {
@@ -46,9 +87,18 @@ export default function HistoryPage() {
     router.push("/editor");
   };
 
-  const handleDelete = (id: string) => {
-    const updated = deleteFromHistory(id);
-    setHistoryItems(updated);
+  const handleDelete = async (id: string) => {
+    deleteFromHistory(id);
+    setHistoryItems((prev) => prev.filter((item) => item.id !== id));
+
+    // If item is a remote backend CV (not a local draft), trigger backend delete
+    if (!id.startsWith("draft-") && !id.startsWith("demo-") && !id.startsWith("imported-")) {
+      try {
+        await cvApi.delete(id);
+      } catch (err) {
+        console.warn("Failed to delete remote CV from server:", err);
+      }
+    }
   };
 
   const handleDuplicate = (id: string) => {

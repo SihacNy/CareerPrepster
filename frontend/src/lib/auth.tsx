@@ -44,18 +44,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Restore user from localStorage on client mount
+  // Restore user from backend session first, with localStorage fallback
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem(USER_STORAGE_KEY);
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
+    let isMounted = true;
+    async function checkSession() {
+      try {
+        const { authApi } = await import("@/lib/api");
+        const res = await authApi.getMe();
+        if (isMounted && res?.user) {
+          const remoteUser: User = {
+            id: res.user.id,
+            name: res.user.name || "Student",
+            email: res.user.email,
+            avatarUrl: res.user.avatarUrl || undefined,
+            provider: "google",
+          };
+          setUser(remoteUser);
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(remoteUser));
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        // Not authenticated on backend or offline; fallback to localStorage
       }
-    } catch (e) {
-      console.warn("Could not restore user from storage:", e);
-    } finally {
-      setIsLoading(false);
+
+      if (isMounted) {
+        try {
+          const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+          if (savedUser) {
+            setUser(JSON.parse(savedUser));
+          }
+        } catch (e) {
+          console.warn("Could not restore user from storage:", e);
+        } finally {
+          setIsLoading(false);
+        }
+      }
     }
+
+    checkSession();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const loginWithGoogleCredential = (credential: string) => {
@@ -99,8 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     try {
       localStorage.removeItem(USER_STORAGE_KEY);
+      import("@/lib/api").then(({ authApi }) => {
+        authApi.logout().catch(() => {});
+      });
     } catch (e) {
-      console.error("Failed to remove user session:", e);
+      console.error("Failed to clear user session:", e);
     }
   };
 

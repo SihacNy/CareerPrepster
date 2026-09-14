@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Search, Briefcase, ChevronDown } from "lucide-react";
-import { MOCK_JOB_ROLES } from "@/lib/mockData";
+import { Search, Briefcase, ChevronDown, Loader2 } from "lucide-react";
 import { useCV } from "@/lib/store";
+import { jobRoleApi } from "@/lib/api";
 
 export function RoleAutocomplete({
   isOpen,
@@ -16,12 +16,44 @@ export function RoleAutocomplete({
   const [query, setQuery] = useState(cvData.targetRole || "");
   const [isOpenAutocomplete, setIsOpenAutocomplete] = useState(false);
   const [internalOpen, setInternalOpen] = useState(true);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [rolesCatalog, setRolesCatalog] = useState<Array<{ id: string; name: string; category?: string }>>([]);
   const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
   const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
 
-  const filteredRoles = MOCK_JOB_ROLES.filter((r) =>
+  // Fetch roles exclusively from backend API
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingRoles(true);
+
+    jobRoleApi
+      .search()
+      .then((roles) => {
+        if (isMounted && Array.isArray(roles)) {
+          setRolesCatalog(
+            roles.map((r) => ({
+              id: r.id,
+              name: r.title,
+              category: r.industry || "General",
+            }))
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load roles catalog from backend:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingRoles(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredRoles = rolesCatalog.filter((r) =>
     r.name.toLowerCase().includes(query.toLowerCase())
   );
 
@@ -39,9 +71,9 @@ export function RoleAutocomplete({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelectRole = (roleName: string) => {
-    setQuery(roleName);
-    setTargetRole(roleName);
+  const handleSelectRole = (role: { id?: string; name: string }) => {
+    setQuery(role.name);
+    setTargetRole(role.name, role.id);
     setIsOpenAutocomplete(false);
   };
 
@@ -101,13 +133,13 @@ export function RoleAutocomplete({
                 return (
                   <div
                     key={role.id}
-                    onClick={() => handleSelectRole(role.name)}
+                    onClick={() => handleSelectRole(role)}
                     className={`px-3.5 py-2.5 text-xs sm:text-sm cursor-pointer flex items-center justify-between hover:bg-sky-50 ${isSelected ? "bg-sky-50/70 text-sky-800 font-semibold" : "text-slate-700"
                       }`}
                   >
                     <span>{role.name}</span>
                     <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                      {role.track}
+                      {(role as any).category || (role as any).track || "General"}
                     </span>
                   </div>
                 );
