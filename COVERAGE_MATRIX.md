@@ -165,9 +165,10 @@ cvs (id, userId, title, templateId, targetRoleId, fullName, email, phone, locati
 - [x] **T-INT-1**: Refactor `frontend/src/types/cv.ts` and `frontend/src/lib/store.tsx` to generic `sections` and `skillGroups`.
 - [x] **T-INT-2**: Update section components (`EducationSection.tsx`, `ExperienceSection.tsx`, `ProjectsSection.tsx`, `SkillsSection.tsx`, `LivePreview.tsx`, `CVForm.tsx`, `CustomSection.tsx`) to consume generic `sections` and `items`.
 - [ ] **T-INT-3**: Create `frontend/src/lib/api.ts` with typed fetch methods for all 15 endpoints (`credentials: "include"`, base URL `http://localhost:5000/api`).
-- [ ] **T-INT-4**: Add Email + Password registration and login form tabs to `frontend/src/components/auth/AuthModal.tsx`.
+- [ ] **T-INT-4**: Connect `frontend/src/components/auth/AuthModal.tsx` and `Header.tsx` to backend Google OAuth verification (`POST /api/auth/google`), session check (`GET /api/auth/me`), and logout (`POST /api/auth/logout`) with zero password forms.
 - [ ] **T-INT-5**: Add parametric `?id=` query parameter support in `frontend/src/app/editor/page.tsx` to load specific CVs from `GET /api/cvs/:id`.
 - [ ] **T-INT-6**: Connect `frontend/src/components/editor/AIEnhanceModal.tsx` to `POST /api/ai/enhance-bullet` (Gemini 3.6 Flash).
 - [ ] **T-INT-7**: Connect `frontend/src/components/editor/RoleAutocomplete.tsx` and `TemplateBulletDrawer.tsx` to `GET /api/job-roles`.
 - [ ] **T-INT-8**: Connect `frontend/src/app/editor/ats/page.tsx` to `POST /api/ats/score`.
 - [ ] **T-INT-9**: Connect `frontend/src/app/history/page.tsx` to `GET /api/cvs` and `DELETE /api/cvs/:id`.
+- [x] **T-INT-10**: Set up full-stack Docker containerization (`frontend/Dockerfile`, `frontend/.dockerignore`, and 3-tier `docker-compose.yml` orchestrating `mysql`, `backend`, and `frontend`).

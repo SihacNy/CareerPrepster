@@ -108,3 +108,17 @@
     - `mysql`: MySQL 8.0 container with persistent named volume `mysql_data`.
     - `backend`: Node.js Express API running on port 5000.
     - `frontend`: Next.js web application running on port 3000.
+
+---
+
+## 9. Authentication Architecture: Passwordless OAuth 2.0 (Google OAuth Primary)
+
+### Decision: Strictly OAuth 2.0 (Google OAuth Primary), Zero Passwords Stored
+- **Rationale**:
+  - **Constitution Alignment**: Principle 4 mandates *"Student Privacy & Data Minimization"*. Storing and hashing raw passwords adds significant attack surfaces (credential stuffing, brute forcing, password spraying) and requires complex reset/verification workflows.
+  - **Zero Friction for University Students**: Students and new graduates already possess verified institutional or personal Google accounts. A single-click OAuth flow eliminates registration drop-off.
+  - **Token & Session Integrity**: Identity verification is delegated to Google's cryptographic token validation endpoint. The backend exchanges verified Google ID tokens for signed, `HttpOnly, SameSite=Lax` session JWT cookies, preventing XSS access to authentication credentials.
+  - **Database Simplicity**: The `users` table only requires `email`, `googleId`, `name`, and `avatarUrl` without password hash fields or salt columns.
+- **Alternatives Evaluated & Rejected**:
+  - *Email + Password Authentication*: Evaluated and explicitly rejected per user directive. Introducing password forms creates friction, requires salt/hash/reset pipelines, and duplicates existing verified Google identity systems without adding value for student users.
+

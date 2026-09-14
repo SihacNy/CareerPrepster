@@ -19,7 +19,7 @@ All services are containerized via Docker and backed by MySQL with Prisma ORM us
 **Backend Framework**: Node.js + Express.js  
 **Database & ORM**: MySQL 8.0, Prisma ORM 5.x (8 relational tables)  
 **State Architecture**: Generic relational section tree (`sections: CVSection[]`, `skillGroups: SkillGroup[]`) matching backend schema 1:1 (Alternative 3)  
-**Authentication & Security**: Google & GitHub OAuth 2.0 (passwordless) + Email/Password, JWT in `HttpOnly, Secure, SameSite=Lax` Cookie, `cookie-parser`  
+**Authentication & Security**: Strictly OAuth 2.0 (Google OAuth 2.0 primary, passwordless), JWT in `HttpOnly, Secure, SameSite=Lax` Cookie, `cookie-parser`  
 **Validation**: Zod 3.x (shared client & server contracts)  
 **File Parsing & Upload**: `multer` (streaming uploads, 5MB limit), `pdf-parse` (PDF text layer), `mammoth` (Word DOCX text)  
 **AI Service Integration**: Google Gemini 1.5 Flash API (structured JSON output for resume parsing & STAR/XYZ wording)  
@@ -35,7 +35,7 @@ All services are containerized via Docker and backed by MySQL with Prisma ORM us
 - Full ATS score scan < 2.0s
 - Document preview rendering < 100ms
 **Constraints**: 
-- All passwords cryptographically salted before storage
+- Passwordless authentication: No passwords stored or processed; all identity verification handled via OAuth 2.0 provider tokens
 - All external API payloads strictly validated with Zod
 - Resumes strictly constrained to ATS-safe single-column layout templates
 

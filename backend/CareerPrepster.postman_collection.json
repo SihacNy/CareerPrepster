@@ -1,0 +1,445 @@
+{
+  "info": {
+    "_postman_id": "7f8b933a-d4c2-482f-8911-a08b5e612984",
+    "name": "CareerPrepster API Collection",
+    "description": "Comprehensive Postman collection for testing the CareerPrepster Express/Prisma Backend with Google OAuth, CV Management, File Import, Job Roles Catalog, Gemini AI Bullet Enhancement, and ATS Scoring.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cvId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "roleId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. System & Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Authentication (Google OAuth Only)",
+      "item": [
+        {
+          "name": "Google OAuth Sign-In / Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.token) {",
+                  "        pm.collectionVariables.set('token', json.data.token);",
+                  "        console.log('Saved token from Google Sign-In:', json.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idToken\": \"REPLACE_WITH_ACTUAL_GOOGLE_ID_TOKEN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/google",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "google"]
+            },
+            "description": "Send Google ID token from frontend. Automatically registers first-time users or logs in existing users and returns the App JWT token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile (Me)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Retrieves current authenticated Google user profile (id, email, name, avatarUrl)."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('token', '');",
+                  "    pm.environment.set('token', '');",
+                  "    console.log('Cleared token in Postman');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Clears HTTP-only session cookie and Postman token variable."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. CV Management & Import",
+      "item": [
+        {
+          "name": "Import Resume Document (PDF / DOCX)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cvs/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cvs", "import"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Full CV",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.id) {",
+                  "        pm.collectionVariables.set('cvId', json.data.id);",
+                  "        console.log('Saved created cvId:', json.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Full Stack Developer CV\",\n  \"templateId\": \"classic-ats\",\n  \"fullName\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"phone\": \"+1 (555) 234-5678\",\n  \"location\": \"San Francisco, CA\",\n  \"linkedinUrl\": \"https://linkedin.com/in/janedoe\",\n  \"githubUrl\": \"https://github.com/janedoe\",\n  \"websiteUrl\": \"https://janedoe.dev\",\n  \"summary\": \"High-impact Software Engineer with expertise in TypeScript, React, and Node.js.\",\n  \"sections\": [\n    {\n      \"sectionType\": \"EXPERIENCE\",\n      \"orderIndex\": 0,\n      \"isVisible\": true,\n      \"items\": [\n        {\n          \"title\": \"Software Engineer\",\n          \"subtitle\": \"Tech Innovations Inc.\",\n          \"location\": \"San Francisco, CA\",\n          \"startDate\": \"2023-01\",\n          \"endDate\": \"Present\",\n          \"isCurrent\": true,\n          \"orderIndex\": 0,\n          \"bulletPoints\": [\n            {\n              \"text\": \"Architected microservices that reduced API latency by 35% across 200k daily users.\",\n              \"actionVerb\": \"Architected\",\n              \"framework\": \"XYZ\",\n              \"hasMetric\": true,\n              \"orderIndex\": 0\n            },\n            {\n              \"text\": \"Spearheaded test coverage initiative, improving unit test coverage from 45% to 88% using Jest.\",\n              \"actionVerb\": \"Spearheaded\",\n              \"framework\": \"STAR\",\n              \"hasMetric\": true,\n              \"orderIndex\": 1\n            }\n          ]\n        }\n      ]\n    },\n    {\n      \"sectionType\": \"EDUCATION\",\n      \"orderIndex\": 1,\n      \"isVisible\": true,\n      \"items\": [\n        {\n          \"title\": \"B.S. in Computer Science\",\n          \"subtitle\": \"University of California, Berkeley\",\n          \"location\": \"Berkeley, CA\",\n          \"startDate\": \"2019-09\",\n          \"endDate\": \"2023-05\",\n          \"isCurrent\": false,\n          \"orderIndex\": 0,\n          \"bulletPoints\": [\n            {\n              \"text\": \"Graduated Magna Cum Laude with a 3.85 GPA.\",\n              \"actionVerb\": \"Graduated\",\n              \"framework\": \"STANDARD\",\n              \"hasMetric\": true,\n              \"orderIndex\": 0\n            }\n          ]\n        }\n      ]\n    }\n  ],\n  \"skillGroups\": [\n    {\n      \"categoryName\": \"Languages\",\n      \"skills\": [\"TypeScript\", \"JavaScript\", \"Python\", \"SQL\"],\n      \"orderIndex\": 0\n    },\n    {\n      \"categoryName\": \"Frameworks & Tools\",\n      \"skills\": [\"React\", \"Next.js\", \"Node.js\", \"Express\", \"Prisma\", \"Docker\"],\n      \"orderIndex\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cvs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cvs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List User CVs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cvs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cvs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get CV by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cvs/{{cvId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cvs", "{{cvId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update CV by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Full Stack CV (v2)\",\n  \"templateId\": \"modern-compact\",\n  \"fullName\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"phone\": \"+1 (555) 234-5678\",\n  \"location\": \"San Francisco, CA\",\n  \"summary\": \"Senior Full Stack Engineer with 4+ years of production experience.\",\n  \"sections\": [\n    {\n      \"sectionType\": \"EXPERIENCE\",\n      \"orderIndex\": 0,\n      \"isVisible\": true,\n      \"items\": [\n        {\n          \"title\": \"Lead Software Engineer\",\n          \"subtitle\": \"Tech Innovations Inc.\",\n          \"startDate\": \"2023-01\",\n          \"endDate\": \"Present\",\n          \"isCurrent\": true,\n          \"bulletPoints\": [\n            {\n              \"text\": \"Engineered distributed caching layer reducing database query overhead by 40%.\",\n              \"actionVerb\": \"Engineered\",\n              \"framework\": \"XYZ\",\n              \"hasMetric\": true\n            }\n          ]\n        }\n      ]\n    }\n  ],\n  \"skillGroups\": [\n    {\n      \"categoryName\": \"Core Skills\",\n      \"skills\": [\"TypeScript\", \"React\", \"Node.js\", \"MySQL\", \"Docker\"]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/cvs/{{cvId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cvs", "{{cvId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete CV by ID",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cvs/{{cvId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "cvs", "{{cvId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Job Role Catalog",
+      "item": [
+        {
+          "name": "List Job Roles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.data && json.data.length > 0) {",
+                  "        pm.collectionVariables.set('roleId', json.data[0].id);",
+                  "        console.log('Saved first roleId:', json.data[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-roles?search=engineer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job-roles"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "engineer"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Starter Bullets for Role",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/job-roles/{{roleId}}/bullets?framework=XYZ",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "job-roles", "{{roleId}}", "bullets"],
+              "query": [
+                {
+                  "key": "framework",
+                  "value": "XYZ"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. AI & ATS Services",
+      "item": [
+        {
+          "name": "AI Enhance Bullet (Google Gemini)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rawBullet\": \"I developed a customer portal with react and improved speed\",\n  \"sectionContext\": {\n    \"roleTitle\": \"Frontend Engineer\",\n    \"organization\": \"Acme Corp\",\n    \"technologies\": [\"React\", \"TypeScript\", \"Tailwind CSS\"]\n  },\n  \"framework\": \"XYZ\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/enhance-bullet",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "enhance-bullet"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ATS Audit & Scoring",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cvId\": \"{{cvId}}\",\n  \"targetJobDescription\": \"Seeking a Full Stack Engineer proficient in React, TypeScript, Node.js, Express, and MySQL database optimization.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ats/score",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ats", "score"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

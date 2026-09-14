@@ -15,13 +15,38 @@ Redirects the user to Google's OAuth 2.0 consent screen.
 
 ---
 
-## 2. Google OAuth Callback
-Receives authorization code from Google, exchanges it for profile data, upserts the `User` in MySQL, issues a signed JWT, and sets the secure `HttpOnly` cookie.
+## 2. Google OAuth Callback & Token Exchange
+Handles authentication either via server redirect callback or direct client-side token verification (from `@react-oauth/google`).
 
+### Flow A: Redirect Callback
 - **Method**: `GET /api/auth/google/callback?code={authCode}`
 - **Response `302 Found`**:
   - **Header**: `Set-Cookie: token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`
   - **Redirect**: Redirects to `http://localhost:3000/editor` (or stored `returnTo` state)
+
+### Flow B: Direct Client ID Token Exchange
+- **Method**: `POST /api/auth/google`
+- **Body**:
+  ```json
+  { "idToken": "<google_credential_or_id_token>" }
+  ```
+- **Response `200 OK`**:
+  - **Header**: `Set-Cookie: token=<jwt>; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=604800`
+  - **Body**:
+    ```json
+    {
+      "success": true,
+      "data": {
+        "user": {
+          "id": "u-123e4567-e89b-12d3-a456-426614174000",
+          "email": "alex.smith@university.edu",
+          "name": "Alex Smith",
+          "avatarUrl": "https://lh3.googleusercontent.com/a/...",
+          "provider": "google"
+        }
+      }
+    }
+    ```
 
 ---
 

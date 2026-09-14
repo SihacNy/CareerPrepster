@@ -218,14 +218,14 @@
 **Goal**: Connect frontend to live backend Express API (`http://localhost:5000/api`) with typed fetch client, session authentication, live role templates, Gemini bullet refine, 4-pillar ATS scoring, and cloud history syncing.
 
 **Independent Test**:
-1. Open auth modal -> register/login with email/password -> `HttpOnly` cookie set, header shows user profile from `/api/auth/me`.
+1. Open auth modal -> click "Continue with Google" -> exchanges OAuth token for backend `HttpOnly` cookie, header displays user profile from `/api/auth/me`.
 2. Type role in editor -> role suggestions fetch from `/api/job-roles`; bullet drawer loads starter bullets from `/api/job-roles/:id/bullets`.
 3. Click "Refine with AI" -> sends bullet to `/api/ai/enhance-bullet` and returns Gemini 3.6 Flash suggestions.
 4. Click "ATS Review" -> calculates 4-pillar score from `/api/ats/score`.
 5. Save draft -> sends `POST /api/cvs` or `PUT /api/cvs/:id`; `/history` fetches live CV list from `/api/cvs` and deletes via `DELETE /api/cvs/:id`.
 
 - [ ] T067 [P] [US10] Create typed API client with credentials support and error boundary in `frontend/src/lib/api.ts` covering all 15 endpoints
-- [ ] T068 [US10] Add Email/Password registration and login form tabs with validation in `frontend/src/components/auth/AuthModal.tsx` connecting to `/api/auth/register` and `/api/auth/login`
+- [ ] T068 [US10] Connect Google OAuth flow in `frontend/src/components/auth/AuthModal.tsx` to backend token exchange endpoint to issue `HttpOnly` session cookie (Zero password forms)
 - [ ] T069 [US10] Connect `frontend/src/lib/auth.tsx` and `frontend/src/components/navigation/Header.tsx` to `/api/auth/me` and `/api/auth/logout`
 - [ ] T070 [US10] Add parametric `?id=[id]` query parameter support in `frontend/src/app/editor/page.tsx` to hydrate state from `GET /api/cvs/:id`
 - [ ] T071 [US10] Connect autosave and continue button in `frontend/src/components/editor/ContinueActionBar.tsx` to `POST /api/cvs` (create) and `PUT /api/cvs/:id` (update)
@@ -236,6 +236,21 @@
 - [ ] T076 [US10] Wire resume upload in `frontend/src/components/onboarding/UploadDropzone.tsx` to `POST /api/cvs/import` via multipart `FormData`
 
 **Checkpoint**: All 15 backend API endpoints integrated with the frontend. Full-stack end-to-end user workflow validated.
+
+---
+
+## Phase 13: Full-Stack Docker Containerization & Orchestration
+
+**Goal**: Full multi-container development and deployment environment orchestrating `frontend` (Next.js 14 on port 3000), `backend` (Express on port 5000), and `mysql` (MySQL 8.0 on port 3307/3306) via Docker Compose per Constitution Principle 5.
+
+**Independent Test**:
+1. Run `docker compose config` -> returns code 0 with valid service definitions for `mysql`, `backend`, and `frontend`.
+2. Run `docker compose up -d` -> all three containers start, health checks pass, frontend loads on `http://localhost:3000`, and communicates with backend API on `http://localhost:5000/api`.
+
+- [x] T077 [P] Create `frontend/Dockerfile` (Node.js 20 Alpine with libc6-compat) and `frontend/.dockerignore` (excluding node_modules, .next, .env*.local)
+- [x] T078 Update `docker-compose.yml` to declare `frontend` service with bind mounts, anonymous volume caching (`/app/node_modules`, `/app/.next`), and dependency on `backend`
+- [x] T079 Configure non-conflicting host port mapping (`${MYSQL_PORT:-3307}:3306`) and environment variables (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`)
+- [x] T080 Verify full-stack container build with `docker compose build frontend` and test end-to-end multi-container runtime
 
 ---
 
@@ -284,9 +299,9 @@ Task: "Update vector PDF documents in frontend/src/lib/pdf/ClassicPdfDocument.ts
 ## Parallel Example: User Story 10 (Backend Integration)
 
 ```bash
-# Build API client and Auth form tabs in parallel:
+# Build API client and Auth session connection in parallel:
 Task: "Create typed API client with credentials support in frontend/src/lib/api.ts"
-Task: "Add Email/Password registration and login form tabs in frontend/src/components/auth/AuthModal.tsx"
+Task: "Connect Google OAuth token flow to backend session cookie in frontend/src/components/auth/AuthModal.tsx"
 ```
 
 ---
