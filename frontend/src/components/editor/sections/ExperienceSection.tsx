@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Briefcase, Plus, Trash2, ChevronDown, Pencil } from "lucide-react";
 import { useCV } from "@/lib/store";
-import { ExperienceItem } from "@/types/cv";
+import { CVItem, getSectionItems, getBulletTexts, createBulletPoints } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
 import { DateRangePicker } from "../DateRangePicker";
 
@@ -23,8 +23,8 @@ const EXPERIENCE_SUGGESTIONS = [
 ];
 
 export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: ExperienceSectionProps) {
-  const { cvData, setCVData } = useCV();
-  const { experience } = cvData;
+  const { cvData, updateSectionItems } = useCV();
+  const experience = getSectionItems(cvData, "EXPERIENCE");
   const [internalOpen, setInternalOpen] = useState(true);
   const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({});
 
@@ -39,48 +39,48 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
   const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
 
   const handleAddEntry = () => {
-    const newEntry: ExperienceItem = {
+    const newEntry: CVItem = {
       id: `exp-${Date.now()}`,
-      company: "",
-      role: "",
+      title: "",     // Role
+      subtitle: "",  // Company
       location: "",
       startDate: "",
       endDate: "",
       isCurrent: false,
-      bulletPoints: [""],
+      orderIndex: experience.length,
+      bulletPoints: createBulletPoints([""]),
     };
-    setCVData((prev) => ({
-      ...prev,
-      experience: [...prev.experience, newEntry],
-    }));
+    updateSectionItems("EXPERIENCE", [...experience, newEntry]);
     setCollapsedEntries((prev) => ({
       ...prev,
       [newEntry.id]: false,
     }));
   };
 
-  const handleUpdateEntry = (id: string, field: keyof ExperienceItem, value: any) => {
-    setCVData((prev) => ({
-      ...prev,
-      experience: prev.experience.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      ),
-    }));
+  const handleUpdateEntry = (id: string, field: string, value: any) => {
+    const updated = experience.map((item) => {
+      if (item.id !== id) return item;
+      if (field === "company") {
+        return { ...item, subtitle: value };
+      }
+      if (field === "role") {
+        return { ...item, title: value };
+      }
+      return { ...item, [field]: value };
+    });
+    updateSectionItems("EXPERIENCE", updated);
   };
 
   const handleRemoveEntry = (id: string) => {
-    setCVData((prev) => ({
-      ...prev,
-      experience: prev.experience.filter((item) => item.id !== id),
-    }));
+    updateSectionItems("EXPERIENCE", experience.filter((item) => item.id !== id));
   };
 
   return (
-    <div id="section-experience" className="bg-white p-5 rounded-xl border border-slate-200 mb-5 scroll-mt-24 transition-all">
+    <div id="section-experience" className="bg-white p-6 rounded-2xl border border-slate-200 mb-6 scroll-mt-24 transition-all">
       <div
         onClick={toggleSection}
         className={`flex items-center justify-between cursor-pointer select-none ${
-          isSectionOpen ? "pb-2 border-b border-slate-100 mb-4" : "mb-0"
+          isSectionOpen ? "pb-2.5 border-b border-slate-100 mb-4" : "mb-0"
         }`}
       >
         <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
               isSectionOpen ? "" : "-rotate-90"
             }`}
           />
-          <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+          <h3 className="text-sm sm:text-base font-semibold text-slate-800 flex items-center gap-2">
             <Briefcase className="w-4 h-4 text-sky-600" />
             <span>Work &amp; Internship Experience</span>
             <span className="text-xs text-slate-400 font-normal">
@@ -108,7 +108,7 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
             }}
             title="Add Experience"
             aria-label="Add Experience"
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky-600 hover:bg-sky-700 text-white flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 flex-shrink-0"
+            className="w-8 h-8 rounded-full bg-sky-600 hover:bg-sky-700 text-white flex items-center justify-center transition-all shadow-2xs hover:scale-105 active:scale-95 flex-shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
@@ -117,9 +117,9 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
 
       {isSectionOpen && (
         experience.length === 0 ? (
-          <div className="py-7 px-4 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+          <div className="py-8 px-4 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
             <Briefcase className="w-8 h-8 text-slate-300 mx-auto mb-2 stroke-[1.5]" />
-            <p className="text-xs font-medium text-slate-500">
+            <p className="text-xs sm:text-sm font-medium text-slate-500">
               No work experience added yet
             </p>
           </div>
@@ -132,7 +132,7 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
               <div
                 key={exp.id}
                 className={`rounded-xl border border-slate-200 bg-slate-50/50 relative group transition-all ${
-                  isCollapsed ? "px-3 py-2 space-y-0" : "p-4 space-y-3"
+                  isCollapsed ? "px-3.5 py-2.5 space-y-0" : "p-5 space-y-4"
                 }`}
               >
                 {/* Entry Header: Summary title on left, Edit & Trash on right */}
@@ -146,79 +146,79 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
                     className="flex items-center gap-2 cursor-pointer select-none group/title flex-1 min-w-0 pr-2"
                     title={isCollapsed ? "Click to edit" : "Click to collapse"}
                   >
-                    <span className="text-xs font-medium text-slate-700 truncate group-hover/title:text-sky-600 transition-colors">
-                      {exp.company || exp.role || `Experience #${index + 1}`}
+                    <span className="text-sm font-medium text-slate-700 truncate group-hover/title:text-sky-600 transition-colors">
+                      {exp.subtitle || exp.title || `Experience #${index + 1}`}
                     </span>
                   </div>
 
-                  <div className="flex items-center space-x-1 flex-shrink-0">
+                  <div className="flex items-center space-x-1.5 flex-shrink-0">
                     <button
                       type="button"
                       onClick={() => toggleEntryCollapse(exp.id)}
-                      className={`p-1 rounded hover:bg-white transition-colors ${
+                      className={`p-1.5 rounded-lg hover:bg-white transition-colors ${
                         !isCollapsed ? "text-sky-600" : "text-slate-400 hover:text-slate-700"
                       }`}
                       title={isCollapsed ? "Edit entry" : "Collapse entry"}
                       aria-label={isCollapsed ? "Edit entry" : "Collapse entry"}
                     >
-                      <Pencil className="w-3.5 h-3.5" />
+                      <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleRemoveEntry(exp.id)}
-                      className="text-slate-400 hover:text-rose-600 p-1 rounded hover:bg-white transition-colors"
+                      className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-white transition-colors"
                       title="Remove experience entry"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
                 {!isCollapsed && (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                           Company / Organization <span className="text-red-500 font-semibold">*</span>
                         </label>
                         <input
                           type="text"
-                          value={exp.company}
+                          value={exp.subtitle || ""}
                           onChange={(e) => handleUpdateEntry(exp.id, "company", e.target.value)}
                           placeholder="e.g. Acme Tech Solutions"
-                          className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
+                          className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                           Job Title / Role <span className="text-red-500 font-semibold">*</span>
                         </label>
                         <input
                           type="text"
-                          value={exp.role}
+                          value={exp.title || ""}
                           onChange={(e) => handleUpdateEntry(exp.id, "role", e.target.value)}
                           placeholder="e.g. Junior Frontend Developer"
-                          className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
+                          className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Location</label>
+                        <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">Location</label>
                         <input
                           type="text"
-                          value={exp.location}
+                          value={exp.location || ""}
                           onChange={(e) => handleUpdateEntry(exp.id, "location", e.target.value)}
                           placeholder="e.g. Phnom Penh, Cambodia (or Remote)"
-                          className="w-full text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
+                          className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
                         />
                       </div>
 
                       <div className="col-span-2">
                         <DateRangePicker
-                          startDate={exp.startDate}
-                          endDate={exp.endDate}
-                          isCurrent={exp.isCurrent}
+                          startDate={exp.startDate || ""}
+                          endDate={exp.endDate || ""}
+                          isCurrent={!!exp.isCurrent}
                           onStartDateChange={(val) => handleUpdateEntry(exp.id, "startDate", val)}
                           onEndDateChange={(val) => handleUpdateEntry(exp.id, "endDate", val)}
                           onIsCurrentChange={(isCurrent) => handleUpdateEntry(exp.id, "isCurrent", isCurrent)}
@@ -231,9 +231,9 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
                     <div className="pt-2 border-t border-slate-200/80">
                       <RichBulletEditor
                         label="Key Achievements & Responsibilities"
-                        bullets={exp.bulletPoints || []}
+                        bullets={getBulletTexts(exp)}
                         suggestions={EXPERIENCE_SUGGESTIONS}
-                        onChange={(newBullets) => handleUpdateEntry(exp.id, "bulletPoints", newBullets)}
+                        onChange={(newBullets) => handleUpdateEntry(exp.id, "bulletPoints", createBulletPoints(newBullets))}
                         onRefineWithAI={onRefineBullet}
                       />
                     </div>

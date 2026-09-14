@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Target, CheckCircle2, AlertCircle, Sparkles, Copy, Check, Plus } from "lucide-react";
 import { ATSReport } from "@/types/cv";
 import { useCV } from "@/lib/store";
@@ -42,7 +42,7 @@ export function JobDescriptionInput({
     const skillsToAdd = keywordAnalysis.missingKeywords;
 
     setCVData((prev) => {
-      const existingCategories = [...prev.skills];
+      const existingCategories = [...(prev.skillGroups || prev.skills || [])];
       let targetCat = existingCategories.find(
         (c) =>
           c.categoryName.toLowerCase().includes("tools") ||
@@ -63,11 +63,13 @@ export function JobDescriptionInput({
           id: `cat-${Date.now()}`,
           categoryName: "Developer Tools & Technologies",
           skills: skillsToAdd,
+          orderIndex: existingCategories.length,
         });
       }
 
       return {
         ...prev,
+        skillGroups: existingCategories,
         skills: existingCategories,
         updatedAt: new Date().toISOString(),
       };
@@ -77,8 +79,24 @@ export function JobDescriptionInput({
     setTimeout(() => setAddedStatus(null), 3500);
   };
 
+  const [draftText, setDraftText] = useState(value);
+
+  // Sync internal draft text if outer value updates
+  useEffect(() => {
+    setDraftText(value);
+  }, [value]);
+
+  const handleMatch = () => {
+    onChange(draftText);
+  };
+
+  const handleClear = () => {
+    setDraftText("");
+    onChange("");
+  };
+
   return (
-    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-card mb-6" style={{ zoom: 1.1 }}>
+    <div className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200 shadow-card mb-6">
       <div className="flex items-center space-x-2.5 pb-2.5 border-b border-slate-100 mb-3.5">
         <Target className="w-5 h-5 text-sky-600" />
         <h3 className="text-sm sm:text-base font-bold text-slate-900">
@@ -92,11 +110,34 @@ export function JobDescriptionInput({
 
       <textarea
         rows={4}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        value={draftText}
+        onChange={(e) => setDraftText(e.target.value)}
         placeholder="Paste full job description text here (e.g. Looking for Software Engineer with React, Node.js, Docker, MySQL, and REST API experience)..."
         className="w-full text-sm text-slate-900 bg-slate-50 border border-slate-200 rounded-lg p-3.5 outline-none focus:bg-white focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-colors leading-relaxed placeholder:text-slate-400 min-h-[110px]"
       />
+
+      {/* Action Button Row */}
+      <div className="flex items-center justify-between pt-3">
+        {draftText.trim() ? (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="text-xs font-medium text-slate-400 hover:text-rose-600 transition-colors"
+          >
+            Clear Job Description
+          </button>
+        ) : (
+          <div />
+        )}
+
+        <button
+          type="button"
+          onClick={handleMatch}
+          className="inline-flex items-center px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-2xs cursor-pointer"
+        >
+          <span>Match Keywords</span>
+        </button>
+      </div>
 
       {keywordAnalysis && (
         <div className="mt-5 pt-4 border-t border-slate-100 space-y-4">

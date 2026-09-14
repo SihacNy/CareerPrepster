@@ -128,6 +128,25 @@ As a finished user, I want to save my completed CV to my account in MySQL and do
 
 ---
 
+### User Story 8 - User Resume & Audit History Dashboard (Priority: P3)
+
+As a student managing multiple job applications or iterating on different resume drafts, I want a dedicated History dashboard page where I can view, search, restore, duplicate, and delete my saved CV drafts, previous ATS audit scores, and exported PDF snapshots, so that I can track my resume iterations across different roles and quickly reuse past work without losing changes.
+
+**Why this priority**: Empowers students to manage tailored resumes for distinct roles and preserves draft versions and ATS audits across sessions.
+
+**Independent Test**: Can be tested by navigating to `/history`, searching and filtering drafts, clicking "Edit" to restore a draft into the editor, clicking "Duplicate" to generate a cloned draft, and deleting obsolete entries.
+
+**Acceptance Scenarios**:
+
+1. **Given** a user navigates to `/history`, **When** the page loads, **Then** all saved CV versions and drafts are displayed with target role, last modified timestamp, template badge, ATS score badge (if audited), and word count.
+2. **Given** a saved history item, **When** the user clicks "Edit", **Then** the snapshot is loaded into active editor state and the browser navigates to `/editor`.
+3. **Given** a saved history item, **When** the user clicks "Audit", **Then** the snapshot is loaded and the browser navigates to `/editor/ats`.
+4. **Given** a user wanting to tailor an existing resume for a new job opening, **When** they click "Duplicate", **Then** a cloned draft is created in history with `(Copy)` suffix.
+5. **Given** an unwanted draft, **When** the user clicks "Delete", **Then** the entry is safely removed after confirmation.
+6. **Given** an empty history, **When** visiting `/history`, **Then** friendly empty state CTAs ("Import Resume" and "Create New Resume") are displayed.
+
+---
+
 ### Edge Cases
 
 - **Image-Only / Scanned PDFs**: If an uploaded PDF contains only flattened images (no extractable text layer), the system alerts the user: *"We could not detect selectable text in this document. You can still use our templates to type your CV, or upload a text-based PDF."*

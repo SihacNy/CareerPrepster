@@ -1,6 +1,6 @@
-import { CVData, JobRole, RoleBulletTemplate, ATSReport } from "@/types/cv";
+import { CVData, JobRole, RoleBulletTemplate, ATSReport, normalizeCVData } from "@/types/cv";
 
-export const INITIAL_EMPTY_CV: CVData = {
+export const INITIAL_EMPTY_CV: CVData = normalizeCVData({
   id: "cv-draft-1",
   title: "My University Resume",
   templateId: "classic",
@@ -14,86 +14,172 @@ export const INITIAL_EMPTY_CV: CVData = {
     githubUrl: "github.com/alexrivera-dev",
     summary: "Final-year Computer Science student with hands-on experience building full-stack web applications and microservices. Seeking full-time Software Engineer roles.",
   },
-  education: [
+  sections: [
     {
-      id: "edu-1",
-      institution: "State University of Technology",
-      degree: "B.S. in Computer Science & Engineering",
-      location: "Seattle, WA",
-      startDate: "Sep 2022",
-      endDate: "Jun 2026",
-      isCurrent: true,
-      gpa: "3.85 / 4.00",
-      bulletPoints: [
-        "Relevant Coursework: Data Structures & Algorithms, Distributed Systems, Database Management Systems, Cloud Computing.",
-        "Dean's Honor List for 5 consecutive semesters; Vice President of ACM Student Chapter.",
+      id: "sec-education",
+      sectionType: "EDUCATION",
+      title: "Education",
+      orderIndex: 0,
+      isVisible: true,
+      items: [
+        {
+          id: "edu-1",
+          title: "B.S. in Computer Science & Engineering",
+          subtitle: "State University of Technology",
+          location: "Seattle, WA",
+          startDate: "Sep 2022",
+          endDate: "Jun 2026",
+          isCurrent: true,
+          gpa: "3.85 / 4.00",
+          orderIndex: 0,
+          bulletPoints: [
+            {
+              id: "bp-edu-1",
+              text: "Relevant Coursework: Data Structures & Algorithms, Distributed Systems, Database Management Systems, Cloud Computing.",
+              framework: "STANDARD",
+            },
+            {
+              id: "bp-edu-2",
+              text: "Dean's Honor List for 5 consecutive semesters; Vice President of ACM Student Chapter.",
+              framework: "STANDARD",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "sec-experience",
+      sectionType: "EXPERIENCE",
+      title: "Work Experience",
+      orderIndex: 1,
+      isVisible: true,
+      items: [
+        {
+          id: "exp-1",
+          title: "Software Engineering Intern",
+          subtitle: "TechNova Solutions",
+          location: "Remote",
+          startDate: "Jun 2025",
+          endDate: "Aug 2025",
+          isCurrent: false,
+          orderIndex: 0,
+          bulletPoints: [
+            {
+              id: "bp-exp-1",
+              text: "Engineered RESTful microservices using Node.js and TypeScript, reducing client query latency by 32%.",
+              framework: "XYZ",
+              actionVerb: "Engineered",
+              hasMetric: true,
+            },
+            {
+              id: "bp-exp-2",
+              text: "Implemented Redis caching layer for high-throughput product catalog, serving 45,000 daily active requests.",
+              framework: "XYZ",
+              actionVerb: "Implemented",
+              hasMetric: true,
+            },
+            {
+              id: "bp-exp-3",
+              text: "Authored comprehensive unit and integration test suites using Jest, boosting service code coverage from 68% to 91%.",
+              framework: "XYZ",
+              actionVerb: "Authored",
+              hasMetric: true,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "sec-projects",
+      sectionType: "PROJECTS",
+      title: "Technical Projects",
+      orderIndex: 2,
+      isVisible: true,
+      items: [
+        {
+          id: "proj-1",
+          title: "Distributed Task Queue Engine",
+          subtitle: "TypeScript, Node.js, Redis, Docker, PostgreSQL",
+          url: "github.com/alexrivera-dev/task-queue",
+          startDate: "Jan 2025",
+          endDate: "May 2025",
+          isCurrent: false,
+          orderIndex: 0,
+          bulletPoints: [
+            {
+              id: "bp-proj-1",
+              text: "Architected an asynchronous worker queue in TypeScript processing 10,000+ simulated concurrent jobs per minute.",
+              framework: "XYZ",
+              actionVerb: "Architected",
+              hasMetric: true,
+            },
+            {
+              id: "bp-proj-2",
+              text: "Constructed dead-letter queuing and exponential backoff retry algorithms to guarantee zero message loss during worker failovers.",
+              framework: "XYZ",
+              actionVerb: "Constructed",
+              hasMetric: true,
+            },
+            {
+              id: "bp-proj-3",
+              text: "Containerized application with Docker Compose for seamless local developer testing and CI/CD validation.",
+              framework: "XYZ",
+              actionVerb: "Containerized",
+              hasMetric: false,
+            },
+          ],
+        },
+        {
+          id: "proj-2",
+          title: "Algorithmic Code Visualizer",
+          subtitle: "React, Tailwind CSS, TypeScript",
+          url: "github.com/alexrivera-dev/algo-visualizer",
+          startDate: "Oct 2024",
+          endDate: "Dec 2024",
+          isCurrent: false,
+          orderIndex: 1,
+          bulletPoints: [
+            {
+              id: "bp-proj-4",
+              text: "Developed interactive tree and graph traversal step-by-step visualizations utilized by 1,200+ university classmates.",
+              framework: "XYZ",
+              actionVerb: "Developed",
+              hasMetric: true,
+            },
+            {
+              id: "bp-proj-5",
+              text: "Optimized canvas render cycles using requestAnimationFrame, achieving sustained 60 FPS performance during large array animations.",
+              framework: "XYZ",
+              actionVerb: "Optimized",
+              hasMetric: true,
+            },
+          ],
+        },
       ],
     },
   ],
-  experience: [
-    {
-      id: "exp-1",
-      company: "TechNova Solutions",
-      role: "Software Engineering Intern",
-      location: "Remote",
-      startDate: "Jun 2025",
-      endDate: "Aug 2025",
-      isCurrent: false,
-      bulletPoints: [
-        "Engineered RESTful microservices using Node.js and TypeScript, reducing client query latency by 32%.",
-        "Implemented Redis caching layer for high-throughput product catalog, serving 45,000 daily active requests.",
-        "Authored comprehensive unit and integration test suites using Jest, boosting service code coverage from 68% to 91%.",
-      ],
-    },
-  ],
-  projects: [
-    {
-      id: "proj-1",
-      name: "Distributed Task Queue Engine",
-      role: "Lead Developer (Capstone Project)",
-      techStack: ["TypeScript", "Node.js", "Redis", "Docker", "PostgreSQL"],
-      linkUrl: "github.com/alexrivera-dev/task-queue",
-      startDate: "Jan 2025",
-      endDate: "May 2025",
-      bulletPoints: [
-        "Architected an asynchronous worker queue in TypeScript processing 10,000+ simulated concurrent jobs per minute.",
-        "Constructed dead-letter queuing and exponential backoff retry algorithms to guarantee zero message loss during worker failovers.",
-        "Containerized application with Docker Compose for seamless local developer testing and CI/CD validation.",
-      ],
-    },
-    {
-      id: "proj-2",
-      name: "Algorithmic Code Visualizer",
-      role: "Frontend Developer",
-      techStack: ["React", "Tailwind CSS", "TypeScript"],
-      linkUrl: "github.com/alexrivera-dev/algo-visualizer",
-      startDate: "Oct 2024",
-      endDate: "Dec 2024",
-      bulletPoints: [
-        "Developed interactive tree and graph traversal step-by-step visualizations utilized by 1,200+ university classmates.",
-        "Optimized canvas render cycles using requestAnimationFrame, achieving sustained 60 FPS performance during large array animations.",
-      ],
-    },
-  ],
-  skills: [
+  skillGroups: [
     {
       id: "skill-1",
       categoryName: "Programming Languages",
       skills: ["TypeScript", "JavaScript", "Python", "Java", "C++", "SQL"],
+      orderIndex: 0,
     },
     {
       id: "skill-2",
       categoryName: "Frameworks & Web Technologies",
       skills: ["React", "Next.js", "Node.js", "Express", "Tailwind CSS", "REST APIs"],
+      orderIndex: 1,
     },
     {
       id: "skill-3",
       categoryName: "Developer Tools & Cloud",
       skills: ["Git", "Docker", "PostgreSQL", "MySQL", "Redis", "Jest", "Linux"],
+      orderIndex: 2,
     },
   ],
   updatedAt: new Date().toISOString(),
-};
+});
 
 export const MOCK_JOB_ROLES: JobRole[] = [
   { id: "role-1", name: "Software Engineer", track: "Engineering" },

@@ -69,9 +69,6 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
         {selectedPath === "choice" ? (
           <div>
             <div className="text-center mb-6">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200 mb-2">
-                Get Started
-              </span>
               <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
                 How would you like to build your CV?
               </h2>

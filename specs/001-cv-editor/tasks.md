@@ -166,6 +166,79 @@
 
 ---
 
+## Phase 10: User Story 8 - User Resume & Audit History Dashboard (Priority: P3)
+
+**Goal**: Dedicated History dashboard allowing students to review, restore, duplicate, and delete their saved CV drafts, previous ATS diagnostic scans, and exported PDF snapshots.
+
+**Independent Test**:
+1. Navigate to `/history` -> view all saved drafts and export snapshots with ATS score badges, role titles, and last modified timestamps.
+2. Click "Edit" on a card -> restores snapshot into active CV editor and navigates to `/editor`.
+3. Click "Audit" on a card -> restores snapshot and navigates to `/editor/ats`.
+4. Click "Duplicate" -> instantly creates a copy with `(Copy)` suffix and adds it to history list.
+5. Click "Delete" -> prompts confirmation and removes the resume from history.
+6. Type in search bar or filter by tab (`All`, `Drafts`, `Audited`, `Exported`) -> grid updates reactively.
+
+- [x] T051 [P] [US8] Define `CVHistoryItem` and `CVHistoryStatus` types in `frontend/src/types/cv.ts`
+- [x] T052 [P] [US8] Build history storage manager with seed generator and CRUD operations in `frontend/src/lib/historyStore.ts`
+- [x] T053 [US8] Integrate `loadFromHistory` and auto-recording in `frontend/src/lib/store.tsx`
+- [x] T054 [P] [US8] Build interactive `HistoryCard` component with brand sky-blue hover styling (`border-sky-300`, `hover:bg-sky-50`), clean text actions (`Edit`, `Audit`), and duplicate/delete triggers in `frontend/src/components/history/HistoryCard.tsx`
+- [x] T055 [US8] Build dedicated User History page at `frontend/src/app/history/page.tsx` with search, category tabs, and stat cards
+- [x] T056 [US8] Connect History access exclusively via user profile dropdown in `frontend/src/components/navigation/Header.tsx`
+
+---
+
+---
+
+## Phase 11: User Story 9 - Frontend State Refactoring to Generic Relational Sections (Alternative 3)
+
+**Goal**: Transition frontend state from rigid isolated arrays (`education[]`, `experience[]`, `projects[]`) to the backend's generic relational structure (`sections: CVSection[]`, `skillGroups: SkillGroup[]`), enabling arbitrary custom sections and eliminating client-server translation adapters.
+
+**Independent Test**:
+1. Open `/editor` -> existing draft loads cleanly into `sections` array without runtime errors.
+2. Edit Education, Experience, Projects, Skills -> updates reflect instantly in `LivePreview.tsx`.
+3. Add a Custom section (e.g., "Volunteering" or "Certifications") -> renders in form and live preview with real-time editing.
+
+- [x] T057 [P] [US9] Refactor TypeScript data contracts in `frontend/src/types/cv.ts` to generic `CVSection`, `CVItem`, `BulletPoint`, `SkillGroup`, and `CVData`
+- [x] T058 [US9] Refactor client state store and `localStorage` persistence in `frontend/src/lib/store.tsx` to manage `sections` and `skillGroups`
+- [x] T059 [P] [US9] Update `frontend/src/components/editor/sections/EducationSection.tsx` to consume and mutate generic `sectionType: "EDUCATION"` items
+- [x] T060 [P] [US9] Update `frontend/src/components/editor/sections/ExperienceSection.tsx` to consume and mutate generic `sectionType: "EXPERIENCE"` items
+- [x] T061 [P] [US9] Update `frontend/src/components/editor/sections/ProjectsSection.tsx` to consume and mutate generic `sectionType: "PROJECTS"` items
+- [x] T062 [P] [US9] Update `frontend/src/components/editor/sections/SkillsSection.tsx` to consume and mutate `skillGroups` array
+- [x] T063 [US9] Update composite form container `frontend/src/components/editor/CVForm.tsx` to assemble generic sections and support adding custom sections
+- [x] T064 [US9] Update Harvard Classic and Jake's Modern preview templates in `frontend/src/components/preview/templates/ClassicAts.tsx` and `frontend/src/components/preview/templates/ModernCompact.tsx` to iterate over generic `sections` and `skillGroups`
+- [x] T065 [P] [US9] Update vector PDF documents in `frontend/src/lib/pdf/ClassicPdfDocument.tsx` and `frontend/src/lib/pdf/ModernPdfDocument.tsx` to render generic `sections` and `skillGroups`
+- [x] T066 [US9] Update `frontend/src/lib/cvParser.ts` to map parsed PDF/DOCX resumes directly to generic `sections` and `skillGroups`
+
+**Checkpoint**: Frontend state store fully refactored to generic `sections` and `skillGroups`. 100% 1-to-1 schema parity with backend MySQL schema.
+
+---
+
+## Phase 12: User Story 10 - Full-Stack Backend Integration (15 Endpoints from COVERAGE_MATRIX.md)
+
+**Goal**: Connect frontend to live backend Express API (`http://localhost:5000/api`) with typed fetch client, session authentication, live role templates, Gemini bullet refine, 4-pillar ATS scoring, and cloud history syncing.
+
+**Independent Test**:
+1. Open auth modal -> register/login with email/password -> `HttpOnly` cookie set, header shows user profile from `/api/auth/me`.
+2. Type role in editor -> role suggestions fetch from `/api/job-roles`; bullet drawer loads starter bullets from `/api/job-roles/:id/bullets`.
+3. Click "Refine with AI" -> sends bullet to `/api/ai/enhance-bullet` and returns Gemini 3.6 Flash suggestions.
+4. Click "ATS Review" -> calculates 4-pillar score from `/api/ats/score`.
+5. Save draft -> sends `POST /api/cvs` or `PUT /api/cvs/:id`; `/history` fetches live CV list from `/api/cvs` and deletes via `DELETE /api/cvs/:id`.
+
+- [ ] T067 [P] [US10] Create typed API client with credentials support and error boundary in `frontend/src/lib/api.ts` covering all 15 endpoints
+- [ ] T068 [US10] Add Email/Password registration and login form tabs with validation in `frontend/src/components/auth/AuthModal.tsx` connecting to `/api/auth/register` and `/api/auth/login`
+- [ ] T069 [US10] Connect `frontend/src/lib/auth.tsx` and `frontend/src/components/navigation/Header.tsx` to `/api/auth/me` and `/api/auth/logout`
+- [ ] T070 [US10] Add parametric `?id=[id]` query parameter support in `frontend/src/app/editor/page.tsx` to hydrate state from `GET /api/cvs/:id`
+- [ ] T071 [US10] Connect autosave and continue button in `frontend/src/components/editor/ContinueActionBar.tsx` to `POST /api/cvs` (create) and `PUT /api/cvs/:id` (update)
+- [ ] T072 [US10] Connect `frontend/src/components/editor/RoleAutocomplete.tsx` and `frontend/src/components/editor/TemplateBulletDrawer.tsx` to `GET /api/job-roles` and `GET /api/job-roles/:id/bullets`
+- [ ] T073 [US10] Connect `frontend/src/components/editor/AIEnhanceModal.tsx` to `POST /api/ai/enhance-bullet` (Gemini 3.6 Flash)
+- [ ] T074 [US10] Connect `frontend/src/app/editor/ats/page.tsx` and `frontend/src/app/editor/job-match/page.tsx` to `POST /api/ats/score`
+- [ ] T075 [US10] Connect `frontend/src/app/history/page.tsx` and `frontend/src/components/history/HistoryCard.tsx` to `GET /api/cvs` and `DELETE /api/cvs/:id`
+- [ ] T076 [US10] Wire resume upload in `frontend/src/components/onboarding/UploadDropzone.tsx` to `POST /api/cvs/import` via multipart `FormData`
+
+**Checkpoint**: All 15 backend API endpoints integrated with the frontend. Full-stack end-to-end user workflow validated.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -177,7 +250,10 @@
 6. **User Story 4 (Phase 6)**: AI STAR/XYZ Assistant (enhances US2 bullet rows).
 7. **User Story 5 (Phase 7)**: Dedicated ATS Scoring Stage (receives data from US1 or US2).
 8. **User Story 7 (Phase 8)**: PDF Export (consumes completed CV data).
-9. **Polish (Phase 9)**: Final aesthetic check.
+9. **Polish (Phase 9)**: Cross-cutting aesthetic and responsive polish.
+10. **User Story 8 (Phase 10)**: User Resume & Audit History Dashboard (consumes saved drafts & export snapshots).
+11. **User Story 9 (Phase 11)**: Frontend Generic State Refactoring (Alternative 3 - prerequisite for backend integration).
+12. **User Story 10 (Phase 12)**: Full-Stack Backend Integration (connects refactored frontend to 15 Express endpoints).
 
 ### Parallel Opportunities per Phase
 - **Phase 1**: T004, T005, T007 can be built in parallel.
@@ -185,14 +261,39 @@
 - **Phase 4**: T015 (Classic) and T016 (Modern) templates can be built in parallel with T018-T022 (Form sections).
 - **Phase 7**: T033 (Gauge), T034 (Pillars), and T035 (JD Input) can be built in parallel.
 - **Phase 8**: T040 and T041 can be built in parallel.
+- **Phase 10**: T051, T052, and T054 can be built in parallel.
+- **Phase 11**: T057, T059, T060, T061, T062, and T065 can be built in parallel.
+- **Phase 12**: T067 (API client) can be built in parallel with T068 (Auth forms).
 
 ---
 
-## Implementation Strategy (MVP First)
+## Parallel Example: User Story 9 (Alternative 3 Refactoring)
 
-1. **Step 1 (MVP Foundation)**: Complete Phases 1, 2, 3, and 4.
-   - *Deliverable*: Working interactive dual-pane CV editor with live preview, mobile toggle, template switching, and local storage auto-saving.
-2. **Step 2 (Content Guidance)**: Complete Phases 5 and 6.
-   - *Deliverable*: Role search, starter bullet library, and AI STAR/XYZ re-writing assistant.
-3. **Step 3 (Audit & Export)**: Complete Phases 7 and 8.
-   - *Deliverable*: Dedicated ATS Scoring Review stage with 4 pillars, JD matching, and PDF download.
+```bash
+# Refactor types and section components in parallel:
+Task: "Refactor TypeScript data contracts in frontend/src/types/cv.ts"
+Task: "Update frontend/src/components/editor/sections/EducationSection.tsx"
+Task: "Update frontend/src/components/editor/sections/ExperienceSection.tsx"
+Task: "Update frontend/src/components/editor/sections/ProjectsSection.tsx"
+Task: "Update frontend/src/components/editor/sections/SkillsSection.tsx"
+Task: "Update vector PDF documents in frontend/src/lib/pdf/ClassicPdfDocument.tsx"
+```
+
+---
+
+## Parallel Example: User Story 10 (Backend Integration)
+
+```bash
+# Build API client and Auth form tabs in parallel:
+Task: "Create typed API client with credentials support in frontend/src/lib/api.ts"
+Task: "Add Email/Password registration and login form tabs in frontend/src/components/auth/AuthModal.tsx"
+```
+
+---
+
+## Implementation Strategy
+
+1. **Step 1 (Standalone UI MVP)**: Completed in Phases 1–10. All screens, templates, mock AI, and local history working.
+2. **Step 2 (Generic Relational State Refactor - Phase 11)**: Refactor `CVData`, `store.tsx`, and section components to generic `sections` and `skillGroups` (Alternative 3).
+3. **Step 3 (Live Backend Integration - Phase 12)**: Connect all 15 endpoints from `COVERAGE_MATRIX.md` to live MySQL + Express backend.
+

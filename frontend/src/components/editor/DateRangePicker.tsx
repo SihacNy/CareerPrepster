@@ -85,27 +85,27 @@ function CustomDropdown({ value, options, placeholder, onChange }: CustomDropdow
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full h-[34px] flex items-center justify-between text-xs text-slate-900 bg-white border border-slate-200 rounded-lg px-3 outline-none hover:border-slate-300 focus:ring-1 focus:ring-sky-500 focus:border-sky-500 shadow-2xs transition-colors"
+        className="w-full h-[42px] flex items-center justify-between text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 outline-none hover:border-slate-300 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
         aria-expanded={isOpen}
       >
         <span className={value ? "font-medium text-slate-900 truncate" : "text-slate-400 truncate"}>
           {value || placeholder}
         </span>
         <ChevronDown
-          className={`w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform duration-150 ml-1 ${
+          className={`w-4 h-4 shrink-0 text-slate-400 transition-transform duration-150 ml-1 ${
             isOpen ? "rotate-180 text-sky-600" : ""
           }`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-52 overflow-y-auto z-50 py-1 scrollbar-thin scrollbar-thumb-slate-200">
+        <div className="absolute top-full left-0 w-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg max-h-56 overflow-y-auto z-50 py-1.5 scrollbar-thin scrollbar-thumb-slate-200">
           <div
             onClick={() => {
               onChange("");
               setIsOpen(false);
             }}
-            className="px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-50 cursor-pointer italic"
+            className="px-3.5 py-2 text-sm text-slate-400 hover:bg-slate-50 cursor-pointer italic"
           >
             Clear
           </div>
@@ -116,7 +116,7 @@ function CustomDropdown({ value, options, placeholder, onChange }: CustomDropdow
                 onChange(opt);
                 setIsOpen(false);
               }}
-              className={`px-3 py-1.5 text-xs cursor-pointer hover:bg-sky-50 hover:text-sky-700 transition-colors ${
+              className={`px-3.5 py-2 text-sm cursor-pointer hover:bg-sky-50 hover:text-sky-700 transition-colors ${
                 opt === value ? "bg-sky-50 text-sky-700 font-semibold" : "text-slate-700"
               }`}
             >
@@ -176,15 +176,15 @@ export function DateRangePicker({
   };
 
   return (
-    <div className="w-full space-y-2.5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+    <div className="w-full space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Start Date UI */}
         <div className="flex flex-col">
-          <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <label className="text-xs sm:text-[13px] font-semibold text-slate-700 flex items-center gap-1.5 mb-2">
+            <Calendar className="w-4 h-4 text-slate-400" />
             <span>{startLabel}</span>
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
             <CustomDropdown
               value={parsedStart.month}
               options={MONTHS}
@@ -202,17 +202,17 @@ export function DateRangePicker({
 
         {/* End Date UI */}
         <div className="flex flex-col">
-          <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <label className="text-xs sm:text-[13px] font-semibold text-slate-700 flex items-center gap-1.5 mb-2">
+            <Calendar className="w-4 h-4 text-slate-400" />
             <span>{endLabel}</span>
           </label>
 
           {isCurrent ? (
-            <div className="w-full h-[34px] text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 flex items-center shadow-2xs">
+            <div className="w-full h-[42px] text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3.5 flex items-center shadow-2xs">
               <span>Present (Ongoing)</span>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
               <CustomDropdown
                 value={parsedEnd.month}
                 options={MONTHS}
@@ -232,16 +232,16 @@ export function DateRangePicker({
 
       {/* "I currently work here / Currently enrolled" Checkbox */}
       {showCurrentCheckbox && onIsCurrentChange && (
-        <div className="pt-0.5">
+        <div className="pt-1">
           <button
             type="button"
             onClick={handleToggleCurrent}
-            className="flex items-center space-x-1.5 text-xs font-medium text-slate-700 hover:text-slate-900 transition-colors select-none focus:outline-none cursor-pointer"
+            className="flex items-center space-x-2 text-xs sm:text-[13px] font-medium text-slate-700 hover:text-slate-900 transition-colors select-none focus:outline-none cursor-pointer"
           >
             {isCurrent ? (
-              <CheckSquare className="w-3.5 h-3.5 text-sky-600" />
+              <CheckSquare className="w-4 h-4 text-sky-600" />
             ) : (
-              <Square className="w-3.5 h-3.5 text-slate-400" />
+              <Square className="w-4 h-4 text-slate-400" />
             )}
             <span>{currentLabel}</span>
           </button>

@@ -113,15 +113,25 @@ export function TemplateBulletDrawer({
                     <button
                       type="button"
                       onClick={() => handleInsert(bullet.id, bullet.text)}
-                      className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-semibold transition-colors ${
+                      className={`inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-2xs ${
                         isAdded
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          ? "bg-sky-600 text-white animate-checkmark-pop shadow-md shadow-sky-500/30"
                           : "bg-white text-sky-700 hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600"
                       }`}
                     >
                       {isAdded ? (
                         <>
-                          <Check className="w-3.5 h-3.5 mr-1" />
+                          <svg
+                            className="w-3.5 h-3.5 mr-1.5 text-white animate-checkmark-draw"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
                           <span>Added to Active Entry</span>
                         </>
                       ) : (

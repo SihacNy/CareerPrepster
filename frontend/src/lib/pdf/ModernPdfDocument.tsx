@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-import { CVData } from "@/types/cv";
+import { CVData, getSectionItems, getBulletTexts } from "@/types/cv";
 import { stripMarkdown } from "@/lib/formatText";
 
 const styles = StyleSheet.create({
@@ -98,7 +98,16 @@ const styles = StyleSheet.create({
 });
 
 export function ModernPdfDocument({ data }: { data: CVData }) {
-  const { personalInfo, education, experience, projects, skills } = data;
+  const { personalInfo } = data;
+  const education = getSectionItems(data, "EDUCATION");
+  const experience = getSectionItems(data, "EXPERIENCE");
+  const projects = getSectionItems(data, "PROJECTS");
+  const customSections = (data.sections || []).filter(
+    (s) => s.sectionType === "CUSTOM" && s.isVisible !== false && s.items && s.items.length > 0
+  );
+  const skillGroups = data.skillGroups && data.skillGroups.length > 0
+    ? data.skillGroups
+    : (data.skills || []);
 
   return (
     <Document title={`${personalInfo.fullName || "Resume"} - Tech CV`}>
@@ -123,33 +132,38 @@ export function ModernPdfDocument({ data }: { data: CVData }) {
         {education && education.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Education</Text>
-            {education.map((edu) => (
-              <View key={edu.id} style={{ marginBottom: 3 }}>
-                <View style={styles.entryHeader}>
-                  <Text style={styles.entryTitle}>{edu.institution}</Text>
-                  <Text style={styles.entryLocation}>{edu.location}</Text>
-                </View>
-                <View style={styles.entrySubHeader}>
-                  <Text>
-                    {edu.degree}
-                    {edu.gpa ? ` (GPA: ${edu.gpa})` : ""}
-                  </Text>
-                  <Text>
-                    {edu.startDate} – {edu.isCurrent ? "Present" : edu.endDate}
-                  </Text>
-                </View>
-                {edu.bulletPoints && edu.bulletPoints.length > 0 && (
-                  <View style={styles.bulletList}>
-                    {edu.bulletPoints.map((bp, i) => (
-                      <View key={i} style={styles.bulletItem}>
-                        <Text style={styles.bulletDot}>•</Text>
-                        <Text style={styles.bulletText}>{stripMarkdown(bp)}</Text>
-                      </View>
-                    ))}
+            {education.map((edu) => {
+              const bullets = getBulletTexts(edu.bulletPoints);
+              return (
+                <View key={edu.id} style={{ marginBottom: 3 }}>
+                  <View style={styles.entryHeader}>
+                    <Text style={styles.entryTitle}>
+                      {edu.subtitle || (edu as any).institution}
+                    </Text>
+                    <Text style={styles.entryLocation}>{edu.location}</Text>
                   </View>
-                )}
-              </View>
-            ))}
+                  <View style={styles.entrySubHeader}>
+                    <Text>
+                      {edu.title || (edu as any).degree}
+                      {edu.gpa ? ` (GPA: ${edu.gpa})` : ""}
+                    </Text>
+                    <Text>
+                      {edu.startDate} – {edu.isCurrent ? "Present" : edu.endDate}
+                    </Text>
+                  </View>
+                  {bullets.length > 0 && (
+                    <View style={styles.bulletList}>
+                      {bullets.map((bp, i) => (
+                        <View key={i} style={styles.bulletItem}>
+                          <Text style={styles.bulletDot}>•</Text>
+                          <Text style={styles.bulletText}>{stripMarkdown(bp)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -157,30 +171,35 @@ export function ModernPdfDocument({ data }: { data: CVData }) {
         {experience && experience.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Experience</Text>
-            {experience.map((exp) => (
-              <View key={exp.id} style={{ marginBottom: 4 }}>
-                <View style={styles.entryHeader}>
-                  <Text style={styles.entryTitle}>{exp.company}</Text>
-                  <Text style={styles.entryLocation}>{exp.location}</Text>
-                </View>
-                <View style={styles.entrySubHeader}>
-                  <Text>{exp.role}</Text>
-                  <Text>
-                    {exp.startDate} – {exp.isCurrent ? "Present" : exp.endDate}
-                  </Text>
-                </View>
-                {exp.bulletPoints && exp.bulletPoints.length > 0 && (
-                  <View style={styles.bulletList}>
-                    {exp.bulletPoints.map((bp, i) => (
-                      <View key={i} style={styles.bulletItem}>
-                        <Text style={styles.bulletDot}>•</Text>
-                        <Text style={styles.bulletText}>{stripMarkdown(bp)}</Text>
-                      </View>
-                    ))}
+            {experience.map((exp) => {
+              const bullets = getBulletTexts(exp.bulletPoints);
+              return (
+                <View key={exp.id} style={{ marginBottom: 4 }}>
+                  <View style={styles.entryHeader}>
+                    <Text style={styles.entryTitle}>
+                      {exp.subtitle || (exp as any).company}
+                    </Text>
+                    <Text style={styles.entryLocation}>{exp.location}</Text>
                   </View>
-                )}
-              </View>
-            ))}
+                  <View style={styles.entrySubHeader}>
+                    <Text>{exp.title || (exp as any).role}</Text>
+                    <Text>
+                      {exp.startDate} – {exp.isCurrent ? "Present" : exp.endDate}
+                    </Text>
+                  </View>
+                  {bullets.length > 0 && (
+                    <View style={styles.bulletList}>
+                      {bullets.map((bp, i) => (
+                        <View key={i} style={styles.bulletItem}>
+                          <Text style={styles.bulletDot}>•</Text>
+                          <Text style={styles.bulletText}>{stripMarkdown(bp)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -188,39 +207,43 @@ export function ModernPdfDocument({ data }: { data: CVData }) {
         {projects && projects.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Technical Projects</Text>
-            {projects.map((proj) => (
-              <View key={proj.id} style={{ marginBottom: 4 }}>
-                <View style={styles.entryHeader}>
-                  <Text style={styles.entryTitle}>
-                    {proj.name}
-                    {proj.techStack && proj.techStack.length > 0
-                      ? ` | ${proj.techStack.join(", ")}`
-                      : ""}
-                  </Text>
-                  <Text style={styles.entryLocation}>
-                    {proj.startDate && proj.endDate ? `${proj.startDate} – ${proj.endDate}` : ""}
-                  </Text>
-                </View>
-                {proj.bulletPoints && proj.bulletPoints.length > 0 && (
-                  <View style={styles.bulletList}>
-                    {proj.bulletPoints.map((bp, i) => (
-                      <View key={i} style={styles.bulletItem}>
-                        <Text style={styles.bulletDot}>•</Text>
-                        <Text style={styles.bulletText}>{stripMarkdown(bp)}</Text>
-                      </View>
-                    ))}
+            {projects.map((proj) => {
+              const bullets = getBulletTexts(proj.bulletPoints);
+              const techList = proj.techStack && proj.techStack.length > 0
+                ? proj.techStack
+                : proj.subtitle ? proj.subtitle.split(",").map((s) => s.trim()).filter(Boolean) : [];
+              return (
+                <View key={proj.id} style={{ marginBottom: 4 }}>
+                  <View style={styles.entryHeader}>
+                    <Text style={styles.entryTitle}>
+                      {proj.title || (proj as any).name}
+                      {techList.length > 0 ? ` | ${techList.join(", ")}` : ""}
+                    </Text>
+                    <Text style={styles.entryLocation}>
+                      {proj.startDate && proj.endDate ? `${proj.startDate} – ${proj.endDate}` : ""}
+                    </Text>
                   </View>
-                )}
-              </View>
-            ))}
+                  {bullets.length > 0 && (
+                    <View style={styles.bulletList}>
+                      {bullets.map((bp, i) => (
+                        <View key={i} style={styles.bulletItem}>
+                          <Text style={styles.bulletDot}>•</Text>
+                          <Text style={styles.bulletText}>{stripMarkdown(bp)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
         {/* Technical Skills */}
-        {skills && skills.length > 0 && (
+        {skillGroups && skillGroups.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Technical Skills</Text>
-            {skills
+            {skillGroups
               .filter(
                 (cat) =>
                   cat.categoryName &&
@@ -237,6 +260,46 @@ export function ModernPdfDocument({ data }: { data: CVData }) {
               ))}
           </View>
         )}
+
+        {/* Custom Sections */}
+        {customSections.map((sec) => (
+          <View key={sec.id} style={styles.section}>
+            <Text style={styles.sectionTitle}>{sec.title}</Text>
+            {sec.items.map((item) => {
+              const bullets = getBulletTexts(item.bulletPoints);
+              return (
+                <View key={item.id} style={{ marginBottom: 4 }}>
+                  <View style={styles.entryHeader}>
+                    <Text style={styles.entryTitle}>{item.title}</Text>
+                    {item.location && (
+                      <Text style={styles.entryLocation}>{item.location}</Text>
+                    )}
+                  </View>
+                  {item.subtitle && (
+                    <View style={styles.entrySubHeader}>
+                      <Text>{item.subtitle}</Text>
+                      {(item.startDate || item.endDate) && (
+                        <Text>
+                          {item.startDate} {item.endDate ? `– ${item.isCurrent ? "Present" : item.endDate}` : ""}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                  {bullets.length > 0 && (
+                    <View style={styles.bulletList}>
+                      {bullets.map((bp, i) => (
+                        <View key={i} style={styles.bulletItem}>
+                          <Text style={styles.bulletDot}>•</Text>
+                          <Text style={styles.bulletText}>{stripMarkdown(bp)}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        ))}
       </Page>
     </Document>
   );

@@ -9,28 +9,103 @@
 
 ## 1. Entity-Relationship Overview
 
-```text
-┌─────────────────┐       1:N       ┌─────────────────┐       1:N       ┌─────────────────┐
-│      User       ├────────────────►│       CV        ├────────────────►│    CVSection    │
-└─────────────────┘                 └────────┬────────┘                 └────────┬────────┘
-                                             │                                   │ 1:N
-                                             │ 1:N                               ▼
-                                             │                          ┌─────────────────┐
-                                             │                          │     CVItem      │
-                                             │                          └────────┬────────┘
-                                             │                                   │ 1:N
-                                             │ 1:N                               ▼
-                                             │                          ┌─────────────────┐
-                                             ▼                          │   BulletPoint   │
-                                    ┌─────────────────┐                 └─────────────────┘
-                                    │    ATSReport    │
-                                    └─────────────────┘
+The database consists of **8 relational tables** designed with foreign key constraints, cascading deletes, and optimized indexes, matching `report_backend.md` exactly:
 
-┌─────────────────┐       1:N       ┌───────────────────────┐
-│     JobRole     ├────────────────►│  RoleBulletTemplate   │
-│ (Seeded Catalog)│                 │ (Curated ATS Bullets) │
-└─────────────────┘                 └───────────────────────┘
+```text
+                      ┌──────────────┐
+                      │    users     │
+                      └──────┬───────┘
+                             │ 1-to-many
+                             ▼
+┌──────────────┐      ┌──────────────┐      ┌──────────────┐
+│  job_roles   │◄─────┤     cvs      │─────►│ ats_reports  │
+└──────┬───────┘      └──────┬───────┘      └──────────────┘
+       │ 1-to-many           │ 1-to-many
+       ▼                     ▼
+┌──────────────────┐  ┌──────────────┐      ┌──────────────┐
+│role_bullet_templ.│  │ cv_sections  │      │ skill_groups │
+└──────────────────┘  └──────┬───────┘      └──────────────┘
+                             │ 1-to-many
+                             ▼
+                      ┌──────────────┐
+                      │   cv_items   │
+                      └──────┬───────┘
+                             │ 1-to-many
+                             ▼
+                      ┌──────────────┐
+                      │bullet_points │
+                      └──────────────┘
 ```
+
+---
+
+## 1.1. Frontend State Architecture: Refactored `CVData` (Alternative 3)
+
+To achieve **100% contract parity** and eliminate brittle adapter layers, the frontend state store (`frontend/src/lib/store.tsx`) is refactored from isolated section arrays (`education[]`, `experience[]`, `projects[]`) to the backend's generic `sections` and `skillGroups` model:
+
+```typescript
+export interface BulletPoint {
+  id?: string;
+  text: string;
+  actionVerb?: string;
+  hasMetric?: boolean;
+  framework?: "STAR" | "XYZ" | "STANDARD";
+  orderIndex?: number;
+}
+
+export interface CVItem {
+  id?: string;
+  title: string;       // Role Title, Degree, or Project Name
+  subtitle?: string;   // Company, University, or Subtitle
+  location?: string;
+  startDate?: string;
+  endDate?: string;
+  isCurrent?: boolean;
+  url?: string;
+  orderIndex?: number;
+  bulletPoints: BulletPoint[];
+}
+
+export interface CVSection {
+  id?: string;
+  sectionType: "EXPERIENCE" | "EDUCATION" | "PROJECTS" | "CERTIFICATIONS" | "CUSTOM";
+  title?: string;
+  orderIndex?: number;
+  isVisible?: boolean;
+  items: CVItem[];
+}
+
+export interface SkillGroup {
+  id?: string;
+  categoryName: string;
+  skills: string[];
+}
+
+export interface CVData {
+  id?: string;
+  title: string;
+  templateId: string;
+  targetRole?: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  summary?: string;
+  sections: CVSection[];
+  skillGroups: SkillGroup[];
+  updatedAt?: string;
+}
+```
+
+### Component Adaptation Strategy:
+- **`EducationSection.tsx`**: Operates on `sections.find(s => s.sectionType === "EDUCATION")`, mapping `item.title` to Degree/Major, `item.subtitle` to Institution, and `item.bulletPoints` to achievements.
+- **`ExperienceSection.tsx`**: Operates on `sections.find(s => s.sectionType === "EXPERIENCE")`, mapping `item.title` to Job Role, `item.subtitle` to Company, and `item.bulletPoints` to achievements.
+- **`ProjectsSection.tsx`**: Operates on `sections.find(s => s.sectionType === "PROJECTS")`, mapping `item.title` to Project Name, `item.subtitle` to Tech Stack, and `item.url` to Repository/Demo.
+- **`SkillsSection.tsx`**: Operates directly on `skillGroups` array (`categoryName` + `skills[]`).
+- **Extensible Custom Sections**: Easily render and reorder any custom sections (`sectionType === "CUSTOM"` or `"CERTIFICATIONS"`).
 
 ---
 
@@ -259,6 +334,7 @@ model CV {
   user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   targetRole     JobRole?    @relation(fields: [targetRoleId], references: [id], onDelete: SetNull)
   sections       CVSection[]
+  skillGroups    SkillGroup[]
   atsReports     ATSReport[]
 
   @@index([userId])
@@ -288,7 +364,6 @@ model CVSection {
 
   cv          CV           @relation(fields: [cvId], references: [id], onDelete: Cascade)
   items       CVItem[]
-  skillGroups SkillGroup[]
 
   @@index([cvId, orderIndex])
   @@map("cv_sections")
@@ -334,16 +409,16 @@ model BulletPoint {
 
 model SkillGroup {
   id           String    @id @default(uuid())
-  sectionId    String
+  cvId         String
   categoryName String    @db.VarChar(100)
   skills       Json      // Array of skill strings: ["React", "Node.js", "TypeScript"]
   orderIndex   Int       @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  section      CVSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  cv           CV        @relation(fields: [cvId], references: [id], onDelete: Cascade)
 
-  @@index([sectionId, orderIndex])
+  @@index([cvId, orderIndex])
   @@map("skill_groups")
 }
 

@@ -4,16 +4,20 @@
 **Date**: 2026-09-11 (Updated with Resume Import & Job Catalog)  
 **Status**: Completed  
 
-## 1. Database & ORM Strategy
+## 1. Database & Frontend State Architecture: Align Frontend with Backend Relational Schema (Alternative 3)
 
-### Decision: MySQL 8.0 + Prisma ORM
+### Decision: Full 8-Table Relational Backend Schema + Frontend Store Refactoring (`sections` & `items`)
 - **Rationale**:
-  - **Constitution Alignment**: Principle 1 mandates MySQL with a type-safe ORM.
-  - **Prisma Benefits**: Declarative `schema.prisma` provides immediate schema migrations, auto-generated TypeScript clients, and strong relation handling between `User`, `CV`, `CVSection`, `BulletPoint`, and `JobRole`.
-  - **JSON/Relational Hybrid**: MySQL 8.0 natively supports JSON columns for flexible template styling and skill groups while maintaining strict relational integrity for core resume data.
-- **Alternatives Considered**:
-  - *Drizzle ORM*: Lightweight and fast SQL-like syntax, but Prisma offers superior automated schema migration generation for student/team collaboration.
-  - *TypeORM*: More verbose decorators and historically prone to migration drift compared to Prisma schema-first definitions.
+  - **Backend Ground Truth**: The backend API is already built and validated with an 8-table normalized relational schema (`cvs`, `cv_sections`, `cv_items`, `bullet_points`, `skill_groups`, `job_roles`, `role_bullet_templates`, `ats_reports`).
+  - **1-to-1 Contract Parity**: By refactoring the frontend `CVData` interface and `store.tsx` to match the backend's generic structure (`sections: Array<{ sectionType, items }>` and `skillGroups: Array<{ categoryName, skills }>`):
+    - Frontend sends `cvData`, backend receives the exact relational payload directly without adapter overhead.
+    - Zero translation/mapping layer needed between frontend state and backend API payloads.
+  - **Extensible & Reorderable Sections**: Enables drag-and-drop section reordering (`orderIndex`) and arbitrary custom sections (e.g. "Volunteering", "Publications", "Certifications", "Awards") without requiring ad-hoc data models.
+  - **Granular AI & ATS Targeting**: Allows backend services to operate directly on individual `bullet_points` (tracking `framework`, `hasMetric`, `actionVerb`) and specific sections.
+- **Alternatives Evaluated**:
+  - *Alternative 1: Complex Bidirectional Adapter Layer in Frontend (`cvDataToBackendPayload` / `backendPayloadToCVData`)*: Leaves the frontend state rigid and requires maintaining hundreds of lines of fragile transformation code.
+  - *Alternative 2: Flattening Backend to a Single JSON Column in MySQL*: Would require completely tearing down the existing normalized backend endpoints, services, and Prisma migrations in `report_backend.md`.
+  - *Chosen Path (Alternative 3)*: Refactor the frontend `CVData` type, `store.tsx`, and section components to consume generic `sections` and `items`. This aligns frontend directly with the production-ready backend.
 
 ---
 

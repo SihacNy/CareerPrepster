@@ -1,4 +1,4 @@
-import { CVData, EducationItem, ExperienceItem, ProjectItem, SkillCategory } from "@/types/cv";
+import { CVData, EducationItem, ExperienceItem, ProjectItem, SkillCategory, normalizeCVData, createBulletPoints } from "@/types/cv";
 
 /**
  * Parses raw text extracted from a resume and structures it into the application's CVData format.
@@ -96,6 +96,8 @@ export function parseResumeTextToCVData(rawText: string, fileName: string): CVDa
 
     education.push({
       id: "edu-imported-1",
+      title: currentDegree,
+      subtitle: currentSchool,
       institution: currentSchool,
       degree: currentDegree,
       location: locationMatch ? locationMatch[1] : "Phnom Penh, Cambodia",
@@ -103,10 +105,14 @@ export function parseResumeTextToCVData(rawText: string, fileName: string): CVDa
       endDate: currentDates.split(/[-–]/)[1]?.trim() || "Present",
       isCurrent: currentDates.toLowerCase().includes("present"),
       gpa: currentGpa || "3.80 / 4.00",
-      bulletPoints: bullets.length > 0 ? bullets : [
-        "Relevant Coursework: Data Structures & Algorithms, Distributed Systems, Database Management.",
-        "Dean's Honor List for outstanding academic performance.",
-      ],
+      bulletPoints: createBulletPoints(
+        bullets.length > 0
+          ? bullets
+          : [
+              "Relevant Coursework: Data Structures & Algorithms, Distributed Systems, Database Management.",
+              "Dean's Honor List for outstanding academic performance.",
+            ]
+      ),
     });
   }
 
@@ -135,17 +141,23 @@ export function parseResumeTextToCVData(rawText: string, fileName: string): CVDa
 
     experience.push({
       id: "exp-imported-1",
+      title: currentRole,
+      subtitle: currentCompany,
       company: currentCompany,
       role: currentRole,
       location: "Remote",
       startDate: expDates.split(/[-–]/)[0]?.trim() || "Jun 2025",
       endDate: expDates.split(/[-–]/)[1]?.trim() || "Aug 2025",
       isCurrent: expDates.toLowerCase().includes("present"),
-      bulletPoints: expBullets.length > 0 ? expBullets : [
-        "Engineered RESTful microservices using Node.js and TypeScript, reducing query latency by 32%.",
-        "Implemented high-throughput Redis caching layer serving 45,000 daily active requests.",
-        "Authored comprehensive unit test suites using Jest, boosting test coverage to 91%.",
-      ],
+      bulletPoints: createBulletPoints(
+        expBullets.length > 0
+          ? expBullets
+          : [
+              "Engineered RESTful microservices using Node.js and TypeScript, reducing query latency by 32%.",
+              "Implemented high-throughput Redis caching layer serving 45,000 daily active requests.",
+              "Authored comprehensive unit test suites using Jest, boosting test coverage to 91%.",
+            ]
+      ),
     });
   }
 
@@ -178,15 +190,22 @@ export function parseResumeTextToCVData(rawText: string, fileName: string): CVDa
 
     projects.push({
       id: "proj-imported-1",
+      title: projName,
+      subtitle: techStack.length > 0 ? techStack.join(", ") : "TypeScript, Node.js, PostgreSQL, Docker",
       name: projName,
       techStack: techStack.length > 0 ? techStack : ["TypeScript", "Node.js", "PostgreSQL", "Docker"],
+      url: githubMatch ? `github.com/${githubMatch[1]}/project` : "github.com/project",
       linkUrl: githubMatch ? `github.com/${githubMatch[1]}/project` : "github.com/project",
       startDate: "Jan 2025",
       endDate: "May 2025",
-      bulletPoints: projBullets.length > 0 ? projBullets : [
-        "Architected scalable asynchronous worker queue processing 10,000+ simulated jobs per minute.",
-        "Constructed dead-letter queuing with exponential backoff to ensure zero message loss.",
-      ],
+      bulletPoints: createBulletPoints(
+        projBullets.length > 0
+          ? projBullets
+          : [
+              "Architected scalable asynchronous worker queue processing 10,000+ simulated jobs per minute.",
+              "Constructed dead-letter queuing with exponential backoff to ensure zero message loss.",
+            ]
+      ),
     });
   }
 
@@ -222,13 +241,13 @@ export function parseResumeTextToCVData(rawText: string, fileName: string): CVDa
 
   skills.push({
     id: "skill-imported-1",
-    categoryName: "Programming Languages",
+    categoryName: "Languages",
     skills: languages.length > 0 ? languages : ["TypeScript", "JavaScript", "Python", "SQL"],
   });
   skills.push({
     id: "skill-imported-2",
-    categoryName: "Frameworks & Web Technologies",
-    skills: frameworks.length > 0 ? frameworks : ["React", "Next.js", "Node.js", "Express", "Tailwind CSS"],
+    categoryName: "Frameworks & Libraries",
+    skills: frameworks.length > 0 ? frameworks : ["React", "Next.js", "Node.js", "Tailwind CSS"],
   });
   skills.push({
     id: "skill-imported-3",
@@ -240,6 +259,8 @@ export function parseResumeTextToCVData(rawText: string, fileName: string): CVDa
   const finalEducation = education.length > 0 ? education : [
     {
       id: "edu-imported-1",
+      title: "B.S. in Computer Science & Engineering",
+      subtitle: "State University of Technology",
       institution: "State University of Technology",
       degree: "B.S. in Computer Science & Engineering",
       location: locationMatch ? locationMatch[1] : "Seattle, WA",
@@ -247,47 +268,52 @@ export function parseResumeTextToCVData(rawText: string, fileName: string): CVDa
       endDate: "Jun 2026",
       isCurrent: true,
       gpa: "3.85 / 4.00",
-      bulletPoints: [
+      bulletPoints: createBulletPoints([
         "Relevant Coursework: Data Structures & Algorithms, Distributed Systems, Cloud Computing.",
         "Dean's Honor List for 5 consecutive semesters; Vice President of ACM Student Chapter.",
-      ],
+      ]),
     },
   ];
 
   const finalExperience = experience.length > 0 ? experience : [
     {
       id: "exp-imported-1",
+      title: "Software Engineering Intern",
+      subtitle: "TechNova Solutions",
       company: "TechNova Solutions",
       role: "Software Engineering Intern",
       location: "Remote",
       startDate: "Jun 2025",
       endDate: "Aug 2025",
       isCurrent: false,
-      bulletPoints: [
+      bulletPoints: createBulletPoints([
         "Engineered RESTful microservices using Node.js and TypeScript, reducing client query latency by 32%.",
         "Implemented Redis caching layer for high-throughput product catalog, serving 45,000 daily requests.",
         "Authored comprehensive unit test suites using Jest, boosting code coverage to 91%.",
-      ],
+      ]),
     },
   ];
 
   const finalProjects = projects.length > 0 ? projects : [
     {
       id: "proj-imported-1",
+      title: "Distributed Task Queue Engine",
+      subtitle: "TypeScript, Node.js, Redis, Docker, PostgreSQL",
       name: "Distributed Task Queue Engine",
       role: "Lead Developer (Capstone Project)",
       techStack: ["TypeScript", "Node.js", "Redis", "Docker", "PostgreSQL"],
+      url: githubMatch ? `github.com/${githubMatch[1]}/task-queue` : "github.com/imported-dev/task-queue",
       linkUrl: githubMatch ? `github.com/${githubMatch[1]}/task-queue` : "github.com/imported-dev/task-queue",
       startDate: "Jan 2025",
       endDate: "May 2025",
-      bulletPoints: [
+      bulletPoints: createBulletPoints([
         "Architected an asynchronous worker queue in TypeScript processing 10,000+ simulated jobs per minute.",
         "Constructed dead-letter queuing with exponential backoff retry algorithms to guarantee zero message loss.",
-      ],
+      ]),
     },
   ];
 
-  return {
+  return normalizeCVData({
     id: `cv-imported-${Date.now()}`,
     title: fileName.replace(/\.[^/.]+$/, "") || "Imported Resume",
     templateId: "classic",
@@ -306,7 +332,7 @@ export function parseResumeTextToCVData(rawText: string, fileName: string): CVDa
     projects: finalProjects,
     skills,
     updatedAt: new Date().toISOString(),
-  };
+  });
 }
 
 /**

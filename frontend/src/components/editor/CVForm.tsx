@@ -7,8 +7,10 @@ import { EducationSection } from "./sections/EducationSection";
 import { ExperienceSection } from "./sections/ExperienceSection";
 import { ProjectsSection } from "./sections/ProjectsSection";
 import { SkillsSection } from "./sections/SkillsSection";
+import { CustomSection } from "./sections/CustomSection";
 import { AIEnhanceModal } from "./AIEnhanceModal";
 import { useCV } from "@/lib/store";
+import { CVSection } from "@/types/cv";
 import {
   Compass,
   ChevronsUpDown,
@@ -20,6 +22,8 @@ import {
   FolderGit2,
   Code2,
   Trash2,
+  Plus,
+  Layers,
 } from "lucide-react";
 
 const JUMP_SECTIONS = [
@@ -31,7 +35,13 @@ const JUMP_SECTIONS = [
   { id: "section-skills", label: "Technical Skills", icon: Code2 },
 ];
 
-function JumpSectionDropdown({ onSelect }: { onSelect: (id: string) => void }) {
+function JumpSectionDropdown({
+  onSelect,
+  customSections = [],
+}: {
+  onSelect: (id: string) => void;
+  customSections?: CVSection[];
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -54,20 +64,20 @@ function JumpSectionDropdown({ onSelect }: { onSelect: (id: string) => void }) {
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center space-x-2 px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 shadow-2xs hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
+        className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 shadow-2xs hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-1 focus:ring-sky-500 transition-colors"
         aria-expanded={isOpen}
       >
-        <Compass className="w-4 h-4 text-sky-600" />
+        <Compass className="w-3.5 h-3.5 text-sky-600" />
         <span>Jump to section...</span>
         <ChevronDown
-          className={`w-4 h-4 text-slate-400 transition-transform duration-150 ${
+          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${
             isOpen ? "rotate-180 text-sky-600" : ""
           }`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-1.5 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-100">
+        <div className="absolute top-full left-0 mt-1.5 w-56 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-100 max-h-80 overflow-y-auto">
           <div className="px-3 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
             CV Sections
           </div>
@@ -88,6 +98,28 @@ function JumpSectionDropdown({ onSelect }: { onSelect: (id: string) => void }) {
               </button>
             );
           })}
+
+          {customSections.length > 0 && (
+            <>
+              <div className="px-3 pt-2 pb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase border-t border-slate-100 mt-1">
+                Custom Sections
+              </div>
+              {customSections.map((sec) => (
+                <button
+                  key={sec.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(`section-${sec.id}`);
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 transition-colors text-left group"
+                >
+                  <Layers className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 transition-colors" />
+                  <span className="truncate">{sec.title || "Custom Section"}</span>
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -95,15 +127,16 @@ function JumpSectionDropdown({ onSelect }: { onSelect: (id: string) => void }) {
 }
 
 export function CVForm() {
-  const { cvData, clearAll } = useCV();
+  const { cvData, clearAll, addCustomSection } = useCV();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const customSections = (cvData.sections || []).filter((s) => s.sectionType === "CUSTOM");
 
   // State for AI Refine modal
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [activeRefineText, setActiveRefineText] = useState("");
   const [activeApplyCallback, setActiveApplyCallback] = useState<((newText: string) => void) | null>(null);
 
-  // Accordion state for all editor sections
+  // Accordion state for standard sections
   const [openSections, setOpenSections] = useState({
     role: true,
     personal: true,
@@ -113,8 +146,18 @@ export function CVForm() {
     skills: true,
   });
 
+  // Accordion state for custom sections
+  const [customOpen, setCustomOpen] = useState<Record<string, boolean>>({});
+
   const toggleSection = (key: keyof typeof openSections) => {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleCustomSection = (id: string) => {
+    setCustomOpen((prev) => ({
+      ...prev,
+      [id]: prev[id] === undefined ? false : !prev[id],
+    }));
   };
 
   const expandAll = () => {
@@ -126,6 +169,11 @@ export function CVForm() {
       projects: true,
       skills: true,
     });
+    const allCustom: Record<string, boolean> = {};
+    customSections.forEach((s) => {
+      allCustom[s.id] = true;
+    });
+    setCustomOpen(allCustom);
   };
 
   const collapseAll = () => {
@@ -137,12 +185,22 @@ export function CVForm() {
       projects: false,
       skills: false,
     });
+    const allCustom: Record<string, boolean> = {};
+    customSections.forEach((s) => {
+      allCustom[s.id] = false;
+    });
+    setCustomOpen(allCustom);
   };
 
   const handleJumpToSection = (sectionId: string) => {
     if (!sectionId) return;
-    const key = sectionId.replace("section-", "") as keyof typeof openSections;
-    setOpenSections((prev) => ({ ...prev, [key]: true }));
+    if (sectionId.startsWith("section-sec-")) {
+      const customId = sectionId.replace("section-", "");
+      setCustomOpen((prev) => ({ ...prev, [customId]: true }));
+    } else {
+      const key = sectionId.replace("section-", "") as keyof typeof openSections;
+      setOpenSections((prev) => ({ ...prev, [key]: true }));
+    }
 
     setTimeout(() => {
       const el = document.getElementById(sectionId);
@@ -167,30 +225,33 @@ export function CVForm() {
   const allOpen = Object.values(openSections).every(Boolean);
 
   return (
-    <div className="w-full pb-12" style={{ zoom: 1.1 }}>
+    <div className="w-full pb-16">
       {/* Quick Section Navigation & Accordion Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3 px-1">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3.5 px-1">
         {/* Jump to section dropdown */}
-        <JumpSectionDropdown onSelect={handleJumpToSection} />
+        <JumpSectionDropdown
+          onSelect={handleJumpToSection}
+          customSections={customSections}
+        />
 
         {/* Expand / Collapse All & Clear All Toggles */}
         <div className="flex items-center space-x-2">
           <button
             type="button"
             onClick={allOpen ? collapseAll : expandAll}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-white hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg shadow-2xs transition-colors"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:text-slate-900 border border-slate-200 hover:border-slate-300 rounded-lg shadow-2xs transition-colors"
           >
-            <ChevronsUpDown className="w-4 h-4 text-slate-400" />
+            <ChevronsUpDown className="w-3.5 h-3.5 text-slate-400" />
             <span>{allOpen ? "Collapse All" : "Expand All"}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowClearConfirm(true)}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:text-rose-600 bg-white hover:border-rose-200 border border-slate-200 rounded-lg shadow-2xs transition-colors group"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:text-rose-600 bg-white hover:border-rose-200 border border-slate-200 rounded-lg shadow-2xs transition-colors group"
             title="Clear all CV fields"
           >
-            <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-rose-600 transition-colors" />
+            <Trash2 className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-600 transition-colors" />
             <span>Clear All</span>
           </button>
         </div>
@@ -226,6 +287,29 @@ export function CVForm() {
         isOpen={openSections.skills}
         onToggle={() => toggleSection("skills")}
       />
+
+      {/* User-added Custom Sections */}
+      {customSections.map((sec) => (
+        <CustomSection
+          key={sec.id}
+          section={sec}
+          onRefineBullet={handleOpenRefineModal}
+          isOpen={customOpen[sec.id] !== false}
+          onToggle={() => toggleCustomSection(sec.id)}
+        />
+      ))}
+
+      {/* Add Custom Section Button */}
+      <div className="mb-6">
+        <button
+          type="button"
+          onClick={() => addCustomSection("Certifications & Activities")}
+          className="w-full py-3.5 px-4 border-2 border-dashed border-sky-300 hover:border-sky-500 rounded-2xl bg-sky-50/40 hover:bg-sky-50 text-sky-700 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-2xs hover:shadow-sm group cursor-pointer"
+        >
+          <Plus className="w-4 h-4 text-sky-600 group-hover:scale-110 transition-transform" />
+          <span>Add Custom Section (e.g. Certifications, Volunteering, Publications)</span>
+        </button>
+      </div>
 
       {/* AI Refine Modal */}
       <AIEnhanceModal

@@ -203,32 +203,6 @@ export function RichBulletEditor({
 
   const activeSuggestions = suggestions && suggestions.length > 0 ? suggestions : DEFAULT_SUGGESTIONS;
 
-  const handleInsertSuggestion = (suggestionText: string, idx: number) => {
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    let ul = editor.querySelector("ul");
-    if (!ul) {
-      editor.innerHTML = `<ul class="${UL_BULLET_CLASS}"><li><br></li></ul>`;
-      ul = editor.querySelector("ul");
-    }
-
-    if (!ul) return;
-
-    const lis = ul.querySelectorAll("li");
-    if (lis.length === 1 && (lis[0].innerText.trim() === "" || lis[0].innerHTML === "<br>")) {
-      lis[0].innerHTML = markdownToHtml(suggestionText);
-    } else {
-      const newLi = document.createElement("li");
-      newLi.innerHTML = markdownToHtml(suggestionText);
-      ul.appendChild(newLi);
-    }
-
-    setAddedIndex(idx);
-    setTimeout(() => setAddedIndex(null), 1200);
-    handleInput(true);
-  };
-
   // Synchronize HTML with incoming bullets prop when changed externally (or on mount)
   useEffect(() => {
     if (isInternalChange.current) {
@@ -657,11 +631,43 @@ export function RichBulletEditor({
     }
   };
 
+  const handleInsertSuggestion = (suggestionText: string, idx: number, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    let ul = editor.querySelector("ul");
+    if (!ul) {
+      editor.innerHTML = `<ul class="${UL_BULLET_CLASS}"><li><br></li></ul>`;
+      ul = editor.querySelector("ul");
+    }
+
+    if (!ul) return;
+
+    const lis = ul.querySelectorAll("li");
+    if (lis.length === 1 && (lis[0].innerText.trim() === "" || lis[0].innerHTML === "<br>")) {
+      lis[0].innerHTML = markdownToHtml(suggestionText);
+    } else {
+      const newLi = document.createElement("li");
+      newLi.innerHTML = markdownToHtml(suggestionText);
+      ul.appendChild(newLi);
+    }
+
+    setAddedIndex(idx);
+    setTimeout(() => {
+      setAddedIndex((curr) => (curr === idx ? null : curr));
+    }, 1400);
+    handleInput(true);
+  };
+
   return (
     <div className="w-full">
       {/* Header with Title and "Refine with AI" on the right */}
       <div className="flex items-center justify-between pb-1.5 mb-2">
-        <span className="text-xs font-semibold text-slate-700">
+        <span className="text-xs sm:text-[13px] font-semibold text-slate-700">
           {label}
         </span>
 
@@ -669,18 +675,18 @@ export function RichBulletEditor({
         <button
           type="button"
           onClick={handleTriggerRefine}
-          className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold text-sky-700 bg-white hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600 transition-colors shadow-subtle cursor-pointer group"
+          className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-semibold text-sky-700 bg-white hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600 transition-colors shadow-subtle cursor-pointer group"
           title="Highlight a bullet and refine with AI STAR/XYZ frameworks"
         >
-          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+          <Sparkles className="w-4 h-4 mr-1.5" />
           <span>Refine with AI</span>
         </button>
       </div>
 
       {/* Editor Box */}
-      <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-subtle focus-within:border-sky-500 focus-within:ring-1 focus-within:ring-sky-500 transition-all">
+      <div className="border border-slate-200 rounded-xl bg-white overflow-hidden shadow-subtle focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 transition-all">
         {/* Rich Formatting Toolbar */}
-        <div className="flex items-center space-x-1 px-3 py-1.5 bg-slate-50 border-b border-slate-200 text-slate-600 text-xs select-none">
+        <div className="flex items-center space-x-1.5 px-3.5 py-2 bg-slate-50 border-b border-slate-200 text-slate-600 text-xs select-none">
           {/* Formatting tools */}
           <button
             type="button"
@@ -688,10 +694,10 @@ export function RichBulletEditor({
               e.preventDefault();
               applyFormat("bold");
             }}
-            className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
+            className="p-1.5 rounded-md hover:bg-white hover:text-slate-900 transition-colors"
             title="Bold (Ctrl+B)"
           >
-            <Bold className="w-3.5 h-3.5" />
+            <Bold className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -699,10 +705,10 @@ export function RichBulletEditor({
               e.preventDefault();
               applyFormat("italic");
             }}
-            className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
+            className="p-1.5 rounded-md hover:bg-white hover:text-slate-900 transition-colors"
             title="Italic (Ctrl+I)"
           >
-            <Italic className="w-3.5 h-3.5" />
+            <Italic className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -710,10 +716,10 @@ export function RichBulletEditor({
               e.preventDefault();
               applyFormat("underline");
             }}
-            className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
+            className="p-1.5 rounded-md hover:bg-white hover:text-slate-900 transition-colors"
             title="Underline (Ctrl+U)"
           >
-            <Underline className="w-3.5 h-3.5" />
+            <Underline className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -721,10 +727,10 @@ export function RichBulletEditor({
               e.preventDefault();
               applyFormat("strikeThrough");
             }}
-            className="p-1.5 rounded hover:bg-white hover:text-slate-900 transition-colors"
+            className="p-1.5 rounded-md hover:bg-white hover:text-slate-900 transition-colors"
             title="Strikethrough"
           >
-            <Strikethrough className="w-3.5 h-3.5" />
+            <Strikethrough className="w-4 h-4" />
           </button>
 
           {/* Divider */}
@@ -738,13 +744,13 @@ export function RichBulletEditor({
               e.preventDefault();
               handleUndo();
             }}
-            className={`p-1.5 rounded transition-colors ${canUndo
+            className={`p-1.5 rounded-md transition-colors ${canUndo
               ? "hover:bg-white hover:text-slate-900 cursor-pointer text-slate-700"
               : "text-slate-300 cursor-not-allowed opacity-40"
               }`}
             title="Undo (Ctrl+Z)"
           >
-            <Undo2 className="w-3.5 h-3.5" />
+            <Undo2 className="w-4 h-4" />
           </button>
 
           {/* Redo */}
@@ -755,13 +761,13 @@ export function RichBulletEditor({
               e.preventDefault();
               handleRedo();
             }}
-            className={`p-1.5 rounded transition-colors ${canRedo
+            className={`p-1.5 rounded-md transition-colors ${canRedo
               ? "hover:bg-white hover:text-slate-900 cursor-pointer text-slate-700"
               : "text-slate-300 cursor-not-allowed opacity-40"
               }`}
             title="Redo (Ctrl+Y)"
           >
-            <Redo2 className="w-3.5 h-3.5" />
+            <Redo2 className="w-4 h-4" />
           </button>
         </div>
 
@@ -812,53 +818,69 @@ export function RichBulletEditor({
               }
             }
           }}
-          className="w-full p-3 min-h-[95px] outline-none cursor-text text-xs text-slate-900 leading-relaxed [&_li]:text-xs [&_li]:text-slate-900 [&_li]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5"
+          className="w-full p-3.5 min-h-[110px] outline-none cursor-text text-sm text-slate-900 leading-relaxed [&_li]:text-sm [&_li]:text-slate-900 [&_li]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2"
         />
       </div>
 
       {/* Vertical Scroll-down Suggestion Bullets at the bottom */}
       {activeSuggestions.length > 0 && (
-        <div className="mt-3 pt-2.5 border-t border-slate-100">
+        <div className="mt-3 pt-3 border-t border-slate-100">
           <div className="flex items-center justify-between mb-2.5 px-0.5">
-            <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-sky-500" />
+            <span className="text-xs sm:text-[13px] font-semibold text-slate-700 flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-sky-500" />
               Suggested Bullets
             </span>
           </div>
 
-          <div className="overflow-y-auto max-h-52 pr-1.5 space-y-2 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
+          <div className="overflow-y-auto max-h-56 pr-1.5 space-y-2.5 scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
             {activeSuggestions.map((item, idx) => {
               const isAdded = addedIndex === idx;
               return (
                 <div
                   key={idx}
-                  onClick={() => handleInsertSuggestion(item, idx)}
-                  className={`group w-full p-2.5 rounded-lg border text-left cursor-pointer transition-all flex items-start justify-between gap-3 ${isAdded
-                    ? "bg-sky-50 border-sky-400 ring-1 ring-sky-300"
-                    : "bg-white hover:bg-sky-50/40 border-slate-200 hover:border-sky-300 shadow-2xs"
-                    }`}
+                  onClick={(e) => handleInsertSuggestion(item, idx, e)}
+                  className={`group w-full p-3 rounded-xl border text-left cursor-pointer transition-all flex items-start justify-between gap-3 ${
+                    isAdded
+                      ? "bg-sky-50 border-sky-400 ring-1 ring-sky-300"
+                      : "bg-white hover:bg-sky-50/40 border-slate-200 hover:border-sky-300 shadow-2xs"
+                  }`}
                   title="Click to insert this bullet into your CV"
                 >
                   <div className="flex-1">
-                    <p className="text-xs text-slate-700 leading-relaxed">
+                    <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed">
                       {item}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    title={isAdded ? "Added to CV" : "Add to CV"}
-                    aria-label={isAdded ? "Added to CV" : "Add to CV"}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-2xs ${isAdded
-                      ? "bg-emerald-600 text-white"
-                      : "bg-sky-600 hover:bg-sky-700 text-white hover:scale-105 active:scale-95"
+
+                  <div className="flex items-center shrink-0 self-center">
+                    <button
+                      type="button"
+                      onClick={(e) => handleInsertSuggestion(item, idx, e)}
+                      title={isAdded ? "Added to CV" : "Add to CV"}
+                      aria-label={isAdded ? "Added to CV" : "Add to CV"}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 shadow-2xs ${
+                        isAdded
+                          ? "bg-sky-600 text-white animate-checkmark-pop shadow-md shadow-sky-500/30"
+                          : "bg-sky-600 hover:bg-sky-700 text-white hover:scale-105 active:scale-95"
                       }`}
-                  >
-                    {isAdded ? (
-                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                    ) : (
-                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                    )}
-                  </button>
+                    >
+                      {isAdded ? (
+                        <svg
+                          className="w-4 h-4 text-white animate-checkmark-draw"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <Plus className="w-4 h-4 stroke-[2.5]" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               );
             })}

@@ -70,57 +70,57 @@ export function AIEnhanceModal({
 
         <div className="flex-1 overflow-y-auto py-4 space-y-4">
           {/* Original Text Preview */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">
               Your Draft Bullet
             </span>
-            <p className="text-xs text-slate-700 italic leading-relaxed">
+            <p className="text-sm text-slate-700 italic leading-relaxed">
               &ldquo;{originalText || "No text entered"}&rdquo;
             </p>
           </div>
 
           {/* AI Suggestions List */}
           <div>
-            <span className="text-xs font-semibold text-slate-900 block mb-2">
+            <span className="text-xs sm:text-sm font-semibold text-slate-900 block mb-2">
               Select an Enhancement Framework:
             </span>
 
             {isLoading ? (
               <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
                 <Loader2 className="w-6 h-6 text-sky-600 animate-spin" />
-                <p className="text-xs text-slate-500 font-medium">
+                <p className="text-xs sm:text-sm text-slate-500 font-medium">
                   Analyzing bullet with Google XYZ and STAR frameworks...
                 </p>
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {suggestions.map((suggestion) => {
                   const isSelected = selectedId === suggestion.id;
                   return (
                     <div
                       key={suggestion.id}
                       onClick={() => setSelectedId(suggestion.id)}
-                      className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      className={`p-4 rounded-xl border cursor-pointer transition-all ${
                         isSelected
-                          ? "border-sky-500 bg-sky-50/30"
-                          : "border-slate-200 bg-white hover:border-slate-300"
+                          ? "border-sky-500 bg-sky-50/40 ring-1 ring-sky-500"
+                          : "border-slate-200 bg-white hover:border-slate-300 shadow-2xs"
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
                           {suggestion.type}
                         </span>
                         {isSelected && (
-                          <span className="flex items-center text-[11px] font-semibold text-sky-600">
-                            <Check className="w-3.5 h-3.5 mr-0.5 text-sky-600 stroke-[2.5]" />
+                          <span className="flex items-center text-xs font-semibold text-sky-600">
+                            <Check className="w-4 h-4 mr-1 text-sky-600 stroke-[2.5]" />
                             Selected
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-900 font-medium leading-relaxed">
+                      <p className="text-sm text-slate-900 font-medium leading-relaxed">
                         {suggestion.text}
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-1">
+                      <p className="text-xs text-slate-500 mt-1.5">
                         {suggestion.explanation}
                       </p>
                     </div>
@@ -132,22 +132,21 @@ export function AIEnhanceModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-2">
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-2.5">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+            className="px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
           >
             Cancel
           </button>
           <button
             type="button"
-            disabled={!selectedId || isLoading}
             onClick={handleApply}
-            className="inline-flex items-center px-4 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50 rounded-lg transition-colors shadow-subtle"
+            disabled={!selectedId || isLoading}
+            className="px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors"
           >
-            <span>Apply to CV</span>
-            <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+            Apply to CV
           </button>
         </div>
       </div>

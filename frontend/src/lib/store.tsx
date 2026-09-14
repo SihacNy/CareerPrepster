@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { CVData, TemplateId } from "@/types/cv";
+import { CVData, TemplateId, CVSection, CVItem, SkillGroup, SectionType, normalizeCVData } from "@/types/cv";
 import { INITIAL_EMPTY_CV } from "./mockData";
+import { saveToHistory } from "./historyStore";
 
 const STORAGE_KEY = "careerprepster_cv_draft_v1";
 
@@ -10,6 +11,11 @@ interface CVContextType {
   cvData: CVData;
   setCVData: React.Dispatch<React.SetStateAction<CVData>>;
   updatePersonalInfo: (field: keyof CVData["personalInfo"], value: string) => void;
+  updateSectionItems: (sectionTypeOrId: SectionType | string, items: CVItem[]) => void;
+  updateSkillGroups: (groups: SkillGroup[]) => void;
+  addCustomSection: (title: string) => void;
+  updateSectionTitle: (sectionId: string, title: string) => void;
+  removeSection: (sectionId: string) => void;
   setTemplateId: (id: TemplateId) => void;
   setTargetRole: (role: string) => void;
   targetJobDescription: string;
@@ -23,6 +29,7 @@ interface CVContextType {
   saveDraft: () => void;
   resetDraft: () => void;
   clearAll: () => void;
+  loadFromHistory: (snapshot: CVData) => void;
 }
 
 const CVContext = createContext<CVContextType | null>(null);
@@ -42,8 +49,9 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed && parsed.id) {
-          setCVDataState(parsed);
+        if (parsed && (parsed.id || parsed.sections || parsed.education)) {
+          const normalized = normalizeCVData(parsed);
+          setCVDataState(normalized);
           setLastSaved(new Date());
         }
       }
@@ -57,7 +65,10 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
 
   const setCVData: React.Dispatch<React.SetStateAction<CVData>> = (action) => {
     setIsDirty(true);
-    setCVDataState(action);
+    setCVDataState((prev) => {
+      const next = typeof action === "function" ? action(prev) : action;
+      return normalizeCVData(next);
+    });
   };
 
   const updatePersonalInfo = (field: keyof CVData["personalInfo"], value: string) => {
@@ -67,6 +78,109 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         ...prev.personalInfo,
         [field]: value,
       },
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const updateSectionItems = (sectionTypeOrId: SectionType | string, items: CVItem[]) => {
+    setCVData((prev) => {
+      const existingSections = [...(prev.sections || [])];
+      const secIdx = existingSections.findIndex(
+        (s) => s.id === sectionTypeOrId || s.sectionType === sectionTypeOrId
+      );
+
+      if (secIdx >= 0) {
+        existingSections[secIdx] = {
+          ...existingSections[secIdx],
+          items,
+        };
+      } else {
+        const sectionType = (sectionTypeOrId as SectionType) || "CUSTOM";
+        existingSections.push({
+          id: `sec-${typeof sectionTypeOrId === "string" ? sectionTypeOrId.toLowerCase() : "custom"}-${Date.now()}`,
+          sectionType,
+          title:
+            sectionType === "EDUCATION"
+              ? "Education"
+              : sectionType === "EXPERIENCE"
+              ? "Work Experience"
+              : sectionType === "PROJECTS"
+              ? "Technical Projects"
+              : typeof sectionTypeOrId === "string"
+              ? sectionTypeOrId
+              : "Custom Section",
+          orderIndex: existingSections.length,
+          isVisible: true,
+          items,
+        });
+      }
+
+      return {
+        ...prev,
+        sections: existingSections,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
+
+  const updateSkillGroups = (groups: SkillGroup[]) => {
+    setCVData((prev) => ({
+      ...prev,
+      skillGroups: groups,
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const updateSectionTitle = (sectionId: string, title: string) => {
+    setCVData((prev) => ({
+      ...prev,
+      sections: (prev.sections || []).map((sec) =>
+        sec.id === sectionId ? { ...sec, title } : sec
+      ),
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const addCustomSection = (title: string) => {
+    setCVData((prev) => ({
+      ...prev,
+      sections: [
+        ...prev.sections,
+        {
+          id: `sec-custom-${Date.now()}`,
+          sectionType: "CUSTOM",
+          title: title || "Additional Section",
+          orderIndex: prev.sections.length,
+          isVisible: true,
+          items: [
+            {
+              id: `item-${Date.now()}`,
+              title: "",
+              subtitle: "",
+              location: "",
+              startDate: "",
+              endDate: "",
+              isCurrent: false,
+              orderIndex: 0,
+              bulletPoints: [
+                {
+                  id: `bp-${Date.now()}`,
+                  text: "",
+                  framework: "STANDARD",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const removeSection = (sectionId: string) => {
+    setCVData((prev) => ({
+      ...prev,
+      sections: prev.sections.filter((s) => s.id !== sectionId),
       updatedAt: new Date().toISOString(),
     }));
   };
@@ -89,16 +203,30 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
 
   const saveDraft = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cvData));
+      const normalized = normalizeCVData(cvData);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
       setLastSaved(new Date());
       setIsDirty(false);
+      saveToHistory(normalized, "draft");
     } catch (e) {
       console.error("Save error:", e);
     }
   };
 
+  const loadFromHistory = (snapshot: CVData) => {
+    const normalized = normalizeCVData(snapshot);
+    setCVDataState(normalized);
+    setIsDirty(false);
+    setLastSaved(new Date());
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    } catch (e) {
+      console.error("Failed to sync loaded history to active draft:", e);
+    }
+  };
+
   const clearAll = () => {
-    const blankCV: CVData = {
+    const blankCV: CVData = normalizeCVData({
       id: `cv-draft-${Date.now()}`,
       title: "My Resume",
       templateId: cvData.templateId || "classic",
@@ -112,52 +240,76 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         githubUrl: "",
         summary: "",
       },
-      education: [
+      sections: [
         {
-          id: `edu-${Date.now()}`,
-          institution: "",
-          degree: "",
-          location: "",
-          startDate: "",
-          endDate: "",
-          isCurrent: false,
-          gpa: "",
-          bulletPoints: [""],
+          id: `sec-education`,
+          sectionType: "EDUCATION",
+          title: "Education",
+          orderIndex: 0,
+          isVisible: true,
+          items: [
+            {
+              id: `edu-${Date.now()}`,
+              title: "",
+              subtitle: "",
+              location: "",
+              startDate: "",
+              endDate: "",
+              isCurrent: false,
+              gpa: "",
+              bulletPoints: [{ id: `bp-${Date.now()}`, text: "", framework: "STANDARD" }],
+            },
+          ],
+        },
+        {
+          id: `sec-experience`,
+          sectionType: "EXPERIENCE",
+          title: "Work Experience",
+          orderIndex: 1,
+          isVisible: true,
+          items: [
+            {
+              id: `exp-${Date.now()}`,
+              title: "",
+              subtitle: "",
+              location: "",
+              startDate: "",
+              endDate: "",
+              isCurrent: false,
+              bulletPoints: [{ id: `bp-${Date.now()}`, text: "", framework: "STANDARD" }],
+            },
+          ],
+        },
+        {
+          id: `sec-projects`,
+          sectionType: "PROJECTS",
+          title: "Technical Projects",
+          orderIndex: 2,
+          isVisible: true,
+          items: [
+            {
+              id: `proj-${Date.now()}`,
+              title: "",
+              subtitle: "",
+              url: "",
+              startDate: "",
+              endDate: "",
+              isCurrent: false,
+              bulletPoints: [{ id: `bp-${Date.now()}`, text: "", framework: "STANDARD" }],
+            },
+          ],
         },
       ],
-      experience: [
-        {
-          id: `exp-${Date.now()}`,
-          company: "",
-          role: "",
-          location: "",
-          startDate: "",
-          endDate: "",
-          isCurrent: false,
-          bulletPoints: [""],
-        },
-      ],
-      projects: [
-        {
-          id: `proj-${Date.now()}`,
-          name: "",
-          role: "",
-          techStack: [],
-          linkUrl: "",
-          startDate: "",
-          endDate: "",
-          bulletPoints: [""],
-        },
-      ],
-      skills: [
+      skillGroups: [
         {
           id: `skill-${Date.now()}`,
           categoryName: "Technical Skills",
           skills: [],
+          orderIndex: 0,
         },
       ],
       updatedAt: new Date().toISOString(),
-    };
+    });
     setCVDataState(blankCV);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(blankCV));
@@ -178,6 +330,11 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         cvData,
         setCVData,
         updatePersonalInfo,
+        updateSectionItems,
+        updateSkillGroups,
+        addCustomSection,
+        updateSectionTitle,
+        removeSection,
         setTemplateId,
         setTargetRole,
         targetJobDescription,
@@ -191,6 +348,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         saveDraft,
         resetDraft,
         clearAll,
+        loadFromHistory,
       }}
     >
       {children}

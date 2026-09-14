@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { LogOut, ChevronDown } from "lucide-react";
+import { LogOut, ChevronDown, Clock } from "lucide-react";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/lib/auth";
 
@@ -101,8 +101,20 @@ export function Header({ }: HeaderProps) {
                       </div>
                     </div>
 
+                    {/* Navigation Menu Items */}
+                    <div className="py-2 border-b border-slate-100">
+                      <Link
+                        href="/history"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="group flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-sky-600 transition-colors"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 transition-colors" />
+                        <span>Resume & Audit History</span>
+                      </Link>
+                    </div>
+
                     {/* Sign Out Button */}
-                    <div className="pt-3">
+                    <div className="pt-2">
                       <button
                         type="button"
                         onClick={() => {

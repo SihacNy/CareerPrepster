@@ -52,6 +52,7 @@ export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) 
         </div>
       </div>
 
+
       {/* Target Job Description Matcher */}
       <JobDescriptionInput
         value={targetJobDescription}
