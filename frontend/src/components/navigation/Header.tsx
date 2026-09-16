@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { LogOut, ChevronDown, Clock } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { LogOut, ChevronDown, Clock, Sparkles } from "lucide-react";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/lib/auth";
 
@@ -15,6 +16,7 @@ export function Header({ }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
+  const pathname = usePathname();
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -43,6 +45,31 @@ export function Header({ }: HeaderProps) {
               </span>
             </div>
           </Link>
+
+          {/* Center Nav */}
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link
+              href="/editor"
+              className={`text-xs font-semibold transition-colors ${
+                pathname?.startsWith("/editor")
+                  ? "text-sky-600"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              CV Editor
+            </Link>
+            <Link
+              href="/interview"
+              className={`text-xs font-semibold transition-colors flex items-center space-x-1.5 ${
+                pathname?.startsWith("/interview")
+                  ? "text-sky-600"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-sky-500" />
+              <span>Interview Coach</span>
+            </Link>
+          </nav>
 
           {/* Right Actions */}
           <div className="flex items-center space-x-3">

@@ -4,6 +4,13 @@
  */
 
 import { CVData } from "@/types/cv";
+import {
+  InterviewSessionData,
+  CreateInterviewSessionPayload,
+  SubmitAnswerPayload,
+  SubmitAnswerResponse,
+  InterviewScorecardData,
+} from "@/types/interview";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
@@ -86,10 +93,10 @@ export interface AuthUser {
 }
 
 export const authApi = {
-  loginWithGoogle: (idToken: string) =>
+  loginWithGoogle: (accessToken: string) =>
     fetchApi<{ user: AuthUser }>("/auth/google", {
       method: "POST",
-      body: JSON.stringify({ idToken }),
+      body: JSON.stringify({ accessToken }),
     }),
 
   getMe: () =>
@@ -295,6 +302,47 @@ export const importApi = {
   },
 };
 
+// -------------------------------------------------------------
+// 7. AI Interview Coach & Drills
+// -------------------------------------------------------------
+export const interviewApi = {
+  createSession: (payload: CreateInterviewSessionPayload) =>
+    fetchApi<{ session: InterviewSessionData }>("/interviews/sessions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  getSession: (id: string) =>
+    fetchApi<InterviewSessionData>(`/interviews/sessions/${id}`, {
+      method: "GET",
+    }),
+
+  submitAnswer: (sessionId: string, payload: SubmitAnswerPayload) =>
+    fetchApi<SubmitAnswerResponse>(`/interviews/sessions/${sessionId}/responses`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  getScorecard: (sessionId: string) =>
+    fetchApi<InterviewScorecardData>(`/interviews/sessions/${sessionId}/scorecard`, {
+      method: "GET",
+    }),
+
+  listSessions: (params?: { page?: number; limit?: number; track?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.track) query.set("track", params.track);
+    const qs = query.toString();
+    return fetchApi<{
+      sessions: Array<any>;
+      pagination: { page: number; limit: number; total: number; totalPages: number };
+    }>(`/interviews/sessions${qs ? `?${qs}` : ""}`, {
+      method: "GET",
+    });
+  },
+};
+
 // Unified Default Client
 export const api = {
   auth: authApi,
@@ -303,4 +351,6 @@ export const api = {
   ai: aiApi,
   ats: atsApi,
   import: importApi,
+  interviews: interviewApi,
 };
+

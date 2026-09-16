@@ -27,7 +27,7 @@ const clearAuthCookie = (res: Response) => {
 export class AuthController {
   static async googleLogin(req: Request, res: Response, next: NextFunction) {
     try {
-      const { user, token } = await AuthService.googleAuth(req.body.idToken);
+      const { user, token } = await AuthService.googleAuth(req.body.accessToken);
       setAuthCookie(res, token);
       return res.status(200).json({
         success: true,

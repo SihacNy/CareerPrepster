@@ -11,6 +11,7 @@ import { jobRoleRoutes } from './routes/job-role.routes.js';
 import { aiRoutes } from './routes/ai.routes.js';
 import { atsRoutes } from './routes/ats.routes.js';
 import { importRoutes } from './routes/import.routes.js';
+import { interviewRoutes } from './routes/interview.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -48,6 +49,7 @@ app.use('/api/cvs', cvRoutes);
 app.use('/api/job-roles', jobRoleRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/ats', atsRoutes);
+app.use('/api/interviews', interviewRoutes);
 
 // Global Centralized Error Boundary
 app.use(errorHandler);
