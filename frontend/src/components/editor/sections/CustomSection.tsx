@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Layers, Plus, Trash2, ChevronDown, Pencil } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { CVSection, CVItem, getBulletTexts, createBulletPoints } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
 import { DateRangePicker } from "../DateRangePicker";
+import { buildValidationMap } from "@/lib/cvValidation";
+import {
+  FieldError,
+  fieldErrorInputClass,
+  useReopenErroredEntries,
+} from "@/components/editor/FieldError";
 
 interface CustomSectionProps {
   section: CVSection;
@@ -20,15 +26,33 @@ export function CustomSection({
   isOpen,
   onToggle,
 }: CustomSectionProps) {
-  const { updateSectionItems, updateSectionTitle, removeSection } = useCV();
+  const { cvData, updateSectionItems, updateSectionTitle, removeSection, persistence } = useCV();
   const [internalOpen, setInternalOpen] = useState(true);
   const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({});
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
+  const sectionIdx = cvData.sections?.findIndex((s) => s.id === section.id) ?? -1;
+  const items = section.items || [];
+  const validationMap = useMemo(
+    () => buildValidationMap(persistence.validationErrors ?? []),
+    [persistence.validationErrors]
+  );
+
+  const erroredIds = useMemo(
+    () =>
+      items
+        .map((item, index) => ({
+          id: item.id,
+          hasError: !!validationMap[`sections.${sectionIdx}.items.${index}.title`],
+        }))
+        .filter((e) => e.hasError)
+        .map((e) => e.id),
+    [items, sectionIdx, validationMap]
+  );
+  useReopenErroredEntries(erroredIds, persistence.validationRunId, setCollapsedEntries);
+
   const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
   const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
-
-  const items = section.items || [];
 
   const toggleEntryCollapse = (id: string) => {
     setCollapsedEntries((prev) => ({
@@ -59,6 +83,20 @@ export function CustomSection({
       if (field === "bulletPoints") {
         const bps = typeof value[0] === "string" ? createBulletPoints(value) : value;
         return { ...item, bulletPoints: bps };
+      }
+      if (field === "isCurrent") {
+        return {
+          ...item,
+          isCurrent: value,
+          endDate: value ? "Present" : (item.endDate?.toLowerCase() === "present" ? "" : item.endDate),
+        };
+      }
+      if (field === "endDate") {
+        return {
+          ...item,
+          endDate: value,
+          isCurrent: value?.toLowerCase() === "present" ? true : (item.endDate?.toLowerCase() === "present" ? false : item.isCurrent),
+        };
       }
       return { ...item, [field]: value };
     });
@@ -166,6 +204,7 @@ export function CustomSection({
         ) : (
           <div className="space-y-6">
             {items.map((item, index) => {
+              const itemTitleError = validationMap[`sections.${sectionIdx}.items.${index}.title`];
               const isCollapsed = !!collapsedEntries[item.id];
 
               return (
@@ -223,13 +262,17 @@ export function CustomSection({
                         <div>
                           <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                             Title / Position / Award
+                            <FieldError message={itemTitleError} inline />
                           </label>
                           <input
                             type="text"
                             value={item.title}
                             onChange={(e) => handleUpdateEntry(item.id, "title", e.target.value)}
+                            data-validate={`sections.${sectionIdx}.items.${index}.title`}
                             placeholder="e.g. First Place / Volunteer Coordinator"
-                            className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                            className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
+                              itemTitleError ? fieldErrorInputClass : ""
+                            }`}
                           />
                         </div>
 
@@ -266,13 +309,10 @@ export function CustomSection({
                           <DateRangePicker
                             startDate={item.startDate || ""}
                             endDate={item.endDate || ""}
-                            isCurrent={item.isCurrent || item.endDate?.toLowerCase() === "present"}
+                            isCurrent={!!item.isCurrent || item.endDate?.toLowerCase() === "present"}
                             onStartDateChange={(val) => handleUpdateEntry(item.id, "startDate", val)}
                             onEndDateChange={(val) => handleUpdateEntry(item.id, "endDate", val)}
-                            onIsCurrentChange={(isCurrent) => {
-                              handleUpdateEntry(item.id, "isCurrent", isCurrent);
-                              handleUpdateEntry(item.id, "endDate", isCurrent ? "Present" : "");
-                            }}
+                            onIsCurrentChange={(isCurrent) => handleUpdateEntry(item.id, "isCurrent", isCurrent)}
                             currentLabel="Ongoing / Present"
                           />
                         </div>

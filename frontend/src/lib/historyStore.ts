@@ -1,8 +1,11 @@
 "use client";
 
 import { CVData, CVHistoryItem, CVHistoryStatus, normalizeCVData, BLANK_CV } from "@/types/cv";
-
-export const HISTORY_STORAGE_KEY = "careerprepster_cv_history_v1";
+import { cvApi, CVListItem } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { useEffect, useState } from "react";
+import { HISTORY_STORAGE_KEY } from "@/lib/storageKeys";
+export { HISTORY_STORAGE_KEY };
 
 // Helper to calculate total words in a CV
 export function countCVWords(cv: CVData): number {
@@ -75,11 +78,41 @@ export function getHistory(): CVHistoryItem[] {
   }
 }
 
-export function saveToHistory(
+export async function getCloudHistory(): Promise<CVHistoryItem[]> {
+  try {
+    const list = await cvApi.list();
+    return list.map((cv: CVListItem) => ({
+      id: `hist-cloud-${cv.id}`,
+      cvId: cv.id,
+      title: cv.title,
+      targetRole: cv.targetRoleId ? "Catalog Role" : "General Candidate",
+      fullName: cv.fullName,
+      templateId: cv.templateId as any,
+      wordCount: 0,
+      status: "draft",
+      createdAt: cv.createdAt,
+      updatedAt: cv.updatedAt,
+      snapshot: undefined,
+    }));
+  } catch (err) {
+    console.error("Failed to read CV history from cloud:", err);
+    return [];
+  }
+}
+
+export async function getUnifiedHistory(cloudAuth: boolean): Promise<CVHistoryItem[]> {
+  if (cloudAuth) {
+    const cloud = await getCloudHistory();
+    if (cloud.length > 0) return cloud;
+  }
+  return getHistory();
+}
+
+export async function saveToHistory(
   cv: CVData,
   status: CVHistoryStatus = "draft",
   atsScore?: number
-): CVHistoryItem {
+): Promise<CVHistoryItem> {
   const history = getHistory();
   const now = new Date().toISOString();
   const wordCount = countCVWords(cv);
@@ -131,7 +164,16 @@ export function saveToHistory(
   return updatedItem;
 }
 
-export function deleteFromHistory(id: string): CVHistoryItem[] {
+export async function deleteFromHistory(id: string, cloudAuth = false): Promise<CVHistoryItem[]> {
+  if (cloudAuth && id.startsWith("hist-cloud-")) {
+    const cvId = id.replace("hist-cloud-", "");
+    try {
+      await cvApi.delete(cvId);
+    } catch (err) {
+      console.error("Failed to delete CV from cloud:", err);
+    }
+    return getHistory();
+  }
   const history = getHistory();
   const filtered = history.filter((item) => item.id !== id);
   try {
@@ -142,7 +184,37 @@ export function deleteFromHistory(id: string): CVHistoryItem[] {
   return filtered;
 }
 
-export function duplicateHistoryItem(id: string): CVHistoryItem | null {
+export async function duplicateHistoryItem(id: string, cloudAuth = false): Promise<CVHistoryItem | null> {
+  if (cloudAuth && id.startsWith("hist-cloud-")) {
+    const cvId = id.replace("hist-cloud-", "");
+    try {
+      const existing = await cvApi.getById(cvId);
+      const cloned: CVData = normalizeCVData({
+        ...existing,
+        id: undefined,
+        title: `${existing.title || "Untitled"} (Copy)`,
+        updatedAt: new Date().toISOString(),
+      });
+      const created = await cvApi.create(cloned);
+      return {
+        id: `hist-cloud-${created.id}`,
+        cvId: created.id,
+        title: created.title,
+        targetRole: "General Candidate",
+        fullName: created.fullName,
+        templateId: created.templateId as any,
+        atsScore: created.atsScore,
+        wordCount: 0,
+        status: "draft",
+        createdAt: created.createdAt,
+        updatedAt: created.updatedAt,
+    snapshot: undefined,
+  };
+} catch (err) {
+  console.error("Failed to duplicate CV in cloud:", err);
+  return null;
+}
+  }
   const history = getHistory();
   const item = history.find((i) => i.id === id);
   if (!item) return null;

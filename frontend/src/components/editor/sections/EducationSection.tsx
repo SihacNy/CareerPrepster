@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { GraduationCap, Plus, Trash2, ChevronDown, Pencil } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { CVItem, getSectionItems, getBulletTexts, createBulletPoints } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
 import { DateRangePicker } from "../DateRangePicker";
+import { buildValidationMap } from "@/lib/cvValidation";
+import {
+  FieldError,
+  fieldErrorInputClass,
+  useReopenErroredEntries,
+} from "@/components/editor/FieldError";
 
 interface EducationSectionProps {
   onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
@@ -22,10 +28,31 @@ const EDUCATION_SUGGESTIONS = [
 ];
 
 export function EducationSection({ onRefineBullet, isOpen, onToggle }: EducationSectionProps) {
-  const { cvData, updateSectionItems } = useCV();
+  const { cvData, updateSectionItems, persistence } = useCV();
   const education = getSectionItems(cvData, "EDUCATION");
+  const sectionIdx = cvData.sections.findIndex((s) => s.sectionType === "EDUCATION");
+  const validationMap = useMemo(
+    () => buildValidationMap(persistence.validationErrors ?? []),
+    [persistence.validationErrors]
+  );
   const [internalOpen, setInternalOpen] = useState(true);
   const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({});
+
+  const erroredIds = useMemo(
+    () =>
+      education
+        .map((edu, index) => ({
+          id: edu.id,
+          hasError: !!(
+            validationMap[`sections.${sectionIdx}.items.${index}.title`] ||
+            validationMap[`sections.${sectionIdx}.items.${index}.subtitle`]
+          ),
+        }))
+        .filter((e) => e.hasError)
+        .map((e) => e.id),
+    [education, sectionIdx, validationMap]
+  );
+  useReopenErroredEntries(erroredIds, persistence.validationRunId, setCollapsedEntries);
 
   const toggleEntryCollapse = (id: string) => {
     setCollapsedEntries((prev) => ({
@@ -62,6 +89,20 @@ export function EducationSection({ onRefineBullet, isOpen, onToggle }: Education
       }
       if (field === "degree") {
         return { ...item, title: value };
+      }
+      if (field === "isCurrent") {
+        return {
+          ...item,
+          isCurrent: value,
+          endDate: value ? "Present" : (item.endDate?.toLowerCase() === "present" ? "" : item.endDate),
+        };
+      }
+      if (field === "endDate") {
+        return {
+          ...item,
+          endDate: value,
+          isCurrent: value?.toLowerCase() === "present" ? true : (item.endDate?.toLowerCase() === "present" ? false : item.isCurrent),
+        };
       }
       return { ...item, [field]: value };
     });
@@ -122,6 +163,8 @@ export function EducationSection({ onRefineBullet, isOpen, onToggle }: Education
         ) : (
           <div className="space-y-6">
             {education.map((edu, index) => {
+              const institutionError = validationMap[`sections.${sectionIdx}.items.${index}.subtitle`];
+              const degreeError = validationMap[`sections.${sectionIdx}.items.${index}.title`];
               const isCollapsed = !!collapsedEntries[edu.id];
               return (
                 <div
@@ -175,26 +218,34 @@ export function EducationSection({ onRefineBullet, isOpen, onToggle }: Education
                         <div>
                           <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                             University / College <span className="text-red-500 font-semibold">*</span>
+                            <FieldError message={institutionError} inline />
                           </label>
                           <input
                             type="text"
                             value={edu.subtitle || ""}
                             onChange={(e) => handleUpdateEntry(edu.id, "institution", e.target.value)}
+                            data-validate={`sections.${sectionIdx}.items.${index}.subtitle`}
                             placeholder="e.g. CamTech University / State University"
-                            className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                            className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
+                              institutionError ? fieldErrorInputClass : ""
+                            }`}
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                             Degree &amp; Major <span className="text-red-500 font-semibold">*</span>
+                            <FieldError message={degreeError} inline />
                           </label>
                           <input
                             type="text"
                             value={edu.title || ""}
                             onChange={(e) => handleUpdateEntry(edu.id, "degree", e.target.value)}
+                            data-validate={`sections.${sectionIdx}.items.${index}.title`}
                             placeholder="e.g. B.S. in Computer Science"
-                            className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                            className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
+                              degreeError ? fieldErrorInputClass : ""
+                            }`}
                           />
                         </div>
 
@@ -226,7 +277,7 @@ export function EducationSection({ onRefineBullet, isOpen, onToggle }: Education
                           <DateRangePicker
                             startDate={edu.startDate || ""}
                             endDate={edu.endDate || ""}
-                            isCurrent={!!edu.isCurrent}
+                            isCurrent={!!edu.isCurrent || edu.endDate?.toLowerCase() === "present"}
                             onStartDateChange={(val) => handleUpdateEntry(edu.id, "startDate", val)}
                             onEndDateChange={(val) => handleUpdateEntry(edu.id, "endDate", val)}
                             onIsCurrentChange={(isCurrent) => handleUpdateEntry(edu.id, "isCurrent", isCurrent)}

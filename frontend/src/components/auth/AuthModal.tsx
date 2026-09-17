@@ -21,34 +21,35 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   }, []);
 
   const handleGoogleLogin = useGoogleLogin({
+    scope: "openid email profile",
     onSuccess: async (tokenResponse) => {
       try {
-        // 1. Fetch profile info from Google API
-        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-        const profile = await res.json();
-
-        // 2. Synchronize with backend API session cookie if backend is available
+        // 1. Exchange the Google OAuth access token with the backend so a User
+        //    row is created in MySQL and the HttpOnly session cookie is set.
         try {
           const { authApi } = await import("@/lib/api");
-          // Attempt token exchange to set HttpOnly session cookie
           const backendRes = await authApi.loginWithGoogle(tokenResponse.access_token);
           if (backendRes?.user) {
             loginWithProfile({
               id: backendRes.user.id,
-              name: backendRes.user.name || profile.name || "Google User",
-              email: backendRes.user.email || profile.email || "",
-              avatarUrl: backendRes.user.avatarUrl || profile.picture,
-            });
+              name: backendRes.user.name || "Google User",
+              email: backendRes.user.email || "",
+              avatarUrl: backendRes.user.avatarUrl || undefined,
+            }, { backendSession: true });
             setErrorMessage(null);
             onClose();
             return;
           }
         } catch (apiErr) {
-          // If backend token verification fails or backend not reachable, proceed with client profile
-          console.info("Backend session sync skipped or pending backend runtime:", apiErr);
+          // Backend offline or token rejected: proceed with client-only profile
+          console.info("Backend session sync skipped (offline or token rejected):", apiErr);
         }
+
+        // 2. Fallback: fetch profile info from Google and sign in client-side only
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const profile = await res.json();
 
         loginWithProfile({
           id: profile.sub || String(Date.now()),

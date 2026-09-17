@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Calendar, CheckSquare, Square, ChevronDown } from "lucide-react";
+import { Calendar, ChevronDown } from "lucide-react";
 
 interface DateRangePickerProps {
   startDate: string;
@@ -144,6 +144,10 @@ export function DateRangePicker({
   const parsedStart = parseDateString(startDate);
   const parsedEnd = parseDateString(endDate);
 
+  const effectiveIsCurrent = Boolean(
+    isCurrent || (endDate && endDate.trim().toLowerCase() === "present")
+  );
+
   const handleStartMonthChange = (newMonth: string) => {
     const y = parsedStart.year || String(currentYear);
     onStartDateChange(newMonth ? `${newMonth} ${y}` : y);
@@ -166,7 +170,7 @@ export function DateRangePicker({
 
   const handleToggleCurrent = () => {
     if (!onIsCurrentChange) return;
-    const nextCurrent = !isCurrent;
+    const nextCurrent = !effectiveIsCurrent;
     onIsCurrentChange(nextCurrent);
     if (nextCurrent) {
       onEndDateChange("Present");
@@ -207,7 +211,7 @@ export function DateRangePicker({
             <span>{endLabel}</span>
           </label>
 
-          {isCurrent ? (
+          {effectiveIsCurrent ? (
             <div className="w-full h-[42px] text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3.5 flex items-center shadow-2xs">
               <span>Present (Ongoing)</span>
             </div>
@@ -236,13 +240,29 @@ export function DateRangePicker({
           <button
             type="button"
             onClick={handleToggleCurrent}
-            className="flex items-center space-x-2 text-xs sm:text-[13px] font-medium text-slate-700 hover:text-slate-900 transition-colors select-none focus:outline-none cursor-pointer"
+            className="group flex items-center space-x-2 text-xs sm:text-[13px] font-medium text-slate-700 hover:text-slate-900 transition-colors select-none focus:outline-none cursor-pointer"
           >
-            {isCurrent ? (
-              <CheckSquare className="w-4 h-4 text-sky-600" />
-            ) : (
-              <Square className="w-4 h-4 text-slate-400" />
-            )}
+            <span
+              className={`w-4 h-4 rounded flex items-center justify-center transition-all flex-shrink-0 ${
+                effectiveIsCurrent
+                  ? "bg-sky-600 text-white animate-checkmark-pop shadow-xs"
+                  : "border border-slate-300 bg-white group-hover:border-slate-400"
+              }`}
+            >
+              {effectiveIsCurrent && (
+                <svg
+                  className="w-3 h-3 text-white animate-checkmark-draw"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </span>
             <span>{currentLabel}</span>
           </button>
         </div>

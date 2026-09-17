@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { User, Mail, Phone, MapPin, Linkedin, Github, ChevronDown } from "lucide-react";
 import { useCV } from "@/lib/store";
+import { buildValidationMap } from "@/lib/cvValidation";
+import { FieldError, fieldErrorInputClass } from "@/components/editor/FieldError";
 
 export function PersonalSection({
   isOpen,
@@ -11,9 +13,18 @@ export function PersonalSection({
   isOpen?: boolean;
   onToggle?: () => void;
 } = {}) {
-  const { cvData, updatePersonalInfo } = useCV();
+  const { cvData, updatePersonalInfo, persistence } = useCV();
   const { personalInfo } = cvData;
   const [internalOpen, setInternalOpen] = useState(true);
+
+  const validationMap = useMemo(
+    () => buildValidationMap(persistence.validationErrors ?? []),
+    [persistence.validationErrors]
+  );
+  const fullNameError = validationMap["personalInfo.fullName"];
+  const emailError = validationMap["personalInfo.email"];
+  const linkedinError = validationMap["personalInfo.linkedinUrl"];
+  const githubError = validationMap["personalInfo.githubUrl"];
 
   const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
   const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
@@ -50,13 +61,17 @@ export function PersonalSection({
             <div>
               <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                 Full Name <span className="text-red-500 font-semibold">*</span>
+                <FieldError message={fullNameError} inline />
               </label>
               <input
                 type="text"
                 value={personalInfo.fullName}
                 onChange={(e) => updatePersonalInfo("fullName", e.target.value)}
+                data-validate="personalInfo.fullName"
                 placeholder="e.g. Alex Rivera"
-                className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors"
+                className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors ${
+                  fullNameError ? fieldErrorInputClass : ""
+                }`}
               />
             </div>
 
@@ -64,13 +79,17 @@ export function PersonalSection({
             <div>
               <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                 Email Address <span className="text-red-500 font-semibold">*</span>
+                <FieldError message={emailError} inline />
               </label>
               <input
                 type="email"
                 value={personalInfo.email}
                 onChange={(e) => updatePersonalInfo("email", e.target.value)}
+                data-validate="personalInfo.email"
                 placeholder="alex.rivera@university.edu"
-                className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors"
+                className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors ${
+                  emailError ? fieldErrorInputClass : ""
+                }`}
               />
             </div>
 
@@ -100,25 +119,37 @@ export function PersonalSection({
 
             {/* LinkedIn */}
             <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">LinkedIn Profile</label>
+              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
+                LinkedIn Profile
+                <FieldError message={linkedinError} inline />
+              </label>
               <input
                 type="text"
                 value={personalInfo.linkedinUrl}
                 onChange={(e) => updatePersonalInfo("linkedinUrl", e.target.value)}
+                data-validate="personalInfo.linkedinUrl"
                 placeholder="linkedin.com/in/username"
-                className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors"
+                className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors ${
+                  linkedinError ? fieldErrorInputClass : ""
+                }`}
               />
             </div>
 
             {/* GitHub */}
             <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">GitHub / Portfolio</label>
+              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
+                GitHub / Portfolio
+                <FieldError message={githubError} inline />
+              </label>
               <input
                 type="text"
                 value={personalInfo.githubUrl}
                 onChange={(e) => updatePersonalInfo("githubUrl", e.target.value)}
+                data-validate="personalInfo.githubUrl"
                 placeholder="github.com/username"
-                className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors"
+                className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors ${
+                  githubError ? fieldErrorInputClass : ""
+                }`}
               />
             </div>
           </div>

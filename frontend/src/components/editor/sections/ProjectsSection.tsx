@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { FolderGit2, Plus, Trash2, ChevronDown, Pencil } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { CVItem, getSectionItems, getBulletTexts, createBulletPoints } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
 import { DateRangePicker } from "../DateRangePicker";
+import { buildValidationMap } from "@/lib/cvValidation";
+import {
+  FieldError,
+  fieldErrorInputClass,
+  useReopenErroredEntries,
+} from "@/components/editor/FieldError";
 
 interface ProjectsSectionProps {
   onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
@@ -23,10 +29,28 @@ const PROJECT_SUGGESTIONS = [
 ];
 
 export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSectionProps) {
-  const { cvData, updateSectionItems } = useCV();
+  const { cvData, updateSectionItems, persistence } = useCV();
   const projects = getSectionItems(cvData, "PROJECTS");
+  const sectionIdx = cvData.sections.findIndex((s) => s.sectionType === "PROJECTS");
+  const validationMap = useMemo(
+    () => buildValidationMap(persistence.validationErrors ?? []),
+    [persistence.validationErrors]
+  );
   const [internalOpen, setInternalOpen] = useState(true);
   const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({});
+
+  const erroredIds = useMemo(
+    () =>
+      projects
+        .map((proj, index) => ({
+          id: proj.id,
+          hasError: !!validationMap[`sections.${sectionIdx}.items.${index}.title`],
+        }))
+        .filter((e) => e.hasError)
+        .map((e) => e.id),
+    [projects, sectionIdx, validationMap]
+  );
+  useReopenErroredEntries(erroredIds, persistence.validationRunId, setCollapsedEntries);
 
   const toggleEntryCollapse = (id: string) => {
     setCollapsedEntries((prev) => ({
@@ -73,6 +97,20 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
       if (field === "bulletPoints") {
         const bps = typeof value[0] === "string" ? createBulletPoints(value) : value;
         return { ...item, bulletPoints: bps };
+      }
+      if (field === "isCurrent") {
+        return {
+          ...item,
+          isCurrent: value,
+          endDate: value ? "Present" : (item.endDate?.toLowerCase() === "present" ? "" : item.endDate),
+        };
+      }
+      if (field === "endDate") {
+        return {
+          ...item,
+          endDate: value,
+          isCurrent: value?.toLowerCase() === "present" ? true : (item.endDate?.toLowerCase() === "present" ? false : item.isCurrent),
+        };
       }
       return { ...item, [field]: value };
     });
@@ -137,6 +175,7 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
         ) : (
           <div className="space-y-6">
           {projects.map((proj, index) => {
+            const projectNameError = validationMap[`sections.${sectionIdx}.items.${index}.title`];
             const isCollapsed = !!collapsedEntries[proj.id];
 
             return (
@@ -191,13 +230,17 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
                       <div>
                         <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                           Project Name <span className="text-red-500 font-semibold">*</span>
+                          <FieldError message={projectNameError} inline />
                         </label>
                         <input
                           type="text"
                           value={proj.title || (proj as any).name || ""}
                           onChange={(e) => handleUpdateEntry(proj.id, "name", e.target.value)}
+                          data-validate={`sections.${sectionIdx}.items.${index}.title`}
                           placeholder="e.g. Distributed Task Queue / E-Commerce App"
-                          className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                          className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
+                            projectNameError ? fieldErrorInputClass : ""
+                          }`}
                         />
                       </div>
 
@@ -235,13 +278,10 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
                         <DateRangePicker
                           startDate={proj.startDate || ""}
                           endDate={proj.endDate || ""}
-                          isCurrent={proj.isCurrent || proj.endDate?.toLowerCase() === "present"}
+                          isCurrent={!!proj.isCurrent || proj.endDate?.toLowerCase() === "present"}
                           onStartDateChange={(val) => handleUpdateEntry(proj.id, "startDate", val)}
                           onEndDateChange={(val) => handleUpdateEntry(proj.id, "endDate", val)}
-                          onIsCurrentChange={(isCurrent) => {
-                            handleUpdateEntry(proj.id, "isCurrent", isCurrent);
-                            handleUpdateEntry(proj.id, "endDate", isCurrent ? "Present" : "");
-                          }}
+                          onIsCurrentChange={(isCurrent) => handleUpdateEntry(proj.id, "isCurrent", isCurrent)}
                           currentLabel="Ongoing project"
                         />
                       </div>

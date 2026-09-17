@@ -11,27 +11,60 @@ export class AuthService {
   static async googleAuth(idToken: string) {
     logger.debug('AuthService', 'Google OAuth login attempt received');
 
-    let payload;
+    let googleId = '';
+    let email = '';
+    let name = '';
+    let avatarUrl: string | null = null;
+
     try {
+      // Case 1: Google ID token JWT (from a "Sign in with Google" credential or
+      // one-tap flow). Verified against Google's certs via google-auth-library.
       const ticket = await googleClient.verifyIdToken({
         idToken,
         audience: env.GOOGLE_CLIENT_ID || undefined,
       });
-      payload = ticket.getPayload();
-    } catch (error: any) {
-      logger.error('AuthService', 'Google token verification failed', error);
-      throw new AppError(`Google authentication failed: ${error.message || 'Invalid token'}`, 401, 'INVALID_GOOGLE_TOKEN');
+      const payload = ticket.getPayload();
+      if (payload) {
+        googleId = payload.sub || '';
+        email = (payload.email || '').toLowerCase();
+        name = payload.name || email.split('@')[0] || '';
+        avatarUrl = payload.picture || null;
+      }
+    } catch (jwtError: any) {
+      // Case 2: OAuth access token from the implicit popup flow (useGoogleLogin).
+      // Verify it against Google's tokeninfo endpoint, then pull the profile from
+      // the userinfo endpoint.
+      try {
+        logger.debug('AuthService', 'ID token verification failed, attempting access-token verification');
+        const tokenInfo = await googleClient.getTokenInfo(idToken);
+        email = (tokenInfo.email || '').toLowerCase();
+        googleId = tokenInfo.sub || tokenInfo.email || '';
+        name = email.split('@')[0] || '';
+
+        const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        if (resp.ok) {
+          const profile: any = await resp.json();
+          if (profile.email) email = profile.email.toLowerCase();
+          if (profile.sub) googleId = profile.sub;
+          name = profile.name || name;
+          avatarUrl = profile.picture || null;
+        }
+      } catch (tokenError: any) {
+        logger.error('AuthService', 'Google token verification failed', tokenError);
+        throw new AppError(
+          `Google authentication failed: ${jwtError?.message || tokenError?.message || 'Invalid token'}`,
+          401,
+          'INVALID_GOOGLE_TOKEN'
+        );
+      }
     }
 
-    if (!payload || !payload.email) {
+    if (!email) {
       logger.warn('AuthService', 'Google token verified but email is missing');
       throw new AppError('Google account does not contain a verified email address', 400, 'INVALID_PAYLOAD');
     }
-
-    const googleId = payload.sub;
-    const email = payload.email.toLowerCase().trim();
-    const name = payload.name || payload.email.split('@')[0];
-    const avatarUrl = payload.picture || null;
 
     // Check if user already exists by googleId or email
     let user = await prisma.user.findFirst({

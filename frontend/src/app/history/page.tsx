@@ -26,12 +26,14 @@ import {
   duplicateHistoryItem,
 } from "@/lib/historyStore";
 import { useCV } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 
 import { cvApi, CVListItem } from "@/lib/api";
 
 export default function HistoryPage() {
   const router = useRouter();
   const { clearAll } = useCV();
+  const { isBackendSession } = useAuth();
   const [historyItems, setHistoryItems] = useState<CVHistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<"all" | CVHistoryStatus>("all");
@@ -42,6 +44,10 @@ export default function HistoryPage() {
   useEffect(() => {
     const localItems = getHistory();
     setHistoryItems(localItems);
+
+    // Remote CV merge only makes sense for a real backend session; a fake
+    // localStorage profile has no valid cookie and cvApi.list() would 401.
+    if (!isBackendSession) return;
 
     let isMounted = true;
     const fetchRemoteCVs = async () => {
@@ -80,7 +86,7 @@ export default function HistoryPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isBackendSession]);
 
   const handleCreateNew = () => {
     clearAll();
@@ -88,11 +94,16 @@ export default function HistoryPage() {
   };
 
   const handleDelete = async (id: string) => {
-    deleteFromHistory(id);
+    deleteFromHistory(id, isBackendSession);
     setHistoryItems((prev) => prev.filter((item) => item.id !== id));
 
     // If item is a remote backend CV (not a local draft), trigger backend delete
-    if (!id.startsWith("draft-") && !id.startsWith("demo-") && !id.startsWith("imported-")) {
+    if (
+      isBackendSession &&
+      !id.startsWith("draft-") &&
+      !id.startsWith("demo-") &&
+      !id.startsWith("imported-")
+    ) {
       try {
         await cvApi.delete(id);
       } catch (err) {
@@ -102,7 +113,7 @@ export default function HistoryPage() {
   };
 
   const handleDuplicate = (id: string) => {
-    duplicateHistoryItem(id);
+    duplicateHistoryItem(id, isBackendSession);
     setHistoryItems(getHistory());
   };
 

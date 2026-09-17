@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Cpu, Plus, Trash2, ChevronDown } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { SkillGroup } from "@/types/cv";
+import { buildValidationMap } from "@/lib/cvValidation";
+import { FieldError, fieldErrorInputClass } from "@/components/editor/FieldError";
 
 export function SkillsSection({
   isOpen,
@@ -12,11 +14,16 @@ export function SkillsSection({
   isOpen?: boolean;
   onToggle?: () => void;
 } = {}) {
-  const { cvData, updateSkillGroups } = useCV();
+  const { cvData, updateSkillGroups, persistence } = useCV();
   const skillGroups = cvData.skillGroups && cvData.skillGroups.length > 0
     ? cvData.skillGroups
     : (cvData.skills || []);
   const [internalOpen, setInternalOpen] = useState(true);
+
+  const validationMap = useMemo(
+    () => buildValidationMap(persistence.validationErrors ?? []),
+    [persistence.validationErrors]
+  );
 
   const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
   const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
@@ -101,7 +108,9 @@ export function SkillsSection({
           </div>
         ) : (
           <div className="space-y-3">
-          {skillGroups.map((cat) => (
+          {skillGroups.map((cat, idx) => {
+            const categoryNameError = validationMap[`skillGroups.${idx}.categoryName`];
+            return (
             <div
               key={cat.id}
               className="p-3.5 px-4 rounded-xl border border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center gap-3.5 text-sm"
@@ -109,13 +118,17 @@ export function SkillsSection({
               <div className="w-full sm:w-48 flex-shrink-0">
                 <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
                   Category Name
+                  <FieldError message={categoryNameError} inline />
                 </label>
                 <input
                   type="text"
                   value={cat.categoryName}
                   onChange={(e) => handleUpdateCategoryName(cat.id, e.target.value)}
+                  data-validate={`skillGroups.${idx}.categoryName`}
                   placeholder="e.g. Languages"
-                  className="w-full text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                  className={`w-full text-sm font-medium text-slate-900 bg-white border border-slate-200 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
+                    categoryNameError ? fieldErrorInputClass : ""
+                  }`}
                 />
               </div>
 
@@ -143,7 +156,8 @@ export function SkillsSection({
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
           </div>
         )
       )}

@@ -1,332 +1,365 @@
-# Tasks: 001-cv-editor (Frontend Standalone)
+---
+description: "Task list for fixing backend/frontend integration, database seeding, and dual persistence (guest localStorage vs authenticated MySQL)"
+---
 
-**Feature**: CV Authoring & ATS Optimization Stage  
-**Target Scope**: Frontend Only (Next.js 14 + Tailwind CSS + Lucide Icons + Local Draft Storage & Mock Services; Backend Integration Deferred)  
-**Design Tokens**: White & Light Sky Blue (`#0284C7` / `#38BDF8` / `#E0F2FE`), Kantumruy Pro & Plus Jakarta Sans, Zero Glow, Zero Emojis, Zero Rainbow AI Clichés.
+# Tasks: 001-cv-editor (Full-Stack Integration & Dual Persistence)
+
+**Feature**: CV Editor, Resume Import & Universal ATS Scoring — Full-Stack Integration Fix & Dual Persistence
+**Target Scope**: Backend (Express/Prisma/MySQL) + Frontend (Next.js 14)
+**Context**: Existing tasks.md marked backend integration as complete, but the database is empty and the integration is broken. Guest users must save to localStorage only; authenticated users must save to MySQL.
 
 ---
 
-## Phase 1: Setup (Frontend Project & Design System)
+## Phase 1: Setup (Database & Environment Readiness)
 
-**Purpose**: Scaffolding the Next.js App Router project, design tokens, typography, and core client state foundation.
+**Purpose**: Restore database connectivity, apply migrations, and seed the required job role catalog and starter bullet library so the backend has real data to serve.
 
-- [x] T001 Initialize Next.js 14 App Router project in `frontend/` with TypeScript and Tailwind CSS
-- [x] T002 Configure Google Fonts (`Kantumruy Pro` and `Plus Jakarta Sans`) and root layout in `frontend/src/app/layout.tsx`
-- [x] T003 Configure Tailwind CSS design tokens (White & Light Blue palette, no glow utilities, border standards) in `frontend/tailwind.config.ts`
-- [x] T004 [P] Install UI dependencies (`lucide-react`, `clsx`, `tailwind-merge`, `zod`, `@react-pdf/renderer`) in `frontend/package.json`
-- [x] T005 [P] Create shared TypeScript types and Zod schemas for CV, Sections, Bullets, Roles, and ATS reports in `frontend/src/types/cv.ts`
-- [x] T006 Create client state store with `localStorage` draft autosave and hydration in `frontend/src/lib/store.tsx`
-- [x] T007 [P] Create mock data generator for sample CVs, job roles, starter bullets, and ATS audits in `frontend/src/lib/mockData.ts`
+- [x] T001 Verify MySQL container is healthy and reachable from the backend container via `docker compose ps` and `docker compose exec backend mysql -h mysql -u root -p -e "SHOW DATABASES"`
+- [x] T002 Apply the Prisma schema to the MySQL database using `docker compose exec backend npx prisma db push` (or `npx prisma migrate dev --name init_cv_editor` if migrations are enabled)
+- [x] T003 Run `docker compose exec backend npx prisma db seed` to populate `job_roles` and `role_bullet_templates` tables
+- [x] T004 Verify seed data exists by querying `docker compose exec backend npx prisma studio` or running a direct MySQL query against `job_roles` and `role_bullet_templates`
+- [x] T005 [P] Confirm backend environment variables (`DATABASE_URL`, `JWT_SECRET`, `GEMINI_API_KEY`) are loaded from `backend/.env` inside the container
+- [x] T006 [P] Confirm frontend environment variables (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`) are loaded from `frontend/.env.local`
 
----
-
-## Phase 2: Foundational (Navigation & App Shell)
-
-**Purpose**: Layout primitives, navigation header, and stepped workflow indicator.
-
-- [x] T008 Implement top application header with logo, draft save indicator, and profile button in `frontend/src/components/navigation/Header.tsx`
-- [x] T009 Implement multi-stage workflow stepper (`[1. Author CV] -> [2. ATS Review] -> [3. Export]`) in `frontend/src/components/navigation/EditorStepper.tsx`
-- [x] T010 [P] Implement 1-click Google and GitHub authentication modal UI in `frontend/src/components/auth/AuthModal.tsx`
-- [x] T011 Create landing / workspace entry page in `frontend/src/app/page.tsx`
-
-**Checkpoint**: Shell ready. Stepper navigation and state store operational.
+**Checkpoint**: MySQL database is populated, backend can connect, and seed data is visible.
 
 ---
 
-## Phase 3: User Story 1 - Two-Path Onboarding & Flow Selection (Priority: P1) 🎯 MVP
+## Phase 2: Foundational (Backend Integration Infrastructure)
 
-**Goal**: Students can start fresh with "Create from Scratch" or upload an existing PDF/DOCX to get an instant ATS diagnostic report.
+**Purpose**: Establish the shared foundation required before any user story can be reliably tested end-to-end.
+
+- [x] T007 [P] Create a shared Zod schema package or synchronize `backend/src/schemas/` with `frontend/src/types/cv.ts` so client and server contracts match exactly
+- [x] T008 [P] Implement a reusable session/auth status resolver in `frontend/src/lib/auth.tsx` that checks `/api/auth/me` and falls back to guest mode on 401
+- [x] T009 [P] Implement a dual-persistence storage abstraction in `frontend/src/lib/store.tsx` with separate `localStorage` and `MySQL` save paths
+- [x] T010 [P] Implement a unified save dispatcher in `frontend/src/lib/store.tsx` that routes guest saves to `localStorage` and authenticated saves to `POST /api/cvs` or `PUT /api/cvs/:id`
+- [x] T011 [P] Implement a unified load dispatcher in `frontend/src/lib/store.tsx` that reads from MySQL when authenticated and falls back to `localStorage` when guest
+- [x] T012 [P] Implement a unified delete dispatcher in `frontend/src/lib/historyStore.ts` that deletes from MySQL when authenticated and from `localStorage` when guest
+- [x] T013 [P] Implement a unified list dispatcher in `frontend/src/lib/historyStore.ts` that fetches from `GET /api/cvs` when authenticated and from `localStorage` when guest
+- [x] T014 [P] Add a persistent auth-state watcher in `frontend/src/lib/auth.tsx` that switches the save target when the user signs in or out
+- [x] T015 [P] Add clear UI feedback in `frontend/src/components/editor/ContinueActionBar.tsx` showing whether the draft is saved locally or in the cloud
+
+**Checkpoint**: Dual persistence layer is operational and can route saves/loads/updates/deletes based on authentication state.
+
+---
+
+## Phase 3: User Story 1 - Onboarding Entry Fork & Existing CV Import (Priority: P1) 🎯 MVP
+
+**Goal**: Students can start fresh with "Create from Scratch" or upload an existing PDF/DOCX to get an instant ATS diagnostic report, with drafts saved to the correct persistence layer.
 
 **Independent Test**:
-1. Open onboarding modal, click "Create from Scratch" -> successfully route to `/editor` with a blank template.
-2. Open onboarding modal, drop a resume file -> system parses mock data and immediately transitions to `/editor/ats?from=upload` showing the baseline score.
+1. Open onboarding modal, click "Create from Scratch" -> successfully route to `/editor` with a blank template saved to localStorage.
+2. Open onboarding modal, drop a resume file -> system parses the file and transitions to `/editor/ats?from=upload` showing the baseline score, with the imported draft saved to localStorage.
+3. Sign in with Google -> the same draft is available from MySQL after reload.
 
-- [x] T012 [P] [US1] Build drag-and-drop resume uploader with PDF/DOCX format validation in `frontend/src/components/onboarding/UploadDropzone.tsx`
-- [x] T013 [US1] Build onboarding fork modal ("Create from Scratch" vs "Upload Existing Resume") in `frontend/src/components/onboarding/OnboardingModal.tsx`
-- [x] T014 [US1] Wire onboarding state transitions to route to `/editor` (Scratch) or `/editor/ats?from=upload` (Upload Diagnostic) in `frontend/src/app/page.tsx`
-- [x] T014a [P] [US1] Build client-side CV file parser and structural normalizer mapping extracted PDF/DOCX text to `CVData` in `frontend/src/lib/cvParser.ts`
-- [x] T014b [US1] Integrate structural CV parser into `OnboardingModal.tsx` and `UploadDropzone.tsx` to populate full sections (`personalInfo`, `education`, `experience`, `projects`, `skills`)
-- [x] T014c [US1] Compute baseline ATS diagnostic report from imported CV content and route seamlessly to `/editor/ats?from=upload` or `/editor`
+### Implementation for User Story 1
 
-**Checkpoint**: Two-path onboarding modal fully operational.
+- [ ] T016 [P] [US1] Refactor `frontend/src/components/onboarding/UploadDropzone.tsx` to send files to `POST /api/cvs/import` via `importApi.uploadFile()` and handle guest fallback gracefully
+- [ ] T017 [US1] Refactor `frontend/src/components/onboarding/OnboardingModal.tsx` to preserve the imported CV in localStorage for guests and in MySQL for authenticated users
+- [ ] T018 [US1] Refactor `frontend/src/lib/cvParser.ts` to normalize parsed data into the shared `CVData` structure used by both guest and authenticated flows
+- [ ] T019 [US1] Refactor `frontend/src/app/page.tsx` to route "Create from Scratch" to `/editor` and "Upload Existing Resume" to `/editor/ats?from=upload` while preserving draft state
+- [ ] T020 [US1] Add baseline ATS diagnostic computation from imported CV content and route seamlessly to `/editor/ats?from=upload` or `/editor`
+
+**Checkpoint**: Onboarding works for both guest and authenticated users with correct persistence routing.
 
 ---
 
-## Phase 4: User Story 2 - Structured CV Form & Live ATS Preview (Priority: P1) 🎯 MVP
+## Phase 4: User Story 2 - Template Selection & Structured CV Content Authoring (Priority: P1) 🎯 MVP
 
-**Goal**: Dual-pane editor with structured inputs (Personal Info, Education, Experience, Projects, Skills) and real-time live preview with responsive mobile view switcher.
+**Goal**: Dual-pane editor with structured inputs and real-time live preview, where guest drafts save to localStorage and authenticated drafts save to MySQL.
 
 **Independent Test**:
 1. Type into personal info or education fields on the left -> right-pane preview updates in under 100ms.
-2. Toggle between `ClassicAts` (Harvard style) and `ModernCompact` (Jake's style) -> layout refreshes cleanly with zero data loss.
-3. Shrink screen to mobile (< 1024px) -> dual-pane collapses and `MobileViewToggle.tsx` switches seamlessly between Form and Preview.
+2. Toggle between `ClassicAts` and `ModernCompact` -> layout refreshes cleanly with zero data loss.
+3. Save as a guest -> draft persists in localStorage after reload.
+4. Sign in -> the same draft is saved to MySQL and survives across sessions.
 
-- [x] T015 [P] [US2] Implement Harvard-style classic single-column ATS resume layout in `frontend/src/components/preview/templates/ClassicAts.tsx`
-- [x] T016 [P] [US2] Implement Jake's Resume compact tech ATS layout in `frontend/src/components/preview/templates/ModernCompact.tsx`
-- [x] T017 [US2] Build live preview container with template switcher in `frontend/src/components/preview/LivePreview.tsx`
-- [x] T018 [P] [US2] Build Personal Info and Contact Details form section in `frontend/src/components/editor/sections/PersonalSection.tsx`
-- [x] T019 [P] [US2] Build Education entries form section with GPA, degree, and date pickers in `frontend/src/components/editor/sections/EducationSection.tsx`
-- [x] T020 [P] [US2] Build Work Experience entries form section in `frontend/src/components/editor/sections/ExperienceSection.tsx`
-- [x] T021 [P] [US2] Build Project entries form section with tech stack tags in `frontend/src/components/editor/sections/ProjectsSection.tsx`
-- [x] T022 [P] [US2] Build Categorized Technical Skills form section in `frontend/src/components/editor/sections/SkillsSection.tsx`
-- [x] T023 [US2] Build composite CV editor form assembling all sections in `frontend/src/components/editor/CVForm.tsx`
-- [x] T024 [P] [US2] Build mobile view switcher toggle (`[ Edit Form ]` vs `[ Live Preview ]`) and floating quick-switch pill in `frontend/src/components/editor/MobileViewToggle.tsx`
-- [x] T025 [US2] Build sticky bottom action bar with `[Save Draft]` indicator and `[Continue to ATS Review →]` button in `frontend/src/components/editor/ContinueActionBar.tsx`
-- [x] T026 [US2] Assemble Stage 1 dual-pane CV Editor page with responsive layout in `frontend/src/app/editor/page.tsx`
+### Implementation for User Story 2
 
-**Checkpoint**: Core CV Authoring editor fully functional with real-time live preview, template switching, and mobile responsiveness.
+- [ ] T021 [P] [US2] Refactor `frontend/src/components/preview/templates/ClassicAts.tsx` to consume the generic `sections` and `skillGroups` structure
+- [ ] T022 [P] [US2] Refactor `frontend/src/components/preview/templates/ModernCompact.tsx` to consume the generic `sections` and `skillGroups` structure
+- [ ] T023 [US2] Refactor `frontend/src/components/preview/LivePreview.tsx` to render from the unified store regardless of persistence target
+- [ ] T024 [P] [US2] Refactor `frontend/src/components/editor/sections/PersonalSection.tsx` to consume the nested `personalInfo` structure
+- [ ] T025 [P] [US2] Refactor `frontend/src/components/editor/sections/EducationSection.tsx` to consume generic `sectionType: "EDUCATION"` items
+- [ ] T026 [P] [US2] Refactor `frontend/src/components/editor/sections/ExperienceSection.tsx` to consume generic `sectionType: "EXPERIENCE"` items
+- [ ] T027 [P] [US2] Refactor `frontend/src/components/editor/sections/ProjectsSection.tsx` to consume generic `sectionType: "PROJECTS"` items
+- [ ] T028 [P] [US2] Refactor `frontend/src/components/editor/sections/SkillsSection.tsx` to consume the `skillGroups` array
+- [ ] T029 [US2] Refactor `frontend/src/components/editor/CVForm.tsx` to assemble generic sections and support adding custom sections
+- [ ] T030 [P] [US2] Refactor `frontend/src/components/editor/MobileViewToggle.tsx` to preserve state across form/preview switches
+- [ ] T031 [US2] Refactor `frontend/src/components/editor/ContinueActionBar.tsx` to trigger the correct save path (localStorage for guests, MySQL for authenticated users)
+- [ ] T032 [US2] Refactor `frontend/src/app/editor/page.tsx` to hydrate from localStorage for guests and from `GET /api/cvs/:id` for authenticated users
+- [ ] T033 [US2] Refactor `frontend/src/lib/store.tsx` to autosave to localStorage for guests and to MySQL for authenticated users with conflict-safe merging
 
----
-
-## Phase 5: User Story 3 - Role Autocomplete & Starter Bullet Library (Priority: P2)
-
-**Goal**: Students can search for a target career role and browse/import pre-curated, high-impact bullet points into their experience or projects.
-
-**Independent Test**:
-1. Type "Frontend" in the target role input -> dropdown shows matching roles (e.g. "Frontend Developer").
-2. Open bullet library drawer -> click "Add to CV" on a starter bullet -> bullet inserts immediately into active project/experience section and renders live in preview.
-
-- [x] T027 [P] [US3] Build role search input with debounced autocomplete dropdown in `frontend/src/components/editor/RoleAutocomplete.tsx`
-- [x] T028 [US3] Build slide-over drawer to browse pre-authored role bullet templates with category filters in `frontend/src/components/editor/TemplateBulletDrawer.tsx`
-- [x] T029 [US3] Connect bullet insertion action to active section store in `frontend/src/components/editor/CVForm.tsx`
-
-**Checkpoint**: Role search and starter bullet drawer integrated into editor.
+**Checkpoint**: Core CV Authoring editor is fully functional with real-time preview, template switching, mobile responsiveness, and correct dual persistence.
 
 ---
 
-## Phase 6: User Story 4 - In-Line AI STAR/XYZ Wording Assistant (Priority: P2)
+## Phase 5: User Story 3 - Job Role Autocomplete & Role-Specific Template Bullet Library (Priority: P2)
 
-**Goal**: Provide students with in-line AI assistance to rewrite weak bullet points into high-impact STAR/XYZ achievements without flashy AI clichés.
+**Goal**: Students can search for a target career role and browse/import pre-curated bullet points, with the role catalog served from the seeded MySQL database.
 
 **Independent Test**:
-1. Hover or focus on a bullet point -> click the dedicated **"Refine with AI"** button -> `AIEnhanceModal.tsx` opens with the draft bullet text.
-2. Select an enhancement option (Action-Oriented, Quantified Metrics, STAR framework) -> review side-by-side diff -> click "Apply to CV" -> bullet replaces original in form and preview.
+1. Type "Frontend" in the target role input -> dropdown shows matching roles from the database.
+2. Open bullet library drawer -> click "Add to CV" on a starter bullet -> bullet inserts into the active section and renders in the preview.
+3. Verify role suggestions and starter bullets come from MySQL, not mock data.
 
-- [x] T030 [P] [US4] Build bullet point input row with explicit **"Refine with AI"** button (vector `<PenLine />` + light blue badge) in `frontend/src/components/editor/BulletInput.tsx`
-- [x] T031 [US4] Build clean editorial AI wording review modal with side-by-side diff and STAR/XYZ options in `frontend/src/components/editor/AIEnhanceModal.tsx`
-- [x] T032 [US4] Wire mock AI generation pipeline with simulated delay and structured suggestions in `frontend/src/lib/mockAI.ts`
+### Implementation for User Story 3
 
-**Checkpoint**: Dedicated "Refine with AI" button and STAR/XYZ wording assistance operational.
+- [ ] T034 [P] [US3] Refactor `frontend/src/components/editor/RoleAutocomplete.tsx` to query `GET /api/job-roles` via `jobRoleApi.search()` and display loading/error states
+- [ ] T035 [US3] Refactor `frontend/src/components/editor/TemplateBulletDrawer.tsx` to fetch starter bullets via `GET /api/job-roles/:id/bullets` and display category groupings
+- [ ] T036 [US3] Refactor `frontend/src/components/editor/CVForm.tsx` to insert imported starter bullets into the active generic section item
+- [ ] T037 [US3] Add debounced search with request cancellation to `frontend/src/components/editor/RoleAutocomplete.tsx` to avoid stale responses
+- [ ] T038 [US3] Add empty-state and error-state handling in `frontend/src/components/editor/TemplateBulletDrawer.tsx` when the database catalog is unavailable
+
+**Checkpoint**: Role search and starter bullet drawer are fully backed by the seeded MySQL catalog.
 
 ---
 
-## Phase 7: User Story 5 - Dedicated ATS Scoring Review Stage (Priority: P3)
+## Phase 6: User Story 4 - AI-Assisted Bullet Point Personalization & Wording Enhancement (Priority: P2)
 
-**Goal**: Dedicated Stage 2 screen evaluating the CV across 4 universal ATS pillars with actionable findings and optional Job Description keyword matcher.
+**Goal**: Provide in-line AI assistance to rewrite bullet points into STAR/XYZ achievements, with the Gemini service reachable through the backend.
 
 **Independent Test**:
-1. From `/editor`, click "Continue to ATS Review" -> navigates to `/editor/ats`.
-2. Overall score (0-100) and 4 pillar cards (Parsability, Impact, Skills, Brevity) display with clean flat badges.
+1. Click "Enhance with AI" on a bullet point -> `AIEnhanceModal.tsx` opens with the draft bullet text.
+2. Review 2-3 suggested variations -> accept one -> bullet replaces the original in the form and preview.
+3. Verify the AI response comes from `POST /api/ai/enhance-bullet` and not from mock data.
+
+### Implementation for User Story 4
+
+- [ ] T039 [P] [US4] Refactor `frontend/src/components/editor/BulletInput.tsx` to trigger the real AI enhancement flow
+- [ ] T040 [US4] Refactor `frontend/src/components/editor/AIEnhanceModal.tsx` to call `POST /api/ai/enhance-bullet` via `aiApi.enhanceBullet()` and display loading/error/retry states
+- [ ] T041 [US4] Refactor `frontend/src/lib/mockAI.ts` to remove mock generation and rely exclusively on the backend Gemini service
+- [ ] T042 [US4] Add structured error handling in `frontend/src/components/editor/AIEnhanceModal.tsx` for invalid input, network failures, and Gemini service disruptions
+- [ ] T043 [US4] Verify the backend `backend/src/services/ai.service.ts` returns 2-3 structured STAR/XYZ suggestions with power verbs and metric slots
+
+**Checkpoint**: AI wording assistance is fully connected to the live Gemini backend service.
+
+---
+
+## Phase 7: User Story 5 - Universal ATS Compatibility Scoring & Explainable Feedback (Priority: P3)
+
+**Goal**: Dedicated ATS scoring stage evaluating the CV across 4 pillars with actionable findings and optional job description matching.
+
+**Independent Test**:
+1. Click "Continue to ATS Review" -> navigates to `/editor/ats` and loads the score.
+2. Overall score (0-100) and 4 pillar cards display with clean flat badges.
 3. Paste a job description -> keyword match percentage and missing skills update instantly.
-4. Click "Fix in Editor" on an issue -> navigates back to `/editor` focused on the offending section.
-5. In Flow B (Upload), page loads with "Improve in Editor →" primary button that transitions into `/editor`.
+4. Verify the score comes from `POST /api/ats/score` and not from mock data.
 
-- [x] T033 [P] [US5] Build 0-100 animated score ring with health tier color coding (Emerald, Amber, Rose) in `frontend/src/components/ats/ScoreGauge.tsx`
-- [x] T034 [P] [US5] Build 4-pillar cards (Parsability 25, Impact 30, Skills 25, Brevity 20) with sub-scores in `frontend/src/components/ats/PillarBreakdown.tsx`
-- [x] T035 [P] [US5] Build target Job Description textarea with keyword match percentage and missing chips in `frontend/src/components/ats/JobDescriptionInput.tsx`
-- [x] T036 [US5] Build categorized findings list (Critical Issues, Suggestions, Passed Checks) with "Fix in Editor" deep-links in `frontend/src/components/ats/ActionableFindingsList.tsx`
-- [x] T037 [US5] Build Stage 2 footer navigation (`[← Back to Editor]`, `[Improve in Editor →]`, `[Download ATS PDF →]`) in `frontend/src/components/ats/StageActions.tsx`
-- [x] T038 [US5] Assemble dedicated ATS review screen layout in `frontend/src/components/ats/ATSScoringStage.tsx`
-- [x] T039 [US5] Create Stage 2 ATS review route in `frontend/src/app/editor/ats/page.tsx`
+### Implementation for User Story 5
 
-**Checkpoint**: Dedicated Stage 2 ATS review fully operational for both Flow A and Flow B.
+- [ ] T044 [P] [US5] Refactor `frontend/src/components/ats/ScoreGauge.tsx` to display the live score from `POST /api/ats/score`
+- [ ] T045 [P] [US5] Refactor `frontend/src/components/ats/PillarBreakdown.tsx` to display live pillar scores from the backend response
+- [ ] T046 [P] [US5] Refactor `frontend/src/components/ats/JobDescriptionInput.tsx` to submit the target job description to the backend and display live keyword matching
+- [ ] T047 [US5] Refactor `frontend/src/components/ats/ActionableFindingsList.tsx` to render live findings from the backend response
+- [ ] T048 [US5] Refactor `frontend/src/components/ats/StageActions.tsx` to navigate between editor, ATS review, and export stages with correct persistence state
+- [ ] T049 [US5] Refactor `frontend/src/components/ats/ATSScoringStage.tsx` to call `POST /api/ats/score` via `atsApi.score()` and display loading/error states
+- [ ] T050 [US5] Refactor `frontend/src/app/editor/ats/page.tsx` to load the CV from localStorage for guests or from MySQL for authenticated users before scoring
+- [ ] T051 [US5] Verify the backend `backend/src/services/ats.service.ts` returns the 4-pillar breakdown and categorized findings in the expected contract shape
+
+**Checkpoint**: Dedicated ATS review stage is fully operational for both guest and authenticated users with live backend scoring.
 
 ---
 
-## Phase 8: User Story 7 - ATS-Compliant PDF Export (Priority: P4)
+## Phase 8: User Story 6 - 1-Click Social Sign-In (Google OAuth) (Priority: P3)
 
-**Goal**: Export the finalized CV as a clean, selectable-text vector PDF matching the active ATS template layout.
+**Goal**: Students can sign in with Google, and their local draft is promoted to MySQL upon authentication.
 
 **Independent Test**:
-1. Click "Download ATS PDF" from editor or ATS review stage -> browser downloads a clean `.pdf` file.
-2. Open PDF in reader -> verify text is selectable, headers are aligned, and font matches the chosen template.
+1. Click "Sign in with Google" -> OAuth completes and session is established.
+2. After sign-in, the current localStorage draft is automatically saved to MySQL.
+3. After sign-out, the cloud session is cleared and the user continues with localStorage.
 
-- [x] T040 [P] [US7] Implement `@react-pdf/renderer` document definition for `ClassicAts` layout in `frontend/src/lib/pdf/ClassicPdfDocument.tsx`
-- [x] T041 [P] [US7] Implement `@react-pdf/renderer` document definition for `ModernCompact` layout in `frontend/src/lib/pdf/ModernPdfDocument.tsx`
-- [x] T042 [US7] Build client-side PDF download trigger component with loading feedback in `frontend/src/components/export/ExportPdfButton.tsx`
-- [x] T043 [US7] Wire export trigger into `Header.tsx` and `StageActions.tsx`
-- [x] T043a [US7] Create dedicated Stage 3 final review & export page at `frontend/src/app/editor/export/page.tsx` and `frontend/src/components/export/ExportStage.tsx`
-- [x] T043b [US7] Build fullscreen interactive draft view modal with zoom controls and print support in `frontend/src/components/export/DraftViewModal.tsx`
+### Implementation for User Story 6
 
-**Checkpoint**: Client-side vector PDF generation working across both templates with dedicated Stage 3 export screen and full-page preview modal.
+- [ ] T052 [P] [US6] Refactor `frontend/src/components/auth/AuthModal.tsx` to complete the Google OAuth token exchange via `POST /api/auth/google`
+- [ ] T053 [US6] Refactor `frontend/src/lib/auth.tsx` to manage the authenticated session, persist user profile, and trigger draft promotion to MySQL on sign-in
+- [ ] T054 [US6] Refactor `frontend/src/components/navigation/Header.tsx` to display the authenticated user profile and sign-out action from `/api/auth/me`
+- [ ] T055 [US6] Refactor `frontend/src/lib/store.tsx` to migrate the guest localStorage draft to MySQL immediately after successful authentication
+- [ ] T056 [US6] Refactor `frontend/src/lib/historyStore.ts` to switch from local history to cloud history after sign-in
+- [ ] T057 [US6] Add a sign-out handler in `frontend/src/lib/auth.tsx` that clears the session cookie and falls back to localStorage persistence
+
+**Checkpoint**: Google OAuth is fully functional and seamlessly promotes guest drafts to MySQL.
 
 ---
 
-## Phase 9: Polish & Cross-Cutting Concerns
+## Phase 9: User Story 7 - High-Fidelity ATS-Compliant PDF Export & Cloud Save (Priority: P4)
 
-**Purpose**: Responsive polish, accessibility, keyboard navigation, landing page features, and demo validation.
+**Goal**: Export the finalized CV as a selectable-text PDF, and save completed versions to MySQL for authenticated users.
 
-- [x] T044 [P] Verify responsive viewport styling across mobile (375px), tablet (768px), and desktop (1280px+)
-- [x] T045 [P] Audit all icons to ensure zero Unicode emojis are used and all icons originate from `lucide-react`
-- [x] T046 Verify color consistency across all screens (pure white cards, `#0284C7` light blue accents, no glow effects)
-- [x] T047 Test end-to-end user journeys for both Flow A (Scratch) and Flow B (Upload & Audit) with sample data
-- [x] T048 [P] Build interactive FAQ accordion in `frontend/src/components/landing/FAQSection.tsx` with brand theme and collapsed default state
-- [x] T049 [P] Build multi-column responsive footer in `frontend/src/components/navigation/Footer.tsx`
-- [x] T050 [P] Enhance landing page with symmetrical hero illustrations (`hire.svg`, `resume.svg`) and interactive 3-pillar feature cards in `frontend/src/app/page.tsx`
+**Independent Test**:
+1. Click "Download ATS PDF" -> browser downloads a clean `.pdf` file with selectable text.
+2. Open the PDF -> verify text is selectable and layout matches the chosen template.
+3. Click "Save CV" as an authenticated user -> the document is committed to MySQL with visual confirmation.
+
+### Implementation for User Story 7
+
+- [ ] T058 [P] [US7] Refactor `frontend/src/lib/pdf/ClassicPdfDocument.tsx` to render from the unified `CVData` structure
+- [ ] T059 [P] [US7] Refactor `frontend/src/lib/pdf/ModernPdfDocument.tsx` to render from the unified `CVData` structure
+- [ ] T060 [US7] Refactor `frontend/src/components/export/ExportPdfButton.tsx` to generate the PDF from the current store state
+- [ ] T061 [US7] Refactor `frontend/src/components/export/ExportStage.tsx` to show the correct save status (local vs cloud)
+- [ ] T062 [US7] Refactor `frontend/src/components/export/DraftViewModal.tsx` to render the full draft sheet with zoom and print support
+- [ ] T063 [US7] Refactor `frontend/src/app/editor/export/page.tsx` to load the CV from the correct persistence layer before export
+- [ ] T064 [US7] Refactor `frontend/src/components/editor/ContinueActionBar.tsx` to commit the complete CV to MySQL via `POST /api/cvs` or `PUT /api/cvs/:id` when authenticated
+
+**Checkpoint**: PDF export works for both guest and authenticated users, and authenticated saves are committed to MySQL.
 
 ---
 
 ## Phase 10: User Story 8 - User Resume & Audit History Dashboard (Priority: P3)
 
-**Goal**: Dedicated History dashboard allowing students to review, restore, duplicate, and delete their saved CV drafts, previous ATS diagnostic scans, and exported PDF snapshots.
+**Goal**: Dedicated History dashboard showing saved drafts, ATS scores, and export snapshots, sourced from MySQL for authenticated users and localStorage for guests.
 
 **Independent Test**:
-1. Navigate to `/history` -> view all saved drafts and export snapshots with ATS score badges, role titles, and last modified timestamps.
-2. Click "Edit" on a card -> restores snapshot into active CV editor and navigates to `/editor`.
-3. Click "Audit" on a card -> restores snapshot and navigates to `/editor/ats`.
-4. Click "Duplicate" -> instantly creates a copy with `(Copy)` suffix and adds it to history list.
-5. Click "Delete" -> prompts confirmation and removes the resume from history.
-6. Type in search bar or filter by tab (`All`, `Drafts`, `Audited`, `Exported`) -> grid updates reactively.
+1. Navigate to `/history` -> view saved drafts with role titles, timestamps, and ATS score badges.
+2. Click "Edit" -> restores the snapshot into the editor.
+3. Click "Duplicate" -> creates a copy.
+4. Click "Delete" -> removes the entry from the correct persistence layer.
+5. As a guest, history shows only localStorage drafts.
 
-- [x] T051 [P] [US8] Define `CVHistoryItem` and `CVHistoryStatus` types in `frontend/src/types/cv.ts`
-- [x] T052 [P] [US8] Build history storage manager with seed generator and CRUD operations in `frontend/src/lib/historyStore.ts`
-- [x] T053 [US8] Integrate `loadFromHistory` and auto-recording in `frontend/src/lib/store.tsx`
-- [x] T054 [P] [US8] Build interactive `HistoryCard` component with brand sky-blue hover styling (`border-sky-300`, `hover:bg-sky-50`), clean text actions (`Edit`, `Audit`), and duplicate/delete triggers in `frontend/src/components/history/HistoryCard.tsx`
-- [x] T055 [US8] Build dedicated User History page at `frontend/src/app/history/page.tsx` with search, category tabs, and stat cards
-- [x] T056 [US8] Connect History access exclusively via user profile dropdown in `frontend/src/components/navigation/Header.tsx`
+### Implementation for User Story 8
+
+- [ ] T065 [P] [US8] Refactor `frontend/src/lib/historyStore.ts` to manage both localStorage and MySQL-backed history with a unified interface
+- [ ] T066 [P] [US8] Refactor `frontend/src/components/history/HistoryCard.tsx` to display the correct source indicator (local vs cloud)
+- [ ] T067 [US8] Refactor `frontend/src/app/history/page.tsx` to fetch from `GET /api/cvs` when authenticated and from localStorage when guest
+- [ ] T068 [US8] Refactor `frontend/src/components/history/HistoryCard.tsx` to route "Edit", "Audit", "Duplicate", and "Delete" actions through the unified dispatcher
+- [ ] T069 [US8] Refactor `frontend/src/lib/store.tsx` to hydrate the editor from the selected history item
+- [ ] T070 [US8] Add empty-state CTAs in `frontend/src/app/history/page.tsx` for both guest and authenticated users
+
+**Checkpoint**: History dashboard works seamlessly for both guest and authenticated users with correct persistence routing.
 
 ---
 
----
+## Phase 11: Polish & Cross-Cutting Concerns
 
-## Phase 11: User Story 9 - Frontend State Refactoring to Generic Relational Sections (Alternative 3)
+**Purpose**: Final integration validation, cleanup, and verification across the full stack.
 
-**Goal**: Transition frontend state from rigid isolated arrays (`education[]`, `experience[]`, `projects[]`) to the backend's generic relational structure (`sections: CVSection[]`, `skillGroups: SkillGroup[]`), enabling arbitrary custom sections and eliminating client-server translation adapters.
+- [ ] T071 [P] Remove all remaining mock data and mock service references from `frontend/src/lib/mockData.ts`, `frontend/src/lib/mockAI.ts`, and component fallbacks
+- [ ] T072 [P] Verify `docker compose config` returns code 0 and `docker compose up -d` starts all services
+- [ ] T073 [P] Verify the backend API responds on `http://localhost:5000/api` and the frontend loads on `http://localhost:3000`
+- [ ] T074 [P] Verify `GET /api/auth/me` returns 401 for guests and 200 with user data for authenticated users
+- [ ] T075 [P] Verify `GET /api/cvs` returns only the authenticated user's CVs and is empty for guests
+- [ ] T076 [P] Verify `GET /api/job-roles?q=front` returns seeded roles from MySQL
+- [ ] T077 [P] Verify `POST /api/ai/enhance-bullet` returns structured Gemini suggestions
+- [ ] T078 [P] Verify `POST /api/ats/score` returns the 4-pillar breakdown
+- [ ] T079 [P] Verify guest save -> localStorage only, and authenticated save -> MySQL only
+- [ ] T080 [P] Verify sign-in promotes the guest draft to MySQL without data loss
+- [ ] T081 [P] Verify sign-out falls back to localStorage without losing the draft
+- [ ] T082 [P] Run `npm run build` in `frontend` and `npm run build` in `backend` and fix all compile errors
+- [ ] T083 [P] Run `npm run test:api` in `backend` against the live server and fix all smoke test failures
+- [ ] T084 [P] Verify the end-to-end user journey: onboarding -> editor -> ATS review -> export for both guest and authenticated flows
+- [ ] T085 [P] Update `specs/001-cv-editor/quickstart.md` to reflect the dual persistence behavior and correct database verification steps
+- [ ] T086 [P] Update `specs/001-cv-editor/contracts/cv-api.md` to document the guest localStorage vs authenticated MySQL save behavior
+- [ ] T087 [P] Update `specs/001-cv-editor/data-model.md` to clarify which entities are persisted in MySQL vs localStorage
 
-**Independent Test**:
-1. Open `/editor` -> existing draft loads cleanly into `sections` array without runtime errors.
-2. Edit Education, Experience, Projects, Skills -> updates reflect instantly in `LivePreview.tsx`.
-3. Add a Custom section (e.g., "Volunteering" or "Certifications") -> renders in form and live preview with real-time editing.
-
-- [x] T057 [P] [US9] Refactor TypeScript data contracts in `frontend/src/types/cv.ts` to generic `CVSection`, `CVItem`, `BulletPoint`, `SkillGroup`, and `CVData`
-- [x] T058 [US9] Refactor client state store and `localStorage` persistence in `frontend/src/lib/store.tsx` to manage `sections` and `skillGroups`
-- [x] T059 [P] [US9] Update `frontend/src/components/editor/sections/EducationSection.tsx` to consume and mutate generic `sectionType: "EDUCATION"` items
-- [x] T060 [P] [US9] Update `frontend/src/components/editor/sections/ExperienceSection.tsx` to consume and mutate generic `sectionType: "EXPERIENCE"` items
-- [x] T061 [P] [US9] Update `frontend/src/components/editor/sections/ProjectsSection.tsx` to consume and mutate generic `sectionType: "PROJECTS"` items
-- [x] T062 [P] [US9] Update `frontend/src/components/editor/sections/SkillsSection.tsx` to consume and mutate `skillGroups` array
-- [x] T063 [US9] Update composite form container `frontend/src/components/editor/CVForm.tsx` to assemble generic sections and support adding custom sections
-- [x] T064 [US9] Update Harvard Classic and Jake's Modern preview templates in `frontend/src/components/preview/templates/ClassicAts.tsx` and `frontend/src/components/preview/templates/ModernCompact.tsx` to iterate over generic `sections` and `skillGroups`
-- [x] T065 [P] [US9] Update vector PDF documents in `frontend/src/lib/pdf/ClassicPdfDocument.tsx` and `frontend/src/lib/pdf/ModernPdfDocument.tsx` to render generic `sections` and `skillGroups`
-- [x] T066 [US9] Update `frontend/src/lib/cvParser.ts` to map parsed PDF/DOCX resumes directly to generic `sections` and `skillGroups`
-
-**Checkpoint**: Frontend state store fully refactored to generic `sections` and `skillGroups`. 100% 1-to-1 schema parity with backend MySQL schema.
-
----
-
-## Phase 12: User Story 10 - Full-Stack Backend Integration (15 Endpoints from COVERAGE_MATRIX.md)
-
-**Goal**: Connect frontend to live backend Express API (`http://localhost:5000/api`) with typed fetch client, session authentication, live role templates, Gemini bullet refine, 4-pillar ATS scoring, and cloud history syncing.
-
-**Independent Test**:
-1. Open auth modal -> click "Continue with Google" -> exchanges OAuth token for backend `HttpOnly` cookie, header displays user profile from `/api/auth/me`.
-2. Type role in editor -> role suggestions fetch from `/api/job-roles`; bullet drawer loads starter bullets from `/api/job-roles/:id/bullets`.
-3. Click "Refine with AI" -> sends bullet to `/api/ai/enhance-bullet` and returns Gemini 3.6 Flash suggestions.
-4. Click "ATS Review" -> calculates 4-pillar score from `/api/ats/score`.
-5. Save draft -> sends `POST /api/cvs` or `PUT /api/cvs/:id`; `/history` fetches live CV list from `/api/cvs` and deletes via `DELETE /api/cvs/:id`.
-
-- [x] T067 [P] [US10] Create typed API client with credentials support and error boundary in `frontend/src/lib/api.ts` covering all 15 endpoints
-- [x] T068 [US10] Connect Google OAuth flow in `frontend/src/components/auth/AuthModal.tsx` to backend token exchange endpoint to issue `HttpOnly` session cookie (Zero password forms)
-- [x] T069 [US10] Connect `frontend/src/lib/auth.tsx` and `frontend/src/components/navigation/Header.tsx` to `/api/auth/me` and `/api/auth/logout`
-- [x] T070 [US10] Add parametric `?id=[id]` query parameter support in `frontend/src/app/editor/page.tsx` to hydrate state from `GET /api/cvs/:id`
-- [x] T071 [US10] Connect autosave and continue button in `frontend/src/components/editor/ContinueActionBar.tsx` to `POST /api/cvs` (create) and `PUT /api/cvs/:id` (update)
-- [x] T072 [US10] Connect `frontend/src/components/editor/RoleAutocomplete.tsx` and `frontend/src/components/editor/TemplateBulletDrawer.tsx` to `GET /api/job-roles` and `GET /api/job-roles/:id/bullets`
-- [x] T073 [US10] Connect `frontend/src/components/editor/AIEnhanceModal.tsx` to `POST /api/ai/enhance-bullet` (Gemini 3.6 Flash)
-- [x] T074 [US10] Connect `frontend/src/app/editor/ats/page.tsx` and `frontend/src/app/editor/job-match/page.tsx` to `POST /api/ats/score`
-- [x] T075 [US10] Connect `frontend/src/app/history/page.tsx` and `frontend/src/components/history/HistoryCard.tsx` to `GET /api/cvs` and `DELETE /api/cvs/:id`
-- [x] T076 [US10] Wire resume upload in `frontend/src/components/onboarding/UploadDropzone.tsx` to `POST /api/cvs/import` via multipart `FormData`
-
-**Checkpoint**: All 15 backend API endpoints integrated with the frontend. Full-stack end-to-end user workflow validated.
-
----
-
-## Phase 13: Full-Stack Docker Containerization & Orchestration
-
-**Goal**: Full multi-container development and deployment environment orchestrating `frontend` (Next.js 14 on port 3000), `backend` (Express on port 5000), and `mysql` (MySQL 8.0 on port 3307/3306) via Docker Compose per Constitution Principle 5.
-
-**Independent Test**:
-1. Run `docker compose config` -> returns code 0 with valid service definitions for `mysql`, `backend`, and `frontend`.
-2. Run `docker compose up -d` -> all three containers start, health checks pass, frontend loads on `http://localhost:3000`, and communicates with backend API on `http://localhost:5000/api`.
-
-- [x] T077 [P] Create `frontend/Dockerfile` (Node.js 20 Alpine with libc6-compat) and `frontend/.dockerignore` (excluding node_modules, .next, .env*.local)
-- [x] T078 Update `docker-compose.yml` to declare `frontend` service with bind mounts, anonymous volume caching (`/app/node_modules`, `/app/.next`), and dependency on `backend`
-- [x] T079 Configure non-conflicting host port mapping (`${MYSQL_PORT:-3307}:3306`) and environment variables (`NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID`)
-- [x] T080 Verify full-stack container build with `docker compose build frontend` and test end-to-end multi-container runtime
-
----
-
-## Phase 14: Eliminate Mock Data & Rely Exclusively on Live Backend APIs
-
-**Goal**: Complete removal of mock data (`mockData.ts`, `mockAI.ts`, hardcoded student profiles, client-side scoring heuristics) and transition all data flows strictly to live MySQL database and Express API endpoints.
-
-**Independent Test**:
-1. Search roles in editor -> queries live `/api/job-roles`; starter bullets query live `/api/job-roles/:id/bullets`. Zero mock fallbacks.
-2. Click "Refine with AI" -> generates rewrite from Gemini Flash via `/api/ai/enhance-bullet`. If unavailable, renders clean error/retry feedback instead of dummy text.
-3. Open `/editor/ats` -> calculates live score and findings from `/api/ats/score`.
-4. Open `/history` -> fetches live resume drafts from `/api/cvs`.
-5. Run `grep -r "mockData" frontend/src` and `grep -r "mockAI" frontend/src` -> returns 0 occurrences.
-
-- [ ] T081 [P] [US10] Define clean default `BLANK_CV` in `frontend/src/types/cv.ts` with empty fields and default section structure, eliminating reliance on hardcoded Alex Rivera mock profile
-- [ ] T082 [P] [US10] Refactor `frontend/src/components/editor/RoleAutocomplete.tsx` to query live database catalog via `jobRoleApi.search()` exclusively, removing `JOB_ROLE_PRESETS`
-- [ ] T083 [P] [US10] Refactor `frontend/src/components/editor/TemplateBulletDrawer.tsx` to fetch starter bullets strictly via `jobRoleApi.getBullets()`, removing `MOCK_ROLE_BULLETS` and handling empty/loading states
-- [ ] T084 [P] [US10] Refactor `frontend/src/components/editor/AIEnhanceModal.tsx` to generate bullet suggestions strictly via `aiApi.enhanceBullet()` (Gemini 3.6 Flash), displaying error/retry states instead of mock text
-- [ ] T085 [P] [US10] Refactor `frontend/src/components/ats/ATSScoringStage.tsx` to fetch 4-pillar ATS audit results strictly via `atsApi.score()`, displaying loading skeleton during calculation and removing `calculateMockAtsReport`
-- [ ] T086 [P] [US10] Refactor `frontend/src/lib/historyStore.ts` and `frontend/src/app/history/page.tsx` to remove hardcoded demo history snapshots, querying and managing CV documents strictly through `cvApi.list()` and `cvApi.delete()`
-- [ ] T087 [US10] Refactor `frontend/src/lib/cvParser.ts` and `frontend/src/components/onboarding/UploadDropzone.tsx` to send files strictly to `POST /api/cvs/import` via `importApi.uploadFile()`, removing client-side regex parsing fallback
-- [ ] T088 [US10] Delete obsolete mock files `frontend/src/lib/mockData.ts` and `frontend/src/lib/mockAI.ts` and update all consumer imports across `store.tsx`, `OnboardingModal.tsx`, and section components
-- [ ] T089 Verify clean Next.js production build (`npm run build`) in `frontend` and validate complete end-to-end data flow with live Express backend
+**Checkpoint**: Full-stack integration is verified, database is populated, and dual persistence works end-to-end.
 
 ---
 
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
-1. **Setup (Phase 1)**: Must be completed first to establish the Next.js app and design tokens.
-2. **Foundational (Phase 2)**: Layout, Header, and Stepper needed before editor screens.
-3. **User Story 1 (Phase 3)**: Onboarding modal and routing logic.
-4. **User Story 2 (Phase 4)**: The core CV Editor, Form sections, Templates, and Live Preview (**MVP Deliverable**).
-5. **User Story 3 (Phase 5)**: Role Autocomplete & Bullet Drawer (enhances US2 form).
-6. **User Story 4 (Phase 6)**: AI STAR/XYZ Assistant (enhances US2 bullet rows).
-7. **User Story 5 (Phase 7)**: Dedicated ATS Scoring Stage (receives data from US1 or US2).
-8. **User Story 7 (Phase 8)**: PDF Export (consumes completed CV data).
-9. **Polish (Phase 9)**: Cross-cutting aesthetic and responsive polish.
-10. **User Story 8 (Phase 10)**: User Resume & Audit History Dashboard (consumes saved drafts & export snapshots).
-11. **User Story 9 (Phase 11)**: Frontend Generic State Refactoring (Alternative 3 - prerequisite for backend integration).
-12. **User Story 10 (Phase 12)**: Full-Stack Backend Integration (connects refactored frontend to 15 Express endpoints).
-13. **Docker Orchestration (Phase 13)**: Multi-container setup for MySQL, Backend, and Frontend.
-14. **Mock Data Elimination (Phase 14)**: Transition all data flows strictly to live backend APIs and delete all mock files.
+- **Setup (Phase 1)**: Must be completed first — the database must be populated before any API can be tested.
+- **Foundational (Phase 2)**: Depends on Setup — dual persistence requires a working backend and database.
+- **User Story 1 (Phase 3)**: Depends on Foundational — onboarding needs the persistence dispatcher.
+- **User Story 2 (Phase 4)**: Depends on Foundational — the editor needs the persistence dispatcher.
+- **User Story 3 (Phase 5)**: Depends on Setup — role autocomplete requires seeded database data.
+- **User Story 4 (Phase 6)**: Depends on Setup — AI enhancement requires the backend Gemini service.
+- **User Story 5 (Phase 7)**: Depends on Setup — ATS scoring requires the backend service.
+- **User Story 6 (Phase 8)**: Depends on Foundational — sign-in triggers draft promotion to MySQL.
+- **User Story 7 (Phase 9)**: Depends on Foundational — cloud save requires the persistence dispatcher.
+- **User Story 8 (Phase 10)**: Depends on Foundational — history requires the persistence dispatcher.
+- **Polish (Phase 11)**: Depends on all user stories being complete.
 
-### Parallel Opportunities per Phase
-- **Phase 1**: T004, T005, T007 can be built in parallel.
-- **Phase 2**: T010 can be built in parallel with T008/T009.
-- **Phase 4**: T015 (Classic) and T016 (Modern) templates can be built in parallel with T018-T022 (Form sections).
-- **Phase 7**: T033 (Gauge), T034 (Pillars), and T035 (JD Input) can be built in parallel.
-- **Phase 8**: T040 and T041 can be built in parallel.
-- **Phase 10**: T051, T052, and T054 can be built in parallel.
-- **Phase 11**: T057, T059, T060, T061, T062, and T065 can be built in parallel.
-- **Phase 12**: T067 (API client) can be built in parallel with T068 (Auth forms).
-- **Phase 14**: T081, T082, T083, T084, T085, and T086 can be built in parallel.
+### User Story Dependencies
+- **User Story 1 (P1)**: Depends on Foundational — can start after Phase 2.
+- **User Story 2 (P1)**: Depends on Foundational — can start after Phase 2.
+- **User Story 3 (P2)**: Depends on Setup — can start after Phase 1.
+- **User Story 4 (P2)**: Depends on Setup — can start after Phase 1.
+- **User Story 5 (P3)**: Depends on Setup — can start after Phase 1.
+- **User Story 6 (P3)**: Depends on Foundational — can start after Phase 2.
+- **User Story 7 (P4)**: Depends on Foundational — can start after Phase 2.
+- **User Story 8 (P3)**: Depends on Foundational — can start after Phase 2.
+
+### Within Each User Story
+- Core implementation before integration
+- Persistence routing before story completion
+- Story complete before moving to the next priority
+
+### Parallel Opportunities
+- **Phase 1**: T005 and T006 can run in parallel.
+- **Phase 2**: T007, T008, T009, T010, T011, T012, T013, T014, T015 can run in parallel (different files).
+- **Phase 3**: T016, T017, T018, T019, T020 can run in parallel.
+- **Phase 4**: T021, T022, T024, T025, T026, T027, T028, T030 can run in parallel.
+- **Phase 5**: T034, T035, T036, T037, T038 can run in parallel.
+- **Phase 6**: T039, T040, T041, T042, T043 can run in parallel.
+- **Phase 7**: T044, T045, T046, T047, T048, T049, T050, T051 can run in parallel.
+- **Phase 8**: T052, T053, T054, T055, T056, T057 can run in parallel.
+- **Phase 9**: T058, T059, T060, T061, T062, T063, T064 can run in parallel.
+- **Phase 10**: T065, T066, T067, T068, T069, T070 can run in parallel.
+- **Phase 11**: T071, T072, T073, T074, T075, T076, T077, T078, T079, T080, T081, T082, T083, T084, T085, T086, T087 can run in parallel.
 
 ---
 
-## Parallel Example: Phase 14 (Mock Data Elimination)
+## Parallel Example: Phase 2 (Foundational)
 
 ```bash
-# Refactor components to eliminate mock fallbacks in parallel:
-Task: "Define clean default BLANK_CV in frontend/src/types/cv.ts"
-Task: "Refactor frontend/src/components/editor/RoleAutocomplete.tsx to rely strictly on jobRoleApi.search()"
-Task: "Refactor frontend/src/components/editor/TemplateBulletDrawer.tsx to rely strictly on jobRoleApi.getBullets()"
-Task: "Refactor frontend/src/components/editor/AIEnhanceModal.tsx to rely strictly on aiApi.enhanceBullet()"
-Task: "Refactor frontend/src/components/ats/ATSScoringStage.tsx to calculate strictly via atsApi.score()"
-Task: "Refactor frontend/src/lib/historyStore.ts to eliminate mock history seed"
+# Launch foundational tasks in parallel (different files, no dependencies):
+Task: "Create a shared Zod schema package or synchronize backend/src/schemas/ with frontend/src/types/cv.ts"
+Task: "Implement a reusable session/auth status resolver in frontend/src/lib/auth.tsx"
+Task: "Implement a dual-persistence storage abstraction in frontend/src/lib/store.tsx"
+Task: "Implement a unified save dispatcher in frontend/src/lib/store.tsx"
+Task: "Implement a unified load dispatcher in frontend/src/lib/store.tsx"
+Task: "Implement a unified delete dispatcher in frontend/src/lib/historyStore.ts"
+Task: "Implement a unified list dispatcher in frontend/src/lib/historyStore.ts"
+Task: "Add a persistent auth-state watcher in frontend/src/lib/auth.tsx"
+Task: "Add clear UI feedback in frontend/src/components/editor/ContinueActionBar.tsx"
 ```
 
 ---
 
 ## Implementation Strategy
 
-1. **Step 1 (Standalone UI MVP)**: Completed in Phases 1–10. All screens, templates, mock AI, and local history working.
-2. **Step 2 (Generic Relational State Refactor - Phase 11)**: Refactor `CVData`, `store.tsx`, and section components to generic `sections` and `skillGroups` (Alternative 3).
-3. **Step 3 (Live Backend Integration - Phase 12)**: Connect all 15 endpoints from `COVERAGE_MATRIX.md` to live MySQL + Express backend.
-4. **Step 4 (Docker Containerization - Phase 13)**: Containerize Frontend, Backend, and MySQL via Docker Compose.
-5. **Step 5 (Mock Data Elimination - Phase 14)**: Purge all mock files (`mockData.ts`, `mockAI.ts`) and transition all data consumption strictly to the backend.
+### MVP First (User Story 1 Only)
+1. Complete Phase 1: Setup (database migration + seed)
+2. Complete Phase 2: Foundational (dual persistence dispatcher)
+3. Complete Phase 3: User Story 1 (onboarding with correct persistence)
+4. **STOP and VALIDATE**: Test guest save to localStorage and authenticated save to MySQL
+5. Deploy/demo if ready
 
+### Incremental Delivery
+1. Complete Setup + Foundational -> Foundation ready
+2. Add User Story 1 -> Test independently -> Deploy/Demo (MVP!)
+3. Add User Story 2 -> Test independently -> Deploy/Demo
+4. Add User Story 3 -> Test independently -> Deploy/Demo
+5. Add User Story 4 -> Test independently -> Deploy/Demo
+6. Add User Story 5 -> Test independently -> Deploy/Demo
+7. Add User Story 6 -> Test independently -> Deploy/Demo
+8. Add User Story 7 -> Test independently -> Deploy/Demo
+9. Add User Story 8 -> Test independently -> Deploy/Demo
+10. Complete Polish phase -> Full-stack validation
+
+### Parallel Team Strategy
+With multiple developers:
+1. Team completes Setup + Foundational together
+2. Once Foundational is done:
+   - Developer A: User Story 1
+   - Developer B: User Story 2
+   - Developer C: User Story 3
+   - Developer D: User Story 4
+3. Stories complete and integrate independently
+
+---
+
+## Notes
+
+- [P] tasks = different files, no dependencies
+- [Story] label maps task to specific user story for traceability
+- Guest users MUST save only to localStorage; authenticated users MUST save to MySQL
+- Sign-in MUST promote the guest localStorage draft to MySQL without data loss
+- Sign-out MUST fall back to localStorage without losing the draft
+- All mock data and mock services must be removed
+- Verify the database is populated before testing any API endpoint
+- Commit after each task or logical group
+- Stop at any checkpoint to validate story independently
+- Avoid: vague tasks, same file conflicts, cross-story dependencies that break independence

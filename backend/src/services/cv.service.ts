@@ -26,6 +26,57 @@ export class CvService {
     logger.info('CvService', `Creating new CV for user [${userId}]`, { title: input.title, templateId: input.templateId });
 
     return prisma.$transaction(async (tx) => {
+      const defaultSections = [
+        { sectionType: SectionType.EDUCATION, customTitle: 'Education', orderIndex: 0 },
+        { sectionType: SectionType.EXPERIENCE, customTitle: 'Work Experience', orderIndex: 1 },
+        { sectionType: SectionType.PROJECTS, customTitle: 'Technical Projects', orderIndex: 2 },
+        { sectionType: SectionType.SKILLS, customTitle: 'Technical Skills', orderIndex: 3 },
+      ];
+      const defaultSkillGroups = [
+        { categoryName: 'Languages & Frameworks', skills: [], orderIndex: 0 },
+        { categoryName: 'Developer Tools', skills: [], orderIndex: 1 },
+      ];
+
+      // Persist authored sections/skillGroups when provided (guest draft promotion,
+      // creation from import, etc.), otherwise fall back to the default scaffold.
+      const sectionCreateData = Array.isArray(input.sections) && input.sections.length > 0
+        ? input.sections.map((sec, sIdx) => ({
+            sectionType: (sec.sectionType as SectionType) || SectionType.CUSTOM,
+            customTitle: sec.title ?? sec.customTitle ?? '',
+            orderIndex: sec.orderIndex ?? sIdx,
+            isVisible: sec.isVisible ?? true,
+            items: {
+              create: (sec.items || []).map((item, iIdx) => ({
+                title: item.title ?? '',
+                subtitle: item.subtitle ?? null,
+                location: item.location ?? null,
+                startDate: item.startDate ?? null,
+                endDate: item.endDate ?? null,
+                isCurrent: item.isCurrent ?? false,
+                url: item.url ?? null,
+                orderIndex: item.orderIndex ?? iIdx,
+                bulletPoints: {
+                  create: (item.bulletPoints || []).map((bp, bIdx) => ({
+                    text: bp.text ?? '',
+                    actionVerb: bp.actionVerb ?? null,
+                    hasMetric: bp.hasMetric ?? false,
+                    framework: bp.framework ?? BulletFramework.STANDARD,
+                    orderIndex: bp.orderIndex ?? bIdx,
+                  })),
+                },
+              })),
+            },
+          }))
+        : defaultSections;
+
+      const skillGroupCreateData = Array.isArray(input.skillGroups) && input.skillGroups.length > 0
+        ? input.skillGroups.map((sg, sgIdx) => ({
+            categoryName: sg.categoryName,
+            skills: sg.skills || [],
+            orderIndex: sg.orderIndex ?? sgIdx,
+          }))
+        : defaultSkillGroups;
+
       const cv = await tx.cV.create({
         data: {
           userId,
@@ -41,18 +92,10 @@ export class CvService {
           githubUrl: input.githubUrl || null,
           summary: input.summary || null,
           sections: {
-            create: [
-              { sectionType: SectionType.EDUCATION, customTitle: 'Education', orderIndex: 0 },
-              { sectionType: SectionType.EXPERIENCE, customTitle: 'Work Experience', orderIndex: 1 },
-              { sectionType: SectionType.PROJECTS, customTitle: 'Technical Projects', orderIndex: 2 },
-              { sectionType: SectionType.SKILLS, customTitle: 'Technical Skills', orderIndex: 3 },
-            ],
+            create: sectionCreateData,
           },
           skillGroups: {
-            create: [
-              { categoryName: 'Languages & Frameworks', skills: [], orderIndex: 0 },
-              { categoryName: 'Developer Tools', skills: [], orderIndex: 1 },
-            ],
+            create: skillGroupCreateData,
           },
         },
         include: {
@@ -69,7 +112,7 @@ export class CvService {
         },
       });
 
-      logger.info('CvService', `CV created with 4 default sections [ID: ${cv.id}]`);
+      logger.info('CvService', `CV created with sections/skillGroups [ID: ${cv.id}]`);
       return cv;
     });
   }
@@ -173,7 +216,7 @@ export class CvService {
               where: { id: sectionId },
               data: {
                 sectionType: sec.sectionType as SectionType,
-                customTitle: sec.customTitle,
+                customTitle: sec.title ?? sec.customTitle ?? '',
                 orderIndex: sec.orderIndex ?? secIdx,
                 isVisible: sec.isVisible ?? true,
               },
@@ -183,7 +226,7 @@ export class CvService {
               data: {
                 cvId,
                 sectionType: sec.sectionType as SectionType,
-                customTitle: sec.customTitle,
+                customTitle: sec.title ?? sec.customTitle ?? '',
                 orderIndex: sec.orderIndex ?? secIdx,
                 isVisible: sec.isVisible ?? true,
               },

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { USER_STORAGE_KEY, CV_DRAFT_STORAGE_KEY, HISTORY_STORAGE_KEY } from "@/lib/storageKeys";
 
 export interface User {
   id: string;
@@ -13,12 +14,11 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
+  isBackendSession: boolean;
   loginWithGoogleCredential: (credential: string) => void;
-  loginWithProfile: (profile: { id: string; name: string; email: string; avatarUrl?: string }) => void;
+  loginWithProfile: (profile: { id: string; name: string; email: string; avatarUrl?: string }, options?: { backendSession?: boolean }) => void;
   logout: () => void;
 }
-
-const USER_STORAGE_KEY = "careerprepster_user_v1";
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -43,6 +43,10 @@ function decodeJwt(token: string) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  // True only when the backend confirmed the session via /auth/me or the
+  // Google token exchange succeeded. A localStorage-restored profile is NOT a
+  // real session, so cloud writes must not be attempted with it.
+  const [isBackendSession, setIsBackendSession] = useState<boolean>(false);
 
   // Restore user from backend session first, with localStorage fallback
   useEffect(() => {
@@ -60,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             provider: "google",
           };
           setUser(remoteUser);
+          setIsBackendSession(true);
           localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(remoteUser));
           setIsLoading(false);
           return;
@@ -69,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (isMounted) {
+        setIsBackendSession(false);
         try {
           const savedUser = localStorage.getItem(USER_STORAGE_KEY);
           if (savedUser) {
@@ -88,27 +94,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const loginWithGoogleCredential = (credential: string) => {
+  const loginWithGoogleCredential = async (credential: string) => {
     const payload = decodeJwt(credential);
+
+    // 1. Try to register/login on the backend so a User row is created in
+    //    MySQL and the HttpOnly session cookie is set.
+    try {
+      const { authApi } = await import("@/lib/api");
+      const res = await authApi.loginWithGoogle(credential);
+      if (res?.user) {
+        const newUser: User = {
+          id: res.user.id,
+          name: res.user.name || payload?.name || payload?.email?.split("@")[0] || "Student",
+          email: res.user.email || payload?.email || "",
+          avatarUrl: res.user.avatarUrl || payload?.picture || undefined,
+          provider: "google",
+        };
+        setUser(newUser);
+        setIsBackendSession(true);
+        try {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+        } catch (e) {
+          console.error("Failed to save user session:", e);
+        }
+        return;
+      }
+    } catch (err) {
+      // Backend offline or token rejected: fall back to a client-only profile
+      console.info("Backend session sync skipped; using client-only profile.", err);
+    }
+
     if (!payload) return;
 
-    const newUser: User = {
+    const fallbackUser: User = {
       id: payload.sub || String(Date.now()),
       name: payload.name || payload.email?.split("@")[0] || "Student",
       email: payload.email || "",
       avatarUrl: payload.picture,
       provider: "google",
     };
-
-    setUser(newUser);
+    setUser(fallbackUser);
+    setIsBackendSession(false);
     try {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(fallbackUser));
     } catch (e) {
       console.error("Failed to save user session:", e);
     }
   };
 
-  const loginWithProfile = (profile: { id: string; name: string; email: string; avatarUrl?: string }) => {
+  const loginWithProfile = (profile: { id: string; name: string; email: string; avatarUrl?: string }, options?: { backendSession?: boolean }) => {
     const newUser: User = {
       id: profile.id,
       name: profile.name,
@@ -118,6 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     setUser(newUser);
+    setIsBackendSession(Boolean(options?.backendSession));
     try {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
     } catch (e) {
@@ -127,8 +162,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
+    setIsBackendSession(false);
     try {
+      // Clear the session and all locally persisted CV data so a different
+      // account signing in on this browser never inherits the previous user's draft.
       localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(CV_DRAFT_STORAGE_KEY);
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
       import("@/lib/api").then(({ authApi }) => {
         authApi.logout().catch(() => {});
       });
@@ -142,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isLoading,
+        isBackendSession,
         loginWithGoogleCredential,
         loginWithProfile,
         logout,
