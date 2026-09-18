@@ -546,5 +546,60 @@ In the exported Executive Accent PDF, user avatars appeared distorted and unclip
 3. **Applied Direct `borderRadius` to `<Image>` Styles:**
    - In `ExecutiveAccentPdfDocument.tsx`: `avatarImage` now has `width: "100%", height: "100%", borderRadius: 32` and `avatarContainer` has `backgroundColor: "transparent"`.
    - In `ModernPhotoPdfDocument.tsx`: `avatarImage` now has `borderRadius: 39` and `avatarContainer` has `backgroundColor: "transparent"`.
+---
+
+## 17. Git Change Audit & Justification Breakdown
+
+A comprehensive audit of the 15 modified files across `module/cv-editor` to verify necessity, minimize code churn, and document rationale:
+
+### 17.1 Template Synchronization & Layout Consistency
+- **`frontend/src/components/preview/CVTemplateRenderer.tsx` (+26, new)**:
+  - *Rationale*: Central multi-template dispatcher for all 4 templates (`executive-accent`, `modern-photo`, `modern`, `classic`). Eliminates duplicate switch-case logic across multiple screens.
+- **`frontend/src/components/export/ExportStage.tsx` (+3, -7)**:
+  - *Rationale*: Replaced legacy hardcoded binary check (`cvData.templateId === "classic" ? <ClassicAts/> : <ModernCompact/>`) with `<CVTemplateRenderer />`. Resolves the bug where the export deliverable sheet rendered Jake's Tech instead of the chosen template.
+- **`frontend/src/components/export/DraftViewModal.tsx` (+4, -8)**:
+  - *Rationale*: Replaced legacy binary switch with `<CVTemplateRenderer />` and dynamic template name resolution via `getTemplateById(cvData.templateId)`.
+- **`frontend/src/components/preview/LivePreview.tsx` (+2, -19)**:
+  - *Rationale*: Removed duplicate switch-case block and delegates directly to `<CVTemplateRenderer />`, reducing 17 lines of redundant code.
+- **`frontend/src/app/history/page.tsx` (+2, -2)**:
+  - *Rationale*: Removed legacy clamp `templateId === "modern" ? "modern" : "classic"` that coerced non-modern templates back to `classic`.
+- **`frontend/src/lib/historyStore.ts` (+3, -3)**:
+  - *Rationale*: Preserved true `templateId` in cloud history and duplicate snapshot routines.
+- **`frontend/src/components/history/HistoryCard.tsx` (+2, -1)**:
+  - *Rationale*: Replaced static binary template names with dynamic lookup via `getTemplateById(item.templateId).name`.
+
+### 17.2 PDF Engine Stability & Font Resolution
+- **`frontend/src/lib/pdf/ExecutiveAccentPdfDocument.tsx` (+16, -20)**:
+  - *Rationale*:
+    1. Fixed `Helvetica-Oblique` / `fontStyle: "italic"` crash by reverting `entryDate` to standard `Helvetica`.
+    2. Fixed distorted and unclipped avatar by adding `borderRadius: 32` directly to `avatarImage` with transparent container background.
+    3. Defended against undefined custom section titles via `(sec.title || sec.customTitle || "CUSTOM SECTION").toUpperCase()`.
+    4. Guarded `group.skills` string/array normalization.
+- **`frontend/src/lib/pdf/ModernPhotoPdfDocument.tsx` (+27, -29)**:
+  - *Rationale*:
+    1. Removed `fontStyle: "italic"` from `eduGpa` to prevent font resolution failures.
+    2. Removed unsupported `objectFit: "cover"` from `StyleSheet.create`.
+    3. Added `borderRadius: 39` to `avatarImage` and set container background to transparent.
+    4. Guarded `group.skills` mapping.
+- **`frontend/src/lib/pdf/ClassicPdfDocument.tsx` (+0, -2)**:
+  - *Rationale*: Removed `fontStyle: "italic"` from `summary` and `entrySubHeader` to ensure 100% Adobe 14 Helvetica font compliance.
+- **`frontend/src/lib/pdf/ModernPdfDocument.tsx` (+0, -1)**:
+  - *Rationale*: Removed `fontStyle: "italic"` from `entrySubHeader` to prevent Helvetica font crash.
+- **`frontend/src/components/export/ExportPdfButton.tsx` (+118, -16)**:
+  - *Rationale*:
+    1. Implemented HTML5 Canvas pre-processing: center-crops non-square photos to 1:1 and applies a circular clip path with transparent alpha channel.
+    2. Added multi-tier fallback protection so PDF download always succeeds even if binary image buffers fail.
+    3. Restricted `img.crossOrigin = "anonymous"` to remote HTTP/HTTPS URLs to avoid data URL extraction failures.
+
+### 17.3 Data Integrity & Normalization
+- **`frontend/src/types/cv.ts` (+43, -14)**:
+  - *Rationale*:
+    1. Fixed bug in `normalizeCVData` and `getSectionItems` where empty `items: []` in metadata sections dropped user entries in top-level `education`, `experience`, and `projects`.
+    2. Added bidirectional fallback between relational sections and top-level mirror arrays.
+    3. Guarded `bp?.text` extraction in `getBulletTexts`.
+- **`frontend/src/components/editor/sections/PersonalSection.tsx` (+22, -9)**:
+  - *Rationale*: Center-crops uploaded photos to a 1:1 square upon selection before storing to state, reducing payload size and preventing aspect ratio squishing.
+- **`report_frontend.md` (+120, -0)**:
+  - *Rationale*: Comprehensive engineering audit and historical documentation of bugs, root causes, and architectural solutions.
 
 *Report generated and validated for the CareerPrepster Frontend Module (`careerprepster-frontend@0.1.0`).*
