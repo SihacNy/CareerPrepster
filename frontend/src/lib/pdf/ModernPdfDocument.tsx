@@ -61,7 +61,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     fontSize: 8.5,
     color: "#334155",
-    fontStyle: "italic",
     marginBottom: 2,
   },
   bulletList: {

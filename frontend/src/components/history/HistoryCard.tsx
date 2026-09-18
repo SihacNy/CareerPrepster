@@ -12,6 +12,7 @@ import {
   Layers,
 } from "lucide-react";
 import { CVHistoryItem } from "@/types/cv";
+import { getTemplateById } from "@/types/templates";
 
 interface HistoryCardProps {
   item: CVHistoryItem;
@@ -142,7 +143,7 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
         <div className="flex items-center gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500 font-medium mb-4">
           <span className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 group-hover:border-slate-300/80 transition-colors">
             <Layers className="w-3 h-3 text-slate-400" />
-            {item.templateId === "modern" ? "Jake's Tech" : "Harvard Classic"}
+            {getTemplateById(item.templateId).name}
           </span>
           {item.wordCount ? (
             <span className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 group-hover:border-slate-300/80 transition-colors">

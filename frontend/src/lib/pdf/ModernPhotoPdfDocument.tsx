@@ -31,12 +31,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.4)",
     overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: "transparent",
   },
   avatarImage: {
     width: "100%",
     height: "100%",
-    objectFit: "cover",
+    borderRadius: 39,
   },
   avatarInitials: {
     width: "100%",
@@ -99,7 +99,6 @@ const styles = StyleSheet.create({
   },
   eduGpa: {
     fontSize: 7,
-    fontStyle: "italic",
     color: "#94A3B8",
     marginTop: 0.5,
   },
@@ -232,12 +231,12 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
 
   const initials = personalInfo.fullName
     ? personalInfo.fullName
-        .split(" ")
-        .map((n) => n[0])
-        .filter(Boolean)
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
+      .split(" ")
+      .map((n) => n[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase()
     : "CV";
 
   return (
@@ -249,7 +248,7 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
         <View style={[styles.sidebar, { backgroundColor: accentColor }]}>
           {/* Avatar Photo */}
           <View style={styles.avatarContainer}>
-            {photoUrl ? (
+            {photoUrl && typeof photoUrl === "string" && photoUrl.trim().length > 0 ? (
               // eslint-disable-next-line jsx-a11y/alt-text
               <Image src={photoUrl} style={styles.avatarImage} />
             ) : (
@@ -325,19 +324,26 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
           {skillGroups && skillGroups.length > 0 && (
             <View style={styles.sidebarSection}>
               <Text style={styles.sidebarTitle}>Expertise</Text>
-              {skillGroups.map((group) => (
-                <View key={group.id} style={{ marginBottom: 4 }}>
-                  {group.categoryName ? (
-                    <Text style={styles.skillCategoryTitle}>{group.categoryName}</Text>
-                  ) : null}
-                  {group.skills.map((skill, idx) => (
-                    <View key={idx} style={styles.skillBulletRow}>
-                      <Text style={styles.skillBulletDot}>•</Text>
-                      <Text style={styles.skillBulletText}>{skill}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
+              {skillGroups.map((group) => {
+                const skillsArr = Array.isArray(group.skills)
+                  ? group.skills.filter(Boolean).map(String)
+                  : typeof group.skills === "string"
+                    ? (group.skills as string).split(",").map((s) => s.trim()).filter(Boolean)
+                    : [];
+                return (
+                  <View key={group.id} style={{ marginBottom: 4 }}>
+                    {group.categoryName ? (
+                      <Text style={styles.skillCategoryTitle}>{group.categoryName}</Text>
+                    ) : null}
+                    {skillsArr.map((skill, idx) => (
+                      <View key={idx} style={styles.skillBulletRow}>
+                        <Text style={styles.skillBulletDot}>•</Text>
+                        <Text style={styles.skillBulletText}>{skill}</Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>
@@ -410,8 +416,8 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
                     proj.techStack && proj.techStack.length > 0
                       ? proj.techStack
                       : proj.subtitle
-                      ? proj.subtitle.split(",").map((s) => s.trim()).filter(Boolean)
-                      : [];
+                        ? proj.subtitle.split(",").map((s) => s.trim()).filter(Boolean)
+                        : [];
 
                   return (
                     <View key={proj.id} style={styles.timelineEntry}>

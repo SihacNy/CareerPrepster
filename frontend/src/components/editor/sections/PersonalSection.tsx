@@ -155,7 +155,36 @@ export function PersonalSection({
                         const reader = new FileReader();
                         reader.onloadend = () => {
                           if (typeof reader.result === "string") {
-                            updatePersonalInfo("photoUrl" as any, reader.result);
+                            const rawDataUrl = reader.result;
+                            const img = new Image();
+                            img.onload = () => {
+                              try {
+                                const canvas = document.createElement("canvas");
+                                const targetDim = 500;
+                                canvas.width = targetDim;
+                                canvas.height = targetDim;
+                                const ctx = canvas.getContext("2d");
+                                if (ctx) {
+                                  const rawWidth = img.naturalWidth || img.width || targetDim;
+                                  const rawHeight = img.naturalHeight || img.height || targetDim;
+                                  const squareSize = Math.min(rawWidth, rawHeight);
+                                  const sx = (rawWidth - squareSize) / 2;
+                                  const sy = (rawHeight - squareSize) / 2;
+
+                                  ctx.drawImage(img, sx, sy, squareSize, squareSize, 0, 0, targetDim, targetDim);
+                                  const jpegUrl = canvas.toDataURL("image/jpeg", 0.95);
+                                  updatePersonalInfo("photoUrl" as any, jpegUrl);
+                                  return;
+                                }
+                              } catch (err) {
+                                console.warn("Canvas conversion fallback:", err);
+                              }
+                              updatePersonalInfo("photoUrl" as any, rawDataUrl);
+                            };
+                            img.onerror = () => {
+                              updatePersonalInfo("photoUrl" as any, rawDataUrl);
+                            };
+                            img.src = rawDataUrl;
                           }
                         };
                         reader.readAsDataURL(file);

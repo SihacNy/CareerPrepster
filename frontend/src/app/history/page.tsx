@@ -94,7 +94,7 @@ export default function HistoryPage() {
             targetRole: getRoleDisplayName(rcv, newRoleMap),
             fullName: rcv.fullName || "Candidate",
             status: "draft",
-            templateId: rcv.templateId === "modern" ? "modern" : "classic",
+            templateId: (rcv.templateId as any) || "classic",
             createdAt: rcv.createdAt,
             updatedAt: rcv.updatedAt,
           }));
@@ -148,7 +148,7 @@ export default function HistoryPage() {
             targetRole: getRoleDisplayName(rcv, roleMap),
             fullName: rcv.fullName || "Candidate",
             status: "draft",
-            templateId: rcv.templateId === "modern" ? "modern" : "classic",
+            templateId: (rcv.templateId as any) || "classic",
             createdAt: rcv.createdAt,
             updatedAt: rcv.updatedAt,
           }))

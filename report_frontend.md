@@ -427,4 +427,124 @@ To complete the end-to-end integration between the CV editor, ATS scoring engine
 
 ---
 
+## 13. Export Stage Preview & Template Synchronization Fix
+
+### 13.1 Root Cause Analysis
+- In `frontend/src/components/export/ExportStage.tsx` and `frontend/src/components/export/DraftViewModal.tsx`, the document preview was hardcoded with a legacy binary check:
+  ```tsx
+  {cvData.templateId === "classic" ? (
+    <ClassicAts data={cvData} />
+  ) : (
+    <ModernCompact data={cvData} />
+  )}
+  ```
+- As a consequence, whenever a user selected `"modern-photo"` (or `"executive-accent"`), the preview fell through to `<ModernCompact data={cvData} />` (Jake's Tech high-density layout), completely ignoring the circular profile picture, executive color accents, and template styling.
+- Furthermore, `history/page.tsx` and `historyStore.ts` had a legacy check `templateId: rcv.templateId === "modern" ? "modern" : "classic"` that coerced any non-modern template back to `"classic"`.
+
+### 13.2 Solution & Architecture
+1. **Created Unified `CVTemplateRenderer` Component (`frontend/src/components/preview/CVTemplateRenderer.tsx`):**
+   - Centralizes the multi-template dynamic switch for all 4 templates (`executive-accent`, `modern-photo`, `modern`, `classic`).
+   - Used uniformly across:
+     - `LivePreview.tsx` (real-time editor preview)
+     - `ExportStage.tsx` (Final Review & Export deliverable sheet)
+     - `DraftViewModal.tsx` (interactive fullscreen review modal with zoom and print controls)
+2. **Dynamic Metadata & Name Resolution:**
+   - In `DraftViewModal.tsx`, replaced hardcoded template names with `getTemplateById(cvData.templateId)` to dynamically display template names and subtitles.
+   - In `HistoryCard.tsx`, dynamic badge lookup via `getTemplateById(item.templateId).name`.
+3. **Preserved Full `TemplateId` in History Mapping:**
+   - Removed the binary `rcv.templateId === "modern" ? "modern" : "classic"` constraint in `history/page.tsx` and `historyStore.ts`, allowing all 4 templates to be stored and restored faithfully.
+
+---
+
+## 14. PDF Export Stability, Image Sanitization & Fallback Protection
+
+### 14.1 Root Cause Analysis
+- When downloading the PDF on `/editor/export`, users encountered:
+  `Could not generate PDF. Please verify resume fields and try again.`
+- **Underlying Issues Identified**:
+  1. **Image Format & WebP Incompatibility:** In `@react-pdf/renderer`, the internal image parser only decodes standard JPEG and PNG buffers. When a user uploads a `.webp` image (supported by web browsers), passing `data:image/webp;base64,...` to `<Image src={photoUrl} />` caused `@react-pdf/renderer` to throw `Error: Valid image source expected` / `Unknown image format`.
+  2. **Unsupported StyleSheet Properties:** `avatarImage` in `ExecutiveAccentPdfDocument.tsx` and `ModernPhotoPdfDocument.tsx` included `objectFit: "cover"`, an unsupported property in `@react-pdf/renderer` StyleSheets.
+  3. **Array/String Skills Mismatches:** In `ExecutiveAccentPdfDocument.tsx`, `group.skills.join(", ")` threw a `TypeError` if `skills` was populated as a comma-separated string rather than an array of strings.
+
+### 14.2 Solution & Resilience Architecture
+1. **Dynamic HTML5 Canvas Pre-Conversion (`ExportPdfButton.tsx`):**
+   - Added `preparePdfCompatibleImage`: converts any uploaded image format (WebP, PNG, high-res photos) into a standardized, compressed baseline JPEG Data URL capped at `500x500px` before handing it to `@react-pdf/renderer`.
+   - If an image fails to load or convert, it safely resolves to `null` so the PDF engine renders the initials avatar rather than crashing the export.
+2. **Multi-Tier Fallback Protection:**
+   - If `@react-pdf/renderer` ever fails on a complex document blob, `ExportPdfButton.tsx` catches the failure and immediately retries generation without the photo as a fallback. The user is guaranteed to receive their PDF document.
+3. **Pre-Optimization on File Upload (`PersonalSection.tsx`):**
+   - When a user selects an image in the Personal Info form, it is immediately converted to an optimized JPEG (`500x500`, quality `0.9`) via canvas before storing into state, dramatically reducing memory and database payload size.
+4. **Safe Skills Mapping:**
+   - Handled `group.skills` safely across all PDF templates regardless of whether it arrives as an array or a raw string.
+
+---
+
+## 15. PDF Font Resolution & Section Item Normalization Fix
+
+### 15.1 Exact Root Cause Analysis
+During PDF generation in the browser on `/editor/export`, the user's browser console printed:
+```
+ExportPdfButton.tsx:163 PDF generation failed: Error: Could not resolve font for Helvetica-Oblique, fontWeight 400, fontStyle italic
+    at async handleDownload (ExportPdfButton.tsx:143:16)
+```
+
+1. **Unresolvable Helvetica-Oblique & Italic Styles**:
+   - In `ExecutiveAccentPdfDocument.tsx`, line 111 defined:
+     ```tsx
+     entryDate: {
+       fontFamily: "Helvetica-Oblique",
+       fontSize: 8,
+       fontStyle: "italic",
+     }
+     ```
+     and line 424 had an inline `fontStyle: "italic"`.
+   - In `ClassicPdfDocument.tsx`, lines 38 and 71 contained `fontStyle: "italic"`.
+   - In `ModernPdfDocument.tsx`, line 64 contained `fontStyle: "italic"`.
+   - In `ModernPhotoPdfDocument.tsx`, line 101 contained `fontStyle: "italic"`.
+   - `@react-pdf/renderer` bundle comes pre-configured with standard Adobe 14 metrics for `Helvetica` (weight 400, normal) and `Helvetica-Bold` (weight 700, normal). When `fontStyle: "italic"` or `fontFamily: "Helvetica-Oblique"` is used without registering an external italic `.ttf` file via `Font.register()`, `@react-pdf/renderer` throws `Error: Could not resolve font for Helvetica-Oblique, fontWeight 400, fontStyle italic`.
+   - Every single resume entry with a date (Education, Work Experience, Projects, Custom Sections) renders `entryDate`, causing PDF generation to immediately crash and fail even the non-photo fallback.
+
+2. **Sections Array vs Top-Level Entity Normalization Mismatch**:
+   - When a draft in `localStorage` contains metadata sections (e.g. `[{ id: "sec-education", sectionType: "EDUCATION", isVisible: true }]`) where `sec.items` is empty or undefined, but the actual items are stored in top-level `education: [...]`, `experience: [...]`, and `projects: [...]`, `normalizeCVData` blindly mapped `(sec.items || [])`, dropping all education, experience, and project entries.
+   - `getSectionItems(cv, sectionType)` was returning `sec?.items || []` (which was `[]`), ignoring `cv.education`, `cv.experience`, and `cv.projects`.
+
+3. **Custom Section Title Crash Protection**:
+   - In `ExecutiveAccentPdfDocument.tsx`, line 403 executed `{sec.title.toUpperCase()}` without checking whether `sec.title` is defined. If a custom section stored `customTitle` or had an empty title, calling `.toUpperCase()` on `undefined` threw an uncaught `TypeError`.
+
+### 15.2 Solutions Applied
+1. **Removed All `Helvetica-Oblique` and `fontStyle: "italic"` Tokens Across All 4 PDF Templates**:
+   - `ExecutiveAccentPdfDocument.tsx`: `entryDate` updated to `fontFamily: "Helvetica", fontSize: 8`.
+   - `ModernPhotoPdfDocument.tsx`, `ModernPdfDocument.tsx`, `ClassicPdfDocument.tsx`: Removed `fontStyle: "italic"` from all subtitle, role, and date styles.
+   - Now `@react-pdf/renderer` strictly relies on universal, built-in `Helvetica` and `Helvetica-Bold`, eliminating font resolution failures across all browsers.
+
+2. **Bidirectional Fallback in `getSectionItems` and `normalizeCVData`**:
+   - In `frontend/src/types/cv.ts`: If `sec.items` is empty, `normalizeCVData` now automatically falls back to `input.education`, `input.experience`, or `input.projects`.
+   - `getSectionItems` now returns `cv.education` / `cv.experience` / `cv.projects` whenever `sec.items` is missing or empty, ensuring zero data loss.
+
+3. **Hardened Custom Section Rendering**:
+   - `ExecutiveAccentPdfDocument.tsx` now renders `{(sec.title || sec.customTitle || "CUSTOM SECTION").toUpperCase()}` and defaults item titles with `{item.title || ""}`.
+
+4. **Data URL Cross-Origin Guard**:
+   - `ExportPdfButton.tsx`: Guarded `img.crossOrigin = "anonymous"` to only execute on remote `http://` / `https://` URLs, preventing data URL canvas extraction issues.
+
+---
+
+## 16. PDF Profile Avatar Aspect Ratio & Circular Clipping Fix
+
+### 16.1 Root Cause Analysis
+In the exported Executive Accent PDF, user avatars appeared distorted and unclipped:
+1. **Aspect Ratio Distortion (Squishing):** Users frequently upload 3:4 portrait or non-square orientation photos. In `preparePdfCompatibleImage` and `PersonalSection.tsx`, the canvas preserved the non-square aspect ratio (e.g. 375x500). When `@react-pdf/renderer` rendered `<Image src={photoUrl} style={{ width: "100%", height: "100%" }} />` inside a 64x64 container, the non-square image was stretched to 1:1, squishing the user's face horizontally.
+2. **Missing Clipping on `<Image>` in PDFKit:** In `@react-pdf/renderer`, `overflow: "hidden"` on a parent `<View style={{ borderRadius: 32 }}>` does not clip child `<Image>` elements in standard PDF viewers. Without `borderRadius` directly on the `<Image>` component and without circular masking on the canvas, the rectangular image corners rendered over and outside the circular accent border.
+
+### 16.2 Solutions Applied
+1. **Dynamic 1:1 Center-Crop in HTML5 Canvas (`ExportPdfButton.tsx` & `PersonalSection.tsx`):**
+   - Implemented an `object-fit: cover` equivalent algorithm using `Math.min(naturalWidth, naturalHeight)`.
+   - The canvas centers the crop box right in the middle of the photo (`sx = (rawWidth - size)/2`, `sy = (rawHeight - size)/2`).
+2. **Circular Canvas Clipping Path (`ExportPdfButton.tsx`):**
+   - Canvas now draws a circular clipping path (`ctx.arc(250, 250, 250, 0, Math.PI * 2); ctx.clip()`).
+   - Exports a clean, circular PNG with a 100% transparent alpha channel outside the circle so no rectangular corners can ever spill over the border.
+3. **Applied Direct `borderRadius` to `<Image>` Styles:**
+   - In `ExecutiveAccentPdfDocument.tsx`: `avatarImage` now has `width: "100%", height: "100%", borderRadius: 32` and `avatarContainer` has `backgroundColor: "transparent"`.
+   - In `ModernPhotoPdfDocument.tsx`: `avatarImage` now has `borderRadius: 39` and `avatarContainer` has `backgroundColor: "transparent"`.
+
 *Report generated and validated for the CareerPrepster Frontend Module (`careerprepster-frontend@0.1.0`).*

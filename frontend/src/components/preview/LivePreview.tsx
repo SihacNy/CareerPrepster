@@ -2,28 +2,11 @@
 
 import React from "react";
 import { useCV } from "@/lib/store";
-import { ClassicAts } from "./templates/ClassicAts";
-import { ModernCompact } from "./templates/ModernCompact";
-import { ExecutiveAccent } from "./templates/ExecutiveAccent";
-import { ModernPhoto } from "./templates/ModernPhoto";
+import { CVTemplateRenderer } from "./CVTemplateRenderer";
 import { Eye } from "lucide-react";
 
 export function LivePreview() {
   const { cvData } = useCV();
-
-  const renderActiveTemplate = () => {
-    switch (cvData.templateId) {
-      case "executive-accent":
-        return <ExecutiveAccent data={cvData} />;
-      case "modern-photo":
-        return <ModernPhoto data={cvData} />;
-      case "modern":
-        return <ModernCompact data={cvData} />;
-      case "classic":
-      default:
-        return <ClassicAts data={cvData} />;
-    }
-  };
 
   return (
     <div className="flex flex-col h-full bg-slate-100 border border-slate-200 rounded-xl overflow-hidden">
@@ -38,7 +21,7 @@ export function LivePreview() {
       {/* Rendered Resume Viewport */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex justify-center items-start">
         <div className="w-full shadow-card border border-slate-300 rounded-sm bg-white">
-          {renderActiveTemplate()}
+          <CVTemplateRenderer data={cvData} />
         </div>
       </div>
     </div>

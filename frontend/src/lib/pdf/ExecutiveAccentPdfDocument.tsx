@@ -25,12 +25,12 @@ const styles = StyleSheet.create({
     marginRight: 16,
     borderWidth: 2.5,
     overflow: "hidden",
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "transparent",
   },
   avatarImage: {
     width: "100%",
     height: "100%",
-    objectFit: "cover",
+    borderRadius: 32,
   },
   avatarInitials: {
     width: "100%",
@@ -110,9 +110,8 @@ const styles = StyleSheet.create({
     color: "#475569",
   },
   entryDate: {
-    fontFamily: "Helvetica-Oblique",
+    fontFamily: "Helvetica",
     fontSize: 8,
-    fontStyle: "italic",
   },
   bulletList: {
     marginLeft: 10,
@@ -192,7 +191,7 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
         {/* Header with Photo and Info */}
         <View style={styles.headerRow}>
           <View style={[styles.avatarContainer, { borderColor: accentColor }]}>
-            {photoUrl ? (
+            {photoUrl && typeof photoUrl === "string" && photoUrl.trim().length > 0 ? (
               // eslint-disable-next-line jsx-a11y/alt-text
               <Image src={photoUrl} style={styles.avatarImage} />
             ) : (
@@ -380,12 +379,19 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
               </Text>
               <View style={[styles.sectionTitleRule, { backgroundColor: accentColor }]} />
             </View>
-            {skillGroups.map((group) => (
-              <View key={group.id} style={styles.skillRow}>
-                <Text style={styles.skillCategory}>{group.categoryName}:</Text>
-                <Text style={styles.skillText}>{group.skills.join(", ")}</Text>
-              </View>
-            ))}
+            {skillGroups.map((group) => {
+              const skillsStr = Array.isArray(group.skills)
+                ? group.skills.filter(Boolean).map(String).join(", ")
+                : typeof group.skills === "string"
+                ? group.skills
+                : "";
+              return (
+                <View key={group.id} style={styles.skillRow}>
+                  <Text style={styles.skillCategory}>{group.categoryName}:</Text>
+                  <Text style={styles.skillText}>{skillsStr}</Text>
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -394,11 +400,11 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
           <View key={sec.id} style={{ marginBottom: 4 }}>
             <View style={styles.sectionTitleRow}>
               <Text style={[styles.sectionTitleText, { color: accentColor }]}>
-                {sec.title.toUpperCase()}
+                {(sec.title || sec.customTitle || "CUSTOM SECTION").toUpperCase()}
               </Text>
               <View style={[styles.sectionTitleRule, { backgroundColor: accentColor }]} />
             </View>
-            {sec.items.map((item) => {
+            {(sec.items || []).map((item) => {
               const bullets = getBulletTexts(item.bulletPoints);
               const dateStr = [item.startDate, item.isCurrent ? "PRESENT" : item.endDate]
                 .filter(Boolean)
@@ -407,7 +413,7 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
               return (
                 <View key={item.id} style={{ marginBottom: 3 }}>
                   <View style={styles.entryRow}>
-                    <Text style={styles.entryTitle}>{item.title}</Text>
+                    <Text style={styles.entryTitle}>{item.title || ""}</Text>
                     {dateStr ? (
                       <Text style={[styles.entryDate, { color: accentColor }]}>
                         {dateStr}
@@ -415,7 +421,7 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
                     ) : null}
                   </View>
                   {item.subtitle ? (
-                    <Text style={{ fontSize: 7.5, color: "#64748B", fontStyle: "italic" }}>
+                    <Text style={{ fontSize: 7.5, color: "#64748B" }}>
                       {item.subtitle}
                     </Text>
                   ) : null}

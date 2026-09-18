@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { X, ZoomIn, ZoomOut, Printer } from "lucide-react";
 import { useCV } from "@/lib/store";
-import { ClassicAts } from "@/components/preview/templates/ClassicAts";
-import { ModernCompact } from "@/components/preview/templates/ModernCompact";
+import { CVTemplateRenderer } from "@/components/preview/CVTemplateRenderer";
+import { getTemplateById } from "@/types/templates";
 import { ExportPdfButton } from "./ExportPdfButton";
 
 interface DraftViewModalProps {
@@ -52,7 +52,7 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
             {cvData.personalInfo.fullName || "CV Draft Preview"}
           </h2>
           <p className="text-[10px] text-slate-500">
-            {cvData.templateId === "classic" ? "Harvard Classic ATS Template" : "Jake's Tech High-Density Template"}
+            {getTemplateById(cvData.templateId).name} • {getTemplateById(cvData.templateId).subtitle}
           </p>
         </div>
 
@@ -129,11 +129,7 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
           }}
           className="w-full max-w-3xl bg-white shadow-2xl rounded-sm border border-slate-300 my-4"
         >
-          {cvData.templateId === "classic" ? (
-            <ClassicAts data={cvData} />
-          ) : (
-            <ModernCompact data={cvData} />
-          )}
+          <CVTemplateRenderer data={cvData} />
         </div>
       </div>
     </div>

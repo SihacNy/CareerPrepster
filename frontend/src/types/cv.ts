@@ -16,6 +16,18 @@ import type {
  */
 export function getSectionItems(cv: CVData, sectionType: SectionType): CVItem[] {
   const sec = cv.sections?.find((s) => s.sectionType === sectionType);
+  if (sec?.items && sec.items.length > 0) {
+    return sec.items;
+  }
+  if (sectionType === "EDUCATION" && Array.isArray(cv.education) && cv.education.length > 0) {
+    return cv.education;
+  }
+  if (sectionType === "EXPERIENCE" && Array.isArray(cv.experience) && cv.experience.length > 0) {
+    return cv.experience;
+  }
+  if (sectionType === "PROJECTS" && Array.isArray(cv.projects) && cv.projects.length > 0) {
+    return cv.projects;
+  }
   return sec?.items || [];
 }
 
@@ -48,11 +60,11 @@ export function getBulletTexts(
 ): string[] {
   if (!itemOrBullets) return [];
   if (Array.isArray(itemOrBullets)) {
-    return itemOrBullets.map((bp) => (typeof bp === "string" ? bp : bp.text));
+    return itemOrBullets.map((bp) => (typeof bp === "string" ? bp : bp?.text || ""));
   }
   if (!itemOrBullets.bulletPoints) return [];
   return itemOrBullets.bulletPoints.map((bp) =>
-    typeof bp === "string" ? bp : bp.text
+    typeof bp === "string" ? bp : bp?.text || ""
   );
 }
 
@@ -68,20 +80,33 @@ export function normalizeCVData(input: any): CVData {
   // If already has sections array, use it
   if (Array.isArray(input.sections) && input.sections.length > 0) {
     sections.push(
-      ...input.sections.map((sec: any, sIdx: number) => ({
-        id: sec.id || `sec-${sIdx}`,
-        sectionType: sec.sectionType || "CUSTOM",
-        title: sec.customTitle || sec.title || sec.sectionType,
-        orderIndex: sec.orderIndex !== undefined ? sec.orderIndex : sIdx,
-        isVisible: sec.isVisible !== false,
-        items: (sec.items || []).map((item: any, iIdx: number) => ({
-          ...item,
-          id: item.id || `item-${sIdx}-${iIdx}`,
-          title: item.title || item.degree || item.role || item.name || "",
-          subtitle: item.subtitle || item.institution || item.company || (Array.isArray(item.techStack) ? item.techStack.join(", ") : "") || "",
-          bulletPoints: createBulletPoints(item.bulletPoints || []),
-        })),
-      }))
+      ...input.sections.map((sec: any, sIdx: number) => {
+        const rawItems =
+          Array.isArray(sec.items) && sec.items.length > 0
+            ? sec.items
+            : sec.sectionType === "EDUCATION" && Array.isArray(input.education) && input.education.length > 0
+            ? input.education
+            : sec.sectionType === "EXPERIENCE" && Array.isArray(input.experience) && input.experience.length > 0
+            ? input.experience
+            : sec.sectionType === "PROJECTS" && Array.isArray(input.projects) && input.projects.length > 0
+            ? input.projects
+            : sec.items || [];
+
+        return {
+          id: sec.id || `sec-${sIdx}`,
+          sectionType: sec.sectionType || "CUSTOM",
+          title: sec.customTitle || sec.title || sec.sectionType,
+          orderIndex: sec.orderIndex !== undefined ? sec.orderIndex : sIdx,
+          isVisible: sec.isVisible !== false,
+          items: rawItems.map((item: any, iIdx: number) => ({
+            ...item,
+            id: item.id || `item-${sIdx}-${iIdx}`,
+            title: item.title || item.degree || item.role || item.name || "",
+            subtitle: item.subtitle || item.institution || item.company || (Array.isArray(item.techStack) ? item.techStack.join(", ") : "") || "",
+            bulletPoints: createBulletPoints(item.bulletPoints || []),
+          })),
+        };
+      })
     );
   } else {
     // Migrate legacy education[]

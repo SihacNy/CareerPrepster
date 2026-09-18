@@ -1,6 +1,6 @@
 "use client";
 
-import { CVData, CVHistoryItem, CVHistoryStatus, normalizeCVData } from "@/types/cv";
+import { CVData, CVHistoryItem, CVHistoryStatus, normalizeCVData, TemplateId } from "@/types/cv";
 import { cvApi, CVListItem } from "@/lib/api";
 import { HISTORY_STORAGE_KEY } from "@/lib/storageKeys";
 export { HISTORY_STORAGE_KEY };
@@ -94,7 +94,7 @@ export async function getCloudHistory(): Promise<CVHistoryItem[]> {
           ? (cv.targetRole as any).title || "General Candidate"
           : "General Candidate",
       fullName: cv.fullName || "Candidate",
-      templateId: cv.templateId === "modern" ? "modern" : "classic",
+      templateId: (cv.templateId as TemplateId) || "classic",
       wordCount: 0,
       status: "draft",
       createdAt: cv.createdAt,
@@ -151,7 +151,7 @@ export async function duplicateHistoryItem(id: string): Promise<CVHistoryItem | 
           ? (created.targetRole as any).title || "General Candidate"
           : "General Candidate",
       fullName: created.fullName || "Candidate",
-      templateId: created.templateId === "modern" ? "modern" : "classic",
+      templateId: (created.templateId as TemplateId) || "classic",
       atsScore: created.atsScore,
       wordCount: 0,
       status: "draft",
