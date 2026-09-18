@@ -21,6 +21,7 @@
 8. [ATS Diagnostic & Keyword Matching Interface](#8-ats-diagnostic--keyword-matching-interface)
 9. [PDF Generation & Template Architecture](#9-pdf-generation--template-architecture)
 10. [Local Development & Build Guide](#10-local-development--build-guide)
+11. [Recent Technical Fixes & Stability Hardening](#11-recent-technical-fixes--stability-hardening)
 
 ---
 
@@ -320,6 +321,109 @@ npm run start
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
+
+---
+
+## 11. Recent Technical Fixes & Stability Hardening
+
+### 11.1 Target Role Name Display & Raw UUID Mitigation
+
+* **Symptom:**
+  When users saved CVs to MySQL and viewed them in `/history`, the candidate role displayed as a raw UUID string (e.g. `Role: 2f01ce5f-b8c4-4116-bc63-4fcf07ba3b7f`) instead of the human-readable job title (e.g. `Associate Product Manager`), even when choosing an existing role from the catalog.
+* **Root Causes:**
+  1. **Backend Select Truncation:** In `backend/prisma/schema.prisma`, `targetRoleId` is a foreign key to `JobRole.id`. The backend service (`CvService.listUserCvs`) only selected `targetRoleId: true` without joining the `targetRole` relation (`targetRole: { select: { id: true, title: true } }`).
+  2. **Frontend Raw ID Assignment:** In `frontend/src/app/history/page.tsx` and `frontend/src/lib/historyStore.ts`, the list mapping was explicitly written as `targetRole: rcv.targetRoleId || "General"`, directly rendering the foreign key UUID string on history cards.
+  3. **Role Text Decoupling:** Typing a custom title or picking a role did not ensure bidirectional persistence between `targetRole` (the display string) and `targetRoleId` (the relation foreign key).
+* **Architecture Fixes Applied:**
+  1. **Backend Relation Joining & Mapping:** Updated `backend/src/services/cv.service.ts` across `listUserCvs`, `createCv`, `getCvById`, and `updateCv` to join `targetRole` and return the mapped role `title` string as `targetRole`. If a new or custom role title is provided, it automatically registers/matches the role entry in `job_roles` so relational integrity is always preserved.
+  2. **Catalog Fallback Cache:** Updated `frontend/src/app/history/page.tsx` to query `jobRoleApi.search()` in parallel with `cvApi.list()`, constructing a `roleMap` cache that resolves role names for any existing historical records.
+  3. **UUID Regex Display Guard:** Integrated UUID detection (`/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`) across `HistoryCard.tsx`, `historyStore.ts`, and `normalizeCVData`. If an identifier is encountered in a role string field, it is safely normalized into `targetRoleId` and guarded from rendering as the candidate role.
+  4. **Auto-Resolution in Autocomplete:** In `RoleAutocomplete.tsx`, if an existing CV only has `targetRoleId`, the component cross-references the catalog on mount and resolves the human-readable name into the input automatically.
+
+### 11.2 Infinite Editor Re-Fetch & Database Update Storm on Edit
+
+* **Symptom:**
+  When clicking "Edit" on a CV card in `/history`, the application triggered an uncontrolled, runaway loop of `GET /api/cvs/:id` and `PUT /api/cvs/:id` requests. MySQL logs showed constant queries, `updatedAt` was overwritten continuously, and the browser encountered excessive re-renders.
+* **Root Causes:**
+  1. **Side Effects Inside State Updater:** In `frontend/src/lib/store.tsx`, `loadCV()` was executing an asynchronous network call (`cvApi.update(merged.id, merged)`) inside React's `setCVDataState` setter callback.
+  2. **Unstable Function References:** `loadCV`, `loadFromHistory`, and `setTargetRole` were not wrapped in `useCallback`. Every state update caused the `CVProvider` to create new function instances.
+  3. **Dependency Loop in Editor Page:** `frontend/src/app/editor/page.tsx` included `[searchParams, loadCV]` in its `useEffect` dependencies without tracking if the ID had already been loaded. Because `loadCV` had a new reference on every render, the effect re-executed continuously:
+     $$\text{Edit Click} \to \text{loadCV()} \to \text{cvApi.update()} \to \text{State Change} \to \text{New loadCV reference} \to \text{useEffect fires} \to \text{cvApi.getById()} \to \text{loadCV()} \dots$$
+  4. **Premature Preload in History Card:** `HistoryCard.tsx` was calling `cvApi.getById()` and `loadCV()` before navigating to `/editor?id=...`, which then executed the same fetch a second time.
+* **Architecture Fixes Applied:**
+  1. **Pure State Loading:** Stripped all network mutation side effects (`cvApi.update`) from `loadCV()` in `store.tsx`. Loading a CV into the editor is now strictly an in-memory state hydration and localStorage draft cache operation with `isDirty = false`.
+  2. **Callback Memoization:** Wrapped `loadCV`, `loadFromHistory`, and `setTargetRole` in `useCallback` to guarantee stable references across re-renders.
+  3. **Navigation Re-entry Guard:** Added `lastLoadedIdRef` in `frontend/src/app/editor/page.tsx`. If `lastLoadedIdRef.current === id`, subsequent renders ignore redundant fetch triggers.
+  4. **Simplified History Navigation:** Removed redundant `cvApi.getById` calls inside `HistoryCard.tsx`, letting `router.push('/editor?id=' + item.id)` hand off lifecycle management cleanly to the editor page.
+
+### 11.3 Backend Service, Database & ORM Adjustments
+
+To complement the frontend client hardening, key architectural enhancements were deployed directly to the Express backend service (`backend/src/services/cv.service.ts`):
+
+1. **Relation Inclusion on Query Layers (`listUserCvs` & `getCvById`):**
+   * Previously, Prisma queries executed against the `CV` model only selected `targetRoleId: true`, returning raw UUID foreign keys and omitting relational job role data entirely.
+   * `CvService.listUserCvs` and `CvService.getCvById` now explicitly declare:
+     ```typescript
+     include: {
+       targetRole: {
+         select: { id: true, title: true }
+       }
+     }
+     ```
+   * The returned payloads are mapped to guarantee that `data.targetRole` supplies the human-readable role title (e.g. `"Associate Product Manager"`), with `data.targetRoleId` preserving the relational foreign key UUID.
+
+2. **Dynamic Job Role Registration & Title-to-ID Matching (`createCv` & `updateCv`):**
+   * Previously, if a client provided a textual role title (`targetRole`) without pre-supplying a valid catalog UUID (`targetRoleId`), the backend defaulted `targetRoleId` to `null`.
+   * Both `createCv` and `updateCv` now incorporate an intelligent resolution step inside the Prisma `$transaction`:
+     ```typescript
+     let targetRoleId = input.targetRoleId || null;
+     if (!targetRoleId && input.targetRole?.trim()) {
+       const trimmed = input.targetRole.trim();
+       const matchedRole = await tx.jobRole.findFirst({
+         where: { title: { equals: trimmed } },
+         select: { id: true },
+       });
+       if (matchedRole) {
+         targetRoleId = matchedRole.id;
+       } else {
+         const createdRole = await tx.jobRole.create({
+           data: { title: trimmed, industry: 'General', skills: [] },
+           select: { id: true },
+         });
+         targetRoleId = createdRole.id;
+       }
+     }
+     ```
+   * This guarantees that whether a user chooses an existing role from the catalog or types a custom career title, the role is reliably linked in MySQL's `job_roles` table, preventing null relations and maintaining full relational referential integrity.
+
+3. **Output Normalization on Mutations:**
+   * Both `createCv` and `updateCv` return the fully populated CV tree including the joined `targetRole.title` mapped directly to `targetRole`, ensuring the frontend immediately receives the canonical title upon creation or edit.
+
+---
+
+## 12. ATS History Integration & Score Badge Roadmap (Phase 13 / User Story 10)
+
+To complete the end-to-end integration between the CV editor, ATS scoring engine, and the user's dashboard history, tasks `T110`–`T115` have been formalized in `specs/001-cv-editor/tasks.md`:
+
+1. **API Client & Type Definitions (`frontend/src/lib/api.ts` & `frontend/src/types/cv.ts`):**
+   - Extend `CVListItem` interface with optional `atsScore?: number | null`.
+   - Add `cvApi.getLatestAtsReport(cvId: string)` client method calling `GET /api/ats/:cvId/latest`.
+
+2. **State Management & Audit Persistence (`frontend/src/lib/store.tsx`):**
+   - Add `atsReport: ATSScoreResult | null` and `setAtsReport` action to the global CV store.
+   - Sync the calculated ATS report upon completion in `ATSScoringStage.tsx` and preserve report data across editor step navigation.
+
+3. **Dynamic ATS Score Badges in History (`frontend/src/components/history/HistoryCard.tsx`):**
+   - Replace placeholder score chips on CV history cards with a real ATS score badge:
+     - Green (`>= 80`): Optimal ATS match.
+     - Amber (`60 - 79`): Needs improvements.
+     - Red (`< 60`): Significant ATS issues detected.
+     - Gray / Empty: Unaudited CV with quick "Run ATS Check" call to action.
+   - Add an interactive "View Audit" button opening `/editor/ats?id=<cvId>` to inspect past findings directly.
+
+4. **Deep-Linking & Direct Audit Inspection (`frontend/src/app/editor/ats/page.tsx`):**
+   - Detect `?id=<cvId>` URL search parameters on load.
+   - Fetch the latest persisted `ATSReport` from the backend and hydrate `ATSScoringStage` without forcing an expensive re-audit with Gemini.
 
 ---
 

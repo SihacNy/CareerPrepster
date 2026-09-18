@@ -1,13 +1,30 @@
-import { SectionType, BulletFramework } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { CreateCvInput, UpdateCvInput } from '../schemas/cv.schema.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
+export const SectionType = {
+  EXPERIENCE: 'EXPERIENCE',
+  EDUCATION: 'EDUCATION',
+  PROJECTS: 'PROJECTS',
+  SKILLS: 'SKILLS',
+  CERTIFICATIONS: 'CERTIFICATIONS',
+  CUSTOM: 'CUSTOM',
+} as const;
+export type SectionType = (typeof SectionType)[keyof typeof SectionType];
+
+export const BulletFramework = {
+  STAR: 'STAR',
+  XYZ: 'XYZ',
+  STANDARD: 'STANDARD',
+} as const;
+export type BulletFramework = (typeof BulletFramework)[keyof typeof BulletFramework];
+
 export class CvService {
   static async listUserCvs(userId: string) {
     logger.debug('CvService', `Listing CVs for user [${userId}]`);
-    return prisma.cV.findMany({
+    const cvs = await prisma.cV.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
       select: {
@@ -16,16 +33,33 @@ export class CvService {
         templateId: true,
         fullName: true,
         targetRoleId: true,
+        targetRole: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
         createdAt: true,
         updatedAt: true,
       },
     });
+
+    return cvs.map((cv: any) => ({
+      id: cv.id,
+      title: cv.title,
+      templateId: cv.templateId,
+      fullName: cv.fullName,
+      targetRoleId: cv.targetRoleId,
+      targetRole: cv.targetRole?.title || null,
+      createdAt: cv.createdAt,
+      updatedAt: cv.updatedAt,
+    }));
   }
 
   static async createCv(userId: string, input: CreateCvInput) {
     logger.info('CvService', `Creating new CV for user [${userId}]`, { title: input.title, templateId: input.templateId });
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const defaultSections = [
         { sectionType: SectionType.EDUCATION, customTitle: 'Education', orderIndex: 0 },
         { sectionType: SectionType.EXPERIENCE, customTitle: 'Work Experience', orderIndex: 1 },
@@ -77,12 +111,42 @@ export class CvService {
           }))
         : defaultSkillGroups;
 
+      let targetRoleId = input.targetRoleId || null;
+      if (!targetRoleId && input.targetRole && typeof input.targetRole === 'string' && input.targetRole.trim()) {
+        const trimmed = input.targetRole.trim();
+        const matchedRole = await tx.jobRole.findFirst({
+          where: { title: { equals: trimmed } },
+          select: { id: true },
+        });
+        if (matchedRole) {
+          targetRoleId = matchedRole.id;
+        } else {
+          try {
+            const createdRole = await tx.jobRole.create({
+              data: {
+                title: trimmed,
+                industry: 'General',
+                skills: [],
+              },
+              select: { id: true },
+            });
+            targetRoleId = createdRole.id;
+          } catch {
+            const existingRole = await tx.jobRole.findFirst({
+              where: { title: { equals: trimmed } },
+              select: { id: true },
+            });
+            if (existingRole) targetRoleId = existingRole.id;
+          }
+        }
+      }
+
       const cv = await tx.cV.create({
         data: {
           userId,
           title: input.title || 'Untitled CV',
           templateId: input.templateId || 'classic-ats',
-          targetRoleId: input.targetRoleId || null,
+          targetRoleId,
           fullName: input.fullName,
           email: input.email,
           phone: input.phone || null,
@@ -99,6 +163,12 @@ export class CvService {
           },
         },
         include: {
+          targetRole: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
           sections: {
             include: {
               items: {
@@ -113,7 +183,10 @@ export class CvService {
       });
 
       logger.info('CvService', `CV created with sections/skillGroups [ID: ${cv.id}]`);
-      return cv;
+      return {
+        ...cv,
+        targetRole: cv.targetRole?.title || null,
+      };
     });
   }
 
@@ -123,6 +196,12 @@ export class CvService {
     const cv = await prisma.cV.findUnique({
       where: { id: cvId },
       include: {
+        targetRole: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
         sections: {
           orderBy: { orderIndex: 'asc' },
           include: {
@@ -156,7 +235,10 @@ export class CvService {
       throw new AppError('You do not have permission to access this CV', 403, 'FORBIDDEN');
     }
 
-    return cv;
+    return {
+      ...cv,
+      targetRole: cv.targetRole?.title || null,
+    };
   }
 
   static async updateCv(cvId: string, userId: string, input: UpdateCvInput) {
@@ -179,14 +261,44 @@ export class CvService {
       throw new AppError('You do not have permission to modify this CV', 403, 'FORBIDDEN');
     }
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      let targetRoleId = input.targetRoleId;
+      if (!targetRoleId && input.targetRole && typeof input.targetRole === 'string' && input.targetRole.trim()) {
+        const trimmed = input.targetRole.trim();
+        const matchedRole = await tx.jobRole.findFirst({
+          where: { title: { equals: trimmed } },
+          select: { id: true },
+        });
+        if (matchedRole) {
+          targetRoleId = matchedRole.id;
+        } else {
+          try {
+            const createdRole = await tx.jobRole.create({
+              data: {
+                title: trimmed,
+                industry: 'General',
+                skills: [],
+              },
+              select: { id: true },
+            });
+            targetRoleId = createdRole.id;
+          } catch {
+            const existingRole = await tx.jobRole.findFirst({
+              where: { title: { equals: trimmed } },
+              select: { id: true },
+            });
+            if (existingRole) targetRoleId = existingRole.id;
+          }
+        }
+      }
+
       // 1. Update root CV fields
       await tx.cV.update({
         where: { id: cvId },
         data: {
           title: input.title,
           templateId: input.templateId,
-          targetRoleId: input.targetRoleId,
+          targetRoleId: targetRoleId !== undefined ? targetRoleId : undefined,
           fullName: input.fullName,
           email: input.email,
           phone: input.phone,
@@ -354,9 +466,15 @@ export class CvService {
 
       logger.info('CvService', `CV [ID: ${cvId}] updated successfully`);
 
-      return tx.cV.findUnique({
+      const updated = await tx.cV.findUnique({
         where: { id: cvId },
         include: {
+          targetRole: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
           sections: {
             orderBy: { orderIndex: 'asc' },
             include: {
@@ -375,6 +493,11 @@ export class CvService {
           },
         },
       });
+
+      return {
+        ...updated,
+        targetRole: updated?.targetRole?.title || null,
+      };
     });
   }
 

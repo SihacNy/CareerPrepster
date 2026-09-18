@@ -8,79 +8,104 @@ import {
   Plus,
   Upload,
   Search,
-  Filter,
-  Sparkles,
   Award,
-  Clock,
-  ArrowRight,
+  Sparkles,
   FolderOpen,
+  LogIn,
+  Loader2,
 } from "lucide-react";
 import { Header } from "@/components/navigation/Header";
 import { Footer } from "@/components/navigation/Footer";
 import { HistoryCard } from "@/components/history/HistoryCard";
 import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
-import { CVHistoryItem, CVHistoryStatus } from "@/types/cv";
-import {
-  getHistory,
-  deleteFromHistory,
-  duplicateHistoryItem,
-} from "@/lib/historyStore";
+import { CVHistoryItem, CVHistoryStatus, normalizeCVData } from "@/types/cv";
 import { useCV } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
+import { cvApi, jobRoleApi } from "@/lib/api";
+import { HISTORY_STORAGE_KEY } from "@/lib/storageKeys";
 
-import { cvApi, CVListItem } from "@/lib/api";
+function getRoleDisplayName(rcv: any, roleMap: Map<string, string>): string {
+  const isUuid = (val?: string) =>
+    Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
+  if (typeof rcv.targetRole === "string" && rcv.targetRole.trim() && !isUuid(rcv.targetRole)) {
+    return rcv.targetRole.trim();
+  }
+  if (typeof rcv.targetRole === "object" && rcv.targetRole !== null && rcv.targetRole.title) {
+    return rcv.targetRole.title;
+  }
+  if (rcv.targetRoleId && roleMap.has(rcv.targetRoleId)) {
+    return roleMap.get(rcv.targetRoleId)!;
+  }
+  return "General";
+}
 
 export default function HistoryPage() {
   const router = useRouter();
   const { clearAll } = useCV();
   const { isBackendSession } = useAuth();
   const [historyItems, setHistoryItems] = useState<CVHistoryItem[]>([]);
+  const [roleMap, setRoleMap] = useState<Map<string, string>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<"all" | CVHistoryStatus>("all");
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [isLoadingRemote, setIsLoadingRemote] = useState(false);
+  const [isLoadingRemote, setIsLoadingRemote] = useState(true);
 
-  // Load history on client mount (local storage + backend sync)
+  // Load history exclusively from MySQL when authenticated
   useEffect(() => {
-    const localItems = getHistory();
-    setHistoryItems(localItems);
+    // Purge any stale localStorage history key
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem(HISTORY_STORAGE_KEY);
+      } catch {
+        // Ignore storage access errors
+      }
+    }
 
-    // Remote CV merge only makes sense for a real backend session; a fake
-    // localStorage profile has no valid cookie and cvApi.list() would 401.
-    if (!isBackendSession) return;
+    if (!isBackendSession) {
+      setHistoryItems([]);
+      setIsLoadingRemote(false);
+      return;
+    }
 
     let isMounted = true;
     const fetchRemoteCVs = async () => {
       setIsLoadingRemote(true);
       try {
-        const remoteCvs = await cvApi.list();
-        if (isMounted && Array.isArray(remoteCvs)) {
-          // Merge remote CVs with local history
-          setHistoryItems((prev) => {
-            const existingIds = new Set(prev.map((i) => i.id));
-            const newRemoteItems: CVHistoryItem[] = remoteCvs
-              .filter((rcv) => !existingIds.has(rcv.id))
-              .map((rcv) => ({
-                id: rcv.id,
-                cvId: rcv.id,
-                title: rcv.title || "Untitled CV",
-                targetRole: rcv.targetRoleId || "General",
-                fullName: rcv.fullName || "Candidate",
-                status: "draft",
-                templateId: rcv.templateId === "modern" ? "modern" : "classic",
-                createdAt: rcv.createdAt,
-                updatedAt: rcv.updatedAt,
-              }));
-
-            return [...newRemoteItems, ...prev];
+        const [remoteCvs, roles] = await Promise.all([
+          cvApi.list(),
+          jobRoleApi.search().catch(() => []),
+        ]);
+        const newRoleMap = new Map<string, string>();
+        if (Array.isArray(roles)) {
+          roles.forEach((r) => {
+            if (r.id && r.title) newRoleMap.set(r.id, r.title);
           });
         }
-      } catch {
-        // Backend offline or guest mode; local history is already populated
+        if (isMounted) {
+          setRoleMap(newRoleMap);
+        }
+
+        if (isMounted && Array.isArray(remoteCvs)) {
+          const items: CVHistoryItem[] = remoteCvs.map((rcv) => ({
+            id: rcv.id,
+            cvId: rcv.id,
+            title: rcv.title || "Untitled CV",
+            targetRole: getRoleDisplayName(rcv, newRoleMap),
+            fullName: rcv.fullName || "Candidate",
+            status: "draft",
+            templateId: rcv.templateId === "modern" ? "modern" : "classic",
+            createdAt: rcv.createdAt,
+            updatedAt: rcv.updatedAt,
+          }));
+          setHistoryItems(items);
+        }
+      } catch (err) {
+        console.warn("Failed to load CV history from MySQL:", err);
       } finally {
         if (isMounted) setIsLoadingRemote(false);
       }
-    }
+    };
 
     fetchRemoteCVs();
     return () => {
@@ -94,27 +119,44 @@ export default function HistoryPage() {
   };
 
   const handleDelete = async (id: string) => {
-    deleteFromHistory(id, isBackendSession);
-    setHistoryItems((prev) => prev.filter((item) => item.id !== id));
-
-    // If item is a remote backend CV (not a local draft), trigger backend delete
-    if (
-      isBackendSession &&
-      !id.startsWith("draft-") &&
-      !id.startsWith("demo-") &&
-      !id.startsWith("imported-")
-    ) {
-      try {
-        await cvApi.delete(id);
-      } catch (err) {
-        console.warn("Failed to delete remote CV from server:", err);
-      }
+    try {
+      await cvApi.delete(id);
+      setHistoryItems((prev) => prev.filter((item) => item.id !== id));
+    } catch (err) {
+      console.warn("Failed to delete remote CV from MySQL:", err);
     }
   };
 
-  const handleDuplicate = (id: string) => {
-    duplicateHistoryItem(id, isBackendSession);
-    setHistoryItems(getHistory());
+  const handleDuplicate = async (id: string) => {
+    try {
+      const existing = await cvApi.getById(id);
+      if (!existing) return;
+      const cloned = normalizeCVData({
+        ...existing,
+        id: undefined,
+        title: `${existing.title || "Untitled CV"} (Copy)`,
+        updatedAt: new Date().toISOString(),
+      });
+      await cvApi.create(cloned);
+      const remoteCvs = await cvApi.list();
+      if (Array.isArray(remoteCvs)) {
+        setHistoryItems(
+          remoteCvs.map((rcv) => ({
+            id: rcv.id,
+            cvId: rcv.id,
+            title: rcv.title || "Untitled CV",
+            targetRole: getRoleDisplayName(rcv, roleMap),
+            fullName: rcv.fullName || "Candidate",
+            status: "draft",
+            templateId: rcv.templateId === "modern" ? "modern" : "classic",
+            createdAt: rcv.createdAt,
+            updatedAt: rcv.updatedAt,
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn("Failed to duplicate CV in MySQL:", err);
+    }
   };
 
   // Filtered history items
@@ -156,7 +198,7 @@ export default function HistoryPage() {
               Resume & Audit History
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Manage your saved CV drafts, ATS diagnostic scans, and exported vector PDFs.
+              Manage your saved CV drafts, ATS diagnostic scans, and exported vector PDFs stored in MySQL.
             </p>
           </div>
 
@@ -165,7 +207,7 @@ export default function HistoryPage() {
             <button
               type="button"
               onClick={() => setIsOnboardingOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors shadow-2xs cursor-pointer"
             >
               <Upload className="w-3.5 h-3.5 text-slate-500" />
               <span>Import Resume</span>
@@ -174,7 +216,7 @@ export default function HistoryPage() {
             <button
               type="button"
               onClick={handleCreateNew}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-2xs shadow-sky-500/20 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-2xs shadow-sky-500/20 transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>New Resume</span>
@@ -230,7 +272,7 @@ export default function HistoryPage() {
             <button
               type="button"
               onClick={() => setSelectedStatus("all")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedStatus === "all"
                   ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -241,7 +283,7 @@ export default function HistoryPage() {
             <button
               type="button"
               onClick={() => setSelectedStatus("draft")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedStatus === "draft"
                   ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -252,7 +294,7 @@ export default function HistoryPage() {
             <button
               type="button"
               onClick={() => setSelectedStatus("audited")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedStatus === "audited"
                   ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -263,7 +305,7 @@ export default function HistoryPage() {
             <button
               type="button"
               onClick={() => setSelectedStatus("exported")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedStatus === "exported"
                   ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -274,8 +316,34 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {/* History Grid */}
-        {filteredItems.length > 0 ? (
+        {/* Loading State */}
+        {isLoadingRemote ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-2xs my-4 flex flex-col items-center justify-center">
+            <Loader2 className="w-8 h-8 text-sky-600 animate-spin mb-3" />
+            <p className="text-xs text-slate-500 font-medium">Loading saved resumes from MySQL...</p>
+          </div>
+        ) : !isBackendSession ? (
+          /* Guest Not Signed In Empty State */
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-2xs my-4">
+            <FolderOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-slate-900">
+              Sign in to View MySQL Saved Resumes
+            </h3>
+            <p className="text-xs text-slate-500 max-w-md mx-auto mt-1.5 mb-6 leading-relaxed">
+              Resume history is stored directly in MySQL cloud database. Sign in with Google to save, sync, and access your CV history across devices.
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleCreateNew}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-2xs transition-colors cursor-pointer"
+              >
+                Create New Resume
+              </button>
+            </div>
+          </div>
+        ) : filteredItems.length > 0 ? (
+          /* History Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredItems.map((item) => (
               <HistoryCard
@@ -287,7 +355,7 @@ export default function HistoryPage() {
             ))}
           </div>
         ) : (
-          /* Empty State */
+          /* Empty State for Authenticated User */
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-2xs my-4">
             <FolderOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <h3 className="text-base font-semibold text-slate-900">
@@ -296,14 +364,14 @@ export default function HistoryPage() {
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-6">
               {searchQuery
                 ? `No resumes match your search query "${searchQuery}". Try clearing your search.`
-                : "You don't have any saved resumes in this category yet. Start drafting or import an existing document."}
+                : "You don't have any saved resumes in MySQL yet. Start drafting or import an existing document."}
             </p>
             <div className="flex items-center justify-center gap-3">
               {searchQuery ? (
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
                 >
                   Clear Search
                 </button>
@@ -312,14 +380,14 @@ export default function HistoryPage() {
                   <button
                     type="button"
                     onClick={() => setIsOnboardingOpen(true)}
-                    className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-colors"
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
                   >
                     Import Resume
                   </button>
                   <button
                     type="button"
                     onClick={handleCreateNew}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-2xs transition-colors"
+                    className="px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-2xs transition-colors cursor-pointer"
                   >
                     Create New Resume
                   </button>

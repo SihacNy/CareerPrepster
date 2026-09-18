@@ -43,7 +43,9 @@ export function CustomSection({
       items
         .map((item, index) => ({
           id: item.id,
-          hasError: !!validationMap[`sections.${sectionIdx}.items.${index}.title`],
+          hasError:
+            !!validationMap[`sections.${sectionIdx}.items.${index}.title`] ||
+            !!validationMap[`sections.${sectionIdx}.items.${index}.subtitle`],
         }))
         .filter((e) => e.hasError)
         .map((e) => e.id),
@@ -77,28 +79,39 @@ export function CustomSection({
     setCollapsedEntries((prev) => ({ ...prev, [newEntry.id]: false }));
   };
 
-  const handleUpdateEntry = (id: string, field: string, value: any) => {
+  const handleUpdateEntry = (
+    id: string,
+    fieldOrUpdates: string | Record<string, any>,
+    value?: any
+  ) => {
+    const updates: Record<string, any> =
+      typeof fieldOrUpdates === "string"
+        ? { [fieldOrUpdates]: value }
+        : fieldOrUpdates;
+
     const updated = items.map((item) => {
       if (item.id !== id) return item;
-      if (field === "bulletPoints") {
-        const bps = typeof value[0] === "string" ? createBulletPoints(value) : value;
-        return { ...item, bulletPoints: bps };
+      const nextItem: any = { ...item };
+      for (const [field, val] of Object.entries(updates)) {
+        if (field === "bulletPoints") {
+          nextItem.bulletPoints =
+            typeof val[0] === "string" ? createBulletPoints(val) : val;
+        } else if (field === "isCurrent") {
+          nextItem.isCurrent = val;
+          nextItem.endDate = val
+            ? "Present"
+            : (item.endDate?.toLowerCase() === "present" ? "" : item.endDate);
+        } else if (field === "endDate") {
+          nextItem.endDate = val;
+          nextItem.isCurrent =
+            val?.toLowerCase() === "present"
+              ? true
+              : (item.endDate?.toLowerCase() === "present" ? false : item.isCurrent);
+        } else {
+          nextItem[field] = val;
+        }
       }
-      if (field === "isCurrent") {
-        return {
-          ...item,
-          isCurrent: value,
-          endDate: value ? "Present" : (item.endDate?.toLowerCase() === "present" ? "" : item.endDate),
-        };
-      }
-      if (field === "endDate") {
-        return {
-          ...item,
-          endDate: value,
-          isCurrent: value?.toLowerCase() === "present" ? true : (item.endDate?.toLowerCase() === "present" ? false : item.isCurrent),
-        };
-      }
-      return { ...item, [field]: value };
+      return nextItem as CVItem;
     });
     updateSectionItems(section.id, updated);
   };
@@ -118,15 +131,13 @@ export function CustomSection({
       {/* Section Header */}
       <div
         onClick={toggleSection}
-        className={`flex items-center justify-between cursor-pointer select-none ${
-          isSectionOpen ? "pb-2.5 border-b border-slate-100 mb-4" : "mb-0"
-        }`}
+        className={`flex items-center justify-between cursor-pointer select-none ${isSectionOpen ? "pb-2.5 border-b border-slate-100 mb-4" : "mb-0"
+          }`}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
           <ChevronDown
-            className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${
-              isSectionOpen ? "" : "-rotate-90"
-            }`}
+            className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${isSectionOpen ? "" : "-rotate-90"
+              }`}
           />
           <Layers className="w-4 h-4 text-sky-600 flex-shrink-0" />
           {isEditingTitle ? (
@@ -205,19 +216,18 @@ export function CustomSection({
           <div className="space-y-6">
             {items.map((item, index) => {
               const itemTitleError = validationMap[`sections.${sectionIdx}.items.${index}.title`];
+              const itemSubtitleError = validationMap[`sections.${sectionIdx}.items.${index}.subtitle`];
               const isCollapsed = !!collapsedEntries[item.id];
 
               return (
                 <div
                   key={item.id}
-                  className={`rounded-xl border border-slate-200 bg-slate-50/50 relative group transition-all ${
-                    isCollapsed ? "px-3.5 py-2.5 space-y-0" : "p-5 space-y-4"
-                  }`}
+                  className={`rounded-xl border border-slate-200 bg-slate-50/50 relative group transition-all ${isCollapsed ? "px-3.5 py-2.5 space-y-0" : "p-5 space-y-4"
+                    }`}
                 >
                   <div
-                    className={`flex items-center justify-between ${
-                      !isCollapsed ? "pb-3 border-b border-slate-200/70" : "py-0.5"
-                    }`}
+                    className={`flex items-center justify-between ${!isCollapsed ? "pb-3 border-b border-slate-200/70" : "py-0.5"
+                      }`}
                   >
                     <div
                       onClick={() => toggleEntryCollapse(item.id)}
@@ -225,22 +235,16 @@ export function CustomSection({
                       title={isCollapsed ? "Click to edit" : "Click to collapse"}
                     >
                       <span className="text-sm font-medium text-slate-700 truncate group-hover/title:text-sky-600 transition-colors">
-                        {item.title || `Entry #${index + 1}`}
+                        {item.title || item.subtitle || `Entry #${index + 1}`}
                       </span>
-                      {item.subtitle && (
-                        <span className="text-xs text-slate-400 truncate">
-                          • {item.subtitle}
-                        </span>
-                      )}
                     </div>
 
                     <div className="flex items-center space-x-1.5 flex-shrink-0">
                       <button
                         type="button"
                         onClick={() => toggleEntryCollapse(item.id)}
-                        className={`p-1.5 rounded-lg hover:bg-white transition-colors ${
-                          !isCollapsed ? "text-sky-600" : "text-slate-400 hover:text-slate-700"
-                        }`}
+                        className={`p-1.5 rounded-lg hover:bg-white transition-colors ${!isCollapsed ? "text-sky-600" : "text-slate-400 hover:text-slate-700"
+                          }`}
                         title={isCollapsed ? "Edit entry" : "Collapse entry"}
                       >
                         <Pencil className="w-4 h-4" />
@@ -261,7 +265,7 @@ export function CustomSection({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
-                            Title / Position / Award
+                            Title / Position / Award <span className="text-red-500 font-semibold">*</span>
                             <FieldError message={itemTitleError} inline />
                           </label>
                           <input
@@ -270,22 +274,24 @@ export function CustomSection({
                             onChange={(e) => handleUpdateEntry(item.id, "title", e.target.value)}
                             data-validate={`sections.${sectionIdx}.items.${index}.title`}
                             placeholder="e.g. First Place / Volunteer Coordinator"
-                            className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
-                              itemTitleError ? fieldErrorInputClass : ""
-                            }`}
+                            className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${itemTitleError ? fieldErrorInputClass : ""
+                              }`}
                           />
                         </div>
 
                         <div>
                           <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
-                            Organization / Issuer / Subtitle
+                            Organization / Issuer <span className="text-red-500 font-semibold">*</span>
+                            <FieldError message={itemSubtitleError} inline />
                           </label>
                           <input
                             type="text"
                             value={item.subtitle || ""}
                             onChange={(e) => handleUpdateEntry(item.id, "subtitle", e.target.value)}
+                            data-validate={`sections.${sectionIdx}.items.${index}.subtitle`}
                             placeholder="e.g. IEEE / Red Cross"
-                            className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                            className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${itemSubtitleError ? fieldErrorInputClass : ""
+                              }`}
                           />
                         </div>
 
@@ -297,8 +303,8 @@ export function CustomSection({
                             type="text"
                             value={item.location || item.url || ""}
                             onChange={(e) => {
-                              handleUpdateEntry(item.id, "location", e.target.value);
-                              handleUpdateEntry(item.id, "url", e.target.value);
+                              const val = e.target.value;
+                              handleUpdateEntry(item.id, { location: val, url: val });
                             }}
                             placeholder="e.g. Remote or https://credential.net/..."
                             className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"

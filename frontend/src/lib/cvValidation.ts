@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { urlFieldSchema } from "@careerprepster/shared";
 import type { CVData } from "@/types/cv";
+import { getTemplateById } from "@/types/templates";
 
 export interface CVValidationDetail {
   field: string;
@@ -11,23 +13,9 @@ export interface CVValidationResult {
   errors: CVValidationDetail[];
 }
 
-// Mirrors the backend Zod schema (backend/src/schemas/cv.schema.ts) against the
-// frontend's nested `personalInfo` CVData shape, so invalid payloads are caught
-// before they reach the server (which would otherwise return a 400).
-//
-// Rules relaxed deliberately:
-// - Bullet point `text` may be empty (draft rows mid-edit).
-// - URL fields are optional: empty/null passes, malformed non-empty fails.
-// - Email is required (non-empty + valid); `null`/`undefined` map to
-//   "Required" via the schema's built-in error overrides.
-//
-// Every authored section entry must be filled in (title, and for Education /
-// Experience also the institution / company) or removed — the SuperRefine
-// enforces the per-section rules.
-const urlField = z
-  .union([z.string().url("Invalid URL"), z.literal("")])
-  .optional()
-  .nullable();
+// Uses shared URL validation from @careerprepster/shared while applying
+// frontend-specific interactive draft rules.
+const urlField = urlFieldSchema;
 
 const itemValidation = z.object({
   title: z.string({ invalid_type_error: "Required" }).min(1, "Required"),
@@ -69,6 +57,7 @@ const cvValidationSchema = z
       githubUrl: urlField,
       portfolioUrl: urlField,
       websiteUrl: urlField,
+      photoUrl: z.string().optional(),
       summary: z.string().optional(),
     }),
     sections: z.array(sectionValidation).default([]),
@@ -84,9 +73,24 @@ const cvValidationSchema = z
       .default([]),
   })
   .superRefine((data, ctx) => {
+    // If template supports photo, candidate headshot is required
+    if (getTemplateById(data.templateId).supportsPhoto) {
+      if (!(data.personalInfo.photoUrl ?? "").trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Required",
+          path: ["personalInfo", "photoUrl"],
+        });
+      }
+    }
+
     for (let sIdx = 0; sIdx < data.sections.length; sIdx++) {
       const sec = data.sections[sIdx];
-      if (sec.sectionType !== "EDUCATION" && sec.sectionType !== "EXPERIENCE") {
+      if (
+        sec.sectionType !== "EDUCATION" &&
+        sec.sectionType !== "EXPERIENCE" &&
+        sec.sectionType !== "CUSTOM"
+      ) {
         continue;
       }
       for (let iIdx = 0; iIdx < sec.items.length; iIdx++) {

@@ -6,6 +6,8 @@ import { useCV } from "@/lib/store";
 import { pdf } from "@react-pdf/renderer";
 import { ClassicPdfDocument } from "@/lib/pdf/ClassicPdfDocument";
 import { ModernPdfDocument } from "@/lib/pdf/ModernPdfDocument";
+import { ExecutiveAccentPdfDocument } from "@/lib/pdf/ExecutiveAccentPdfDocument";
+import { ModernPhotoPdfDocument } from "@/lib/pdf/ModernPhotoPdfDocument";
 
 interface ExportPdfButtonProps {
   variant?: "primary" | "secondary";
@@ -23,12 +25,22 @@ export function ExportPdfButton({
     try {
       setIsGenerating(true);
 
-      const DocumentComponent =
-        cvData.templateId === "classic" ? (
-          <ClassicPdfDocument data={cvData} />
-        ) : (
-          <ModernPdfDocument data={cvData} />
-        );
+      let DocumentComponent: React.ReactElement;
+      switch (cvData.templateId) {
+        case "executive-accent":
+          DocumentComponent = <ExecutiveAccentPdfDocument data={cvData} />;
+          break;
+        case "modern-photo":
+          DocumentComponent = <ModernPhotoPdfDocument data={cvData} />;
+          break;
+        case "modern":
+          DocumentComponent = <ModernPdfDocument data={cvData} />;
+          break;
+        case "classic":
+        default:
+          DocumentComponent = <ClassicPdfDocument data={cvData} />;
+          break;
+      }
 
       const blob = await pdf(DocumentComponent).toBlob();
       const url = URL.createObjectURL(blob);
@@ -41,6 +53,11 @@ export function ExportPdfButton({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("careerprepster_pdf_downloaded", "true");
+        window.dispatchEvent(new CustomEvent("careerprepster:pdf-downloaded"));
+      }
     } catch (error) {
       console.error("PDF generation failed:", error);
       alert("Could not generate PDF. Please verify resume fields and try again.");

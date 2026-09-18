@@ -283,8 +283,8 @@ export function ClassicPdfDocument({ data }: { data: CVData }) {
                 <View key={item.id} style={{ marginBottom: 4 }}>
                   <View style={styles.entryHeader}>
                     <Text style={styles.entryTitle}>{item.title}</Text>
-                    {item.location && (
-                      <Text style={styles.entryLocation}>{item.location}</Text>
+                    {(item.location || item.url) && (
+                      <Text style={styles.entryLocation}>{item.location || item.url}</Text>
                     )}
                   </View>
                   {item.subtitle && (

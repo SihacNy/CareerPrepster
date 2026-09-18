@@ -24,8 +24,8 @@ services:
   # -------------------------------------------------------------
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: careerprepster-backend
     restart: always
     ports:
@@ -46,16 +46,18 @@ services:
       mysql:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ./shared:/app/shared
+      - ./backend:/app/backend
       - /app/node_modules
+      - /app/backend/node_modules
 
   # -------------------------------------------------------------
   # Next.js Frontend Web Application Service
   # -------------------------------------------------------------
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: careerprepster-frontend
     restart: always
     ports:
@@ -69,9 +71,11 @@ services:
     depends_on:
       - backend
     volumes:
-      - ./frontend:/app
+      - ./shared:/app/shared
+      - ./frontend:/app/frontend
       - /app/node_modules
-      - /app/.next
+      - /app/frontend/node_modules
+      - /app/frontend/.next
 
 volumes:
   mysql_data:

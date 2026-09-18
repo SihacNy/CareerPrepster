@@ -144,6 +144,7 @@ export interface CVListItem {
   templateId: string;
   fullName: string;
   targetRoleId?: string | null;
+  targetRole?: string | { id: string; title: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -164,6 +165,7 @@ export const cvApi = {
       title: cvData.title || "Untitled CV",
       templateId: cvData.templateId || "classic-ats",
       targetRoleId: cvData.targetRoleId || null,
+      targetRole: cvData.targetRole || null,
       fullName: cvData.personalInfo?.fullName || "Candidate",
       email: cvData.personalInfo?.email || "candidate@example.com",
       phone: cvData.personalInfo?.phone || null,
@@ -185,7 +187,8 @@ export const cvApi = {
     const payload = {
       title: cvData.title,
       templateId: cvData.templateId,
-      targetRoleId: cvData.targetRoleId || null,
+      targetRoleId: cvData.targetRoleId !== undefined ? cvData.targetRoleId : null,
+      targetRole: cvData.targetRole || null,
       fullName: cvData.personalInfo?.fullName,
       email: cvData.personalInfo?.email,
       phone: cvData.personalInfo?.phone || null,

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-CareerPrepster: full-stack AI CV editor (Next.js 14 + Express + MySQL/Prisma + Gemini). Two independent npm packages under `backend/` and `frontend/` — no root workspace, no root `package.json`. Run npm commands from each package dir; `docker compose` from the root.
+CareerPrepster: full-stack AI CV editor (Next.js 14 + Express + MySQL/Prisma + Gemini). Root npm workspaces link `shared/` (`@careerprepster/shared`), `backend/`, and `frontend/`. Run npm commands from each package dir or with `--workspace=<name>`; `docker compose` from the root.
 
 ## Commands
 

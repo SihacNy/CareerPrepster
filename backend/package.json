@@ -17,6 +17,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@careerprepster/shared": "^1.0.0",
     "@google/generative-ai": "^0.24.0",
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",

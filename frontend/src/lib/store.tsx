@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { CVData, TemplateId, CVSection, CVItem, SkillGroup, SectionType, normalizeCVData, BLANK_CV } from "@/types/cv";
-import { saveToHistory, getHistory, deleteFromHistory } from "./historyStore";
+
 import { cvApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { CV_DRAFT_STORAGE_KEY } from "@/lib/storageKeys";
@@ -25,6 +25,64 @@ interface PersistenceState {
   validationRunId?: number;
 }
 
+// Checks if a CV data structure has real content filled in by a user
+export function isRealCVDraft(cv: any): boolean {
+  if (!cv) return false;
+  if (cv.targetRole?.trim()) return true;
+  if (cv.personalInfo) {
+    const { fullName, email, phone, summary, linkedinUrl, githubUrl, portfolioUrl } = cv.personalInfo;
+    if (fullName?.trim() || email?.trim() || phone?.trim() || summary?.trim() || linkedinUrl?.trim() || githubUrl?.trim() || portfolioUrl?.trim()) {
+      return true;
+    }
+  }
+  if (Array.isArray(cv.sections)) {
+    for (const sec of cv.sections) {
+      if (Array.isArray(sec.items)) {
+        for (const item of sec.items) {
+          if (item.title?.trim() || item.subtitle?.trim() || item.company?.trim() || item.institution?.trim() || item.role?.trim()) {
+            return true;
+          }
+          if (Array.isArray(item.bulletPoints)) {
+            for (const bp of item.bulletPoints) {
+              const text = typeof bp === "string" ? bp : bp?.text;
+              if (text?.trim()) return true;
+            }
+          }
+        }
+      }
+    }
+  }
+  if (Array.isArray(cv.skillGroups)) {
+    for (const g of cv.skillGroups) {
+      if (Array.isArray(g.skills) && g.skills.length > 0) {
+        return true;
+      }
+    }
+  }
+  if (Array.isArray(cv.education) && cv.education.some((e: any) => e.degree?.trim() || e.institution?.trim())) return true;
+  if (Array.isArray(cv.experience) && cv.experience.some((e: any) => e.role?.trim() || e.company?.trim())) return true;
+  if (Array.isArray(cv.projects) && cv.projects.some((p: any) => p.name?.trim() || p.title?.trim())) return true;
+  return false;
+}
+
+// Retrieves the latest real draft from primary draft storage
+export function getSavedDraftFromStorage(): CVData | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem(CV_DRAFT_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (isRealCVDraft(parsed)) {
+        return normalizeCVData(parsed);
+      }
+    }
+  } catch (err) {
+    console.warn("Could not parse local draft from localStorage:", err);
+  }
+
+  return null;
+}
+
 interface CVContextType {
   cvData: CVData;
   setCVData: React.Dispatch<React.SetStateAction<CVData>>;
@@ -34,7 +92,8 @@ interface CVContextType {
   addCustomSection: (title: string) => void;
   updateSectionTitle: (sectionId: string, title: string) => void;
   removeSection: (sectionId: string) => void;
-  setTemplateId: (id: TemplateId) => void;
+  setTemplateId: (id: TemplateId | string) => void;
+  setAccentColor: (color: string) => void;
   setTargetRole: (role: string, roleId?: string) => void;
   targetJobDescription: string;
   setTargetJobDescription: (jd: string) => void;
@@ -49,6 +108,8 @@ interface CVContextType {
   clearAll: () => void;
   loadFromHistory: (snapshot: CVData) => void;
   loadCV: (data: Partial<CVData>) => void;
+  restoreDraft: () => boolean;
+  hasSavedDraft: boolean;
   persistence: PersistenceState;
 }
 
@@ -86,47 +147,67 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
       const userChanged = prevUserIdRef.current !== userId;
       prevUserIdRef.current = userId;
 
+      // Retrieve any existing real draft from localStorage or history snapshots
+      const localDraft = getSavedDraftFromStorage();
+
       try {
         if (canUseCloud) {
-          // Authenticated: load from MySQL
-          const cvs = await cvApi.list();
-          if (cvs.length > 0) {
-            const latest = cvs[0];
-            const remote = await cvApi.getById(latest.id);
-            const normalized = normalizeCVData({
-              ...remote,
-              personalInfo: {
-                fullName: remote.fullName || "",
-                email: remote.email || "",
-                phone: remote.phone || "",
-                location: remote.location || "",
-                linkedinUrl: remote.linkedinUrl || "",
-                githubUrl: remote.githubUrl || "",
-                portfolioUrl: remote.websiteUrl || "",
-                summary: remote.summary || "",
-              },
-            });
-            setCVDataState(normalized);
-            setPersistence({ isSynced: true, lastSync: new Date(), saveSource: "cloud" });
-            setLastSaved(new Date());
+          // Authenticated: attempt to load from MySQL
+          try {
+            const cvs = await cvApi.list();
+            if (cvs.length > 0) {
+              const latest = cvs[0];
+              const remote = await cvApi.getById(latest.id);
+              const remoteNormalized = normalizeCVData({
+                ...remote,
+                personalInfo: {
+                  fullName: remote.fullName || "",
+                  email: remote.email || "",
+                  phone: remote.phone || "",
+                  location: remote.location || "",
+                  linkedinUrl: remote.linkedinUrl || "",
+                  githubUrl: remote.githubUrl || "",
+                  portfolioUrl: remote.websiteUrl || "",
+                  summary: remote.summary || "",
+                  photoUrl: remote.personalInfo?.photoUrl || (remote as any).photoUrl || "",
+                },
+                accentColor: (remote as any).accentColor || "#0284c7",
+              });
+
+              // If the user has newer local draft edits than the remote copy, preserve local work
+              if (
+                localDraft &&
+                localDraft.updatedAt &&
+                remoteNormalized.updatedAt &&
+                new Date(localDraft.updatedAt) > new Date(remoteNormalized.updatedAt)
+              ) {
+                setCVDataState(localDraft);
+                setPersistence({ isSynced: false, lastSync: new Date(localDraft.updatedAt), saveSource: "local" });
+                setLastSaved(new Date(localDraft.updatedAt));
+                setIsDirty(false);
+                return;
+              }
+
+              // Otherwise load the cloud CV
+              setCVDataState(remoteNormalized);
+              setPersistence({ isSynced: true, lastSync: new Date(), saveSource: "cloud" });
+              setLastSaved(new Date(remoteNormalized.updatedAt || Date.now()));
+              setIsDirty(false);
+              return;
+            }
+          } catch (cloudErr) {
+            console.warn("Could not load CV from cloud, falling back to local draft:", cloudErr);
+          }
+
+          // No cloud CVs or cloud error: restore local draft if available
+          if (localDraft) {
+            setCVDataState(localDraft);
+            setPersistence({ isSynced: false, saveSource: "local" });
+            setLastSaved(new Date(localDraft.updatedAt || Date.now()));
             setIsDirty(false);
             return;
           }
 
-          // No cloud CVs for this account. Adopt a local draft ONLY if it is
-          // guest-origin (created locally in this browser); ignore a mirror
-          // left over from a previously signed-in account.
-          const saved = localStorage.getItem(CV_DRAFT_STORAGE_KEY);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed && isLocalDraftId(parsed.id ?? parsed.cvId)) {
-              const normalized = normalizeCVData(parsed);
-              setCVDataState(normalized);
-              setPersistence({ isSynced: false, saveSource: "local" });
-              setLastSaved(new Date());
-              return;
-            }
-          }
           if (userChanged) {
             setCVDataState({ ...normalizeCVData(BLANK_CV), id: `cv-draft-${Date.now()}` });
             setPersistence({ isSynced: false, saveSource: "local" });
@@ -135,18 +216,15 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Guest or no cloud CVs: load from localStorage
-        const saved = localStorage.getItem(CV_DRAFT_STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && (parsed.id || parsed.sections || parsed.education)) {
-            const normalized = normalizeCVData(parsed);
-            setCVDataState(normalized);
-            setPersistence({ isSynced: false, saveSource: "local" });
-            setLastSaved(new Date());
-            return;
-          }
+        // Guest: load from local draft if present
+        if (localDraft) {
+          setCVDataState(localDraft);
+          setPersistence({ isSynced: false, saveSource: "local" });
+          setLastSaved(new Date(localDraft.updatedAt || Date.now()));
+          setIsDirty(false);
+          return;
         }
+
         if (userChanged) {
           setCVDataState({ ...normalizeCVData(BLANK_CV), id: `cv-draft-${Date.now()}` });
           setPersistence({ isSynced: false, saveSource: "local" });
@@ -154,17 +232,9 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         console.warn("Could not hydrate draft:", e);
-        // Fallback to localStorage (best effort, e.g. backend offline)
-        try {
-          const saved = localStorage.getItem(CV_DRAFT_STORAGE_KEY);
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            const normalized = normalizeCVData(parsed);
-            setCVDataState(normalized);
-            setPersistence({ isSynced: false, saveSource: "local" });
-          }
-        } catch (localErr) {
-          console.warn("Could not load draft from localStorage:", localErr);
+        if (localDraft) {
+          setCVDataState(localDraft);
+          setPersistence({ isSynced: false, saveSource: "local" });
         }
       } finally {
         setIsHydrated(true);
@@ -173,6 +243,50 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     }
     hydrate();
   }, [canUseCloud, user, authLoading]);
+
+  const [hasSavedDraft, setHasSavedDraft] = useState<boolean>(false);
+
+  // Monitor storage for any restorable draft
+  useEffect(() => {
+    if (!isHydrated) return;
+    const draft = getSavedDraftFromStorage();
+    setHasSavedDraft(Boolean(draft));
+  }, [isHydrated, cvData]);
+
+  // Restore draft on demand
+  const restoreDraft = useCallback((): boolean => {
+    const draft = getSavedDraftFromStorage();
+    if (draft) {
+      setCVDataState(draft);
+      setPersistence({ isSynced: false, saveSource: "local" });
+      setLastSaved(new Date(draft.updatedAt || Date.now()));
+      setIsDirty(false);
+      try {
+        localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      } catch (e) {
+        // ignore
+      }
+      return true;
+    }
+    return false;
+  }, []);
+
+  // Autosave to localStorage so draft is never lost when navigating away
+  useEffect(() => {
+    if (!isHydrated) return;
+    // CRITICAL: Never overwrite an existing saved draft in localStorage with a blank/empty CV!
+    if (!isRealCVDraft(cvData)) return;
+
+    const timer = setTimeout(() => {
+      try {
+        localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(cvData));
+      } catch (e) {
+        console.warn("Autosave to localStorage failed:", e);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [cvData, isHydrated]);
 
   const setCVData: React.Dispatch<React.SetStateAction<CVData>> = (action) => {
     setIsDirty(true);
@@ -238,6 +352,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     setCVData((prev) => ({
       ...prev,
       skillGroups: groups,
+      skills: groups,
       updatedAt: new Date().toISOString(),
     }));
   };
@@ -296,7 +411,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const setTemplateId = (id: TemplateId) => {
+  const setTemplateId = (id: TemplateId | string) => {
     setCVData((prev) => ({
       ...prev,
       templateId: id,
@@ -304,14 +419,22 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const setTargetRole = (role: string, roleId?: string) => {
+  const setAccentColor = (color: string) => {
     setCVData((prev) => ({
       ...prev,
-      targetRole: role,
-      targetRoleId: roleId !== undefined ? roleId : prev.targetRoleId,
+      accentColor: color,
       updatedAt: new Date().toISOString(),
     }));
   };
+
+  const setTargetRole = useCallback((role: string, roleId?: string) => {
+    setCVData((prev) => ({
+      ...prev,
+      targetRole: role,
+      targetRoleId: roleId !== undefined ? roleId : undefined,
+      updatedAt: new Date().toISOString(),
+    }));
+  }, []);
 
   const saveDraft = async (): Promise<boolean> => {
     try {
@@ -333,7 +456,6 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
           validationErrors: validation.errors,
           validationRunId,
         });
-        saveToHistory(normalized, "draft");
         return false;
       }
 
@@ -350,18 +472,15 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
           }
           setPersistence({ isSynced: true, lastSync: now, saveSource: "cloud", validationRunId });
           localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
-          saveToHistory(normalized, "draft");
         } catch (cloudErr) {
           // Fallback to localStorage if cloud save fails
           localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
           setPersistence({ isSynced: false, lastSync: now, saveSource: "local", validationRunId });
-          saveToHistory(normalized, "draft");
         }
       } else {
         // Guest: save to localStorage only
         localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
         setPersistence({ isSynced: false, lastSync: now, saveSource: "local", validationRunId });
-        saveToHistory(normalized, "draft");
       }
       return true;
     } catch (e) {
@@ -370,75 +489,40 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const loadFromHistory = (snapshot: CVData) => {
+  const loadFromHistory = useCallback((snapshot: CVData) => {
     const normalized = normalizeCVData(snapshot);
     setCVDataState(normalized);
-    setIsDirty(false);
-    setLastSaved(new Date());
-    if (canUseCloud) {
-      const promote = isLocalDraftId(normalized.id);
-      if (promote) {
-        cvApi.create(normalized).then((created) => {
-          const updated = { ...normalized, id: created.id };
-          setCVDataState(updated);
-          localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(updated));
-          setPersistence({ isSynced: true, lastSync: new Date(), saveSource: "cloud" });
-        }).catch(() => {
-          localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
-          setPersistence({ isSynced: false, saveSource: "local" });
-        });
-      } else {
-        cvApi.update(normalized.id!, normalized).then((updated) => {
-          setCVDataState({ ...normalized, id: updated.id || normalized.id! });
-          localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
-          setPersistence({ isSynced: true, lastSync: new Date(), saveSource: "cloud" });
-        }).catch(() => {
-          localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
-          setPersistence({ isSynced: false, saveSource: "local" });
-        });
-      }
-    } else {
+    try {
       localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
-      setPersistence({ isSynced: false, saveSource: "local" });
+    } catch (e) {
+      // ignore
     }
-  };
+    setPersistence({
+      isSynced: false,
+      lastSync: new Date(),
+      saveSource: "local",
+    });
+    setIsDirty(true);
+    setLastSaved(new Date());
+  }, []);
 
-  const loadCV = (data: Partial<CVData>) => {
-    setCVDataState((prev) => {
-      const merged = normalizeCVData({
-        ...prev,
-        ...data,
-        id: data.id || prev.id || `cv-${Date.now()}`,
-      });
-      if (canUseCloud) {
-        // Existing cloud CV (real UUID): update in place. New or guest-origin
-        // draft: create (promote to cloud).
-        if (merged.id && !isLocalDraftId(merged.id)) {
-          cvApi.update(merged.id, merged).then((updated) => {
-            setCVDataState({ ...merged, id: updated.id || merged.id! });
-            setPersistence({ isSynced: true, lastSync: new Date(), saveSource: "cloud" });
-          }).catch(() => {
-            localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(merged));
-            setPersistence({ isSynced: false, saveSource: "local" });
-          });
-        } else {
-          cvApi.create(merged).then((created) => {
-            setCVDataState({ ...merged, id: created.id });
-            setPersistence({ isSynced: true, lastSync: new Date(), saveSource: "cloud" });
-          }).catch(() => {
-            localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(merged));
-            setPersistence({ isSynced: false, saveSource: "local" });
-          });
-        }
-      } else {
-        localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(merged));
-        setPersistence({ isSynced: false, saveSource: "local" });
-      }
-      return merged;
+  const loadCV = useCallback((data: Partial<CVData>) => {
+    const merged = normalizeCVData(data);
+    setCVDataState(merged);
+    try {
+      localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(merged));
+    } catch (e) {
+      // ignore
+    }
+    setPersistence({
+      isSynced: true,
+      lastSync: new Date(merged.updatedAt || Date.now()),
+      saveSource: canUseCloud ? "cloud" : "local",
+      validationRunId: 0,
     });
     setIsDirty(false);
-    setLastSaved(new Date());
-  };
+    setLastSaved(new Date(merged.updatedAt || Date.now()));
+  }, [canUseCloud]);
 
   const clearAll = () => {
     const blankCV: CVData = normalizeCVData({
@@ -553,6 +637,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         updateSectionTitle,
         removeSection,
         setTemplateId,
+        setAccentColor,
         setTargetRole,
         targetJobDescription,
         setTargetJobDescription,
@@ -567,6 +652,8 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         clearAll,
         loadFromHistory,
         loadCV,
+        restoreDraft,
+        hasSavedDraft,
         persistence,
       }}
     >

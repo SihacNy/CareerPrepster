@@ -19,6 +19,7 @@
 8. [Multi-Level Structured Logging & Error Boundary](#8-multi-level-structured-logging--error-boundary)
 9. [Step-by-Step Postman Testing Guide](#9-step-by-step-postman-testing-guide)
 10. [Local Development & Docker Run Guide](#10-local-development--docker-run-guide)
+11. [Recent Backend Enhancements & Target Role Resolution](#11-recent-backend-enhancements--target-role-resolution)
 
 ---
 
@@ -424,3 +425,117 @@ npx prisma db push
 npm run prisma:seed
 npm run dev
 ```
+
+---
+
+## 11. Recent Backend Enhancements & Target Role Resolution
+
+### 11.1 Problem Statement & Background
+In MySQL, `CV.targetRoleId` acts as a nullable foreign key pointing to `job_roles.id`. Previously:
+1. `GET /api/cvs` (`CvService.listUserCvs`) only selected `targetRoleId: true`, returning the raw UUID foreign key string (`2f01ce5f-...`) rather than joining the human-readable job title.
+2. `GET /api/cvs/:id` (`CvService.getCvById`) omitted `targetRole` from its Prisma relation inclusion query.
+3. `POST /api/cvs` and `PUT /api/cvs/:id` did not resolve incoming textual `targetRole` names into `targetRoleId` foreign keys when a UUID was not directly supplied by the client, leaving custom or unlinked roles without a catalog reference.
+
+### 11.2 Architecture & Service Improvements (`backend/src/services/cv.service.ts`)
+
+1. **Relational Role Join on Queries:**
+   Both `listUserCvs` and `getCvById` now join `targetRole` with select filtering:
+   ```typescript
+   targetRole: {
+     select: {
+       id: true,
+       title: true,
+     },
+   }
+   ```
+   The service maps the returned records so that `data.targetRole` supplies the human-readable title string (e.g., `"Associate Product Manager"` or `"Software Engineer"`), while `data.targetRoleId` preserves the underlying UUID.
+
+2. **Intelligent Role Title Resolution & Auto-Registration:**
+   Inside `createCv` and `updateCv` transactions, if a client supplies a role title (`targetRole`) without a `targetRoleId`, the service now resolves it dynamically:
+   - Queries `tx.jobRole.findFirst` for a matching `title` (case-sensitive / exact).
+   - If an existing catalog role is found, its `id` is assigned to `targetRoleId`.
+   - If no matching role exists (e.g. user typed a custom career title like `"AI Research Engineer"`), the service dynamically creates a new `job_roles` entry:
+     ```typescript
+     const createdRole = await tx.jobRole.create({
+       data: {
+         title: trimmed,
+         industry: 'General',
+         skills: [],
+       },
+       select: { id: true },
+     });
+     targetRoleId = createdRole.id;
+     ```
+   - Includes unique-constraint race condition recovery to ensure concurrent saves never fail.
+
+3. **Consistent Output Mutation Normalization:**
+   Both `createCv` and `updateCv` return the full CV tree with `targetRole` populated as the resolved title string, eliminating payload ambiguity between frontend and backend.
+
+---
+
+## 12. TypeScript Typing Stabilization & IDE Diagnostic Fixes (`cv.service.ts`)
+
+### 12.1 Background & Diagnostic Symptoms
+During IDE compilation and language server analysis on `backend/src/services/cv.service.ts`, five diagnostic issues were encountered:
+1. `Module '"@prisma/client"' has no exported member 'SectionType'.`
+2. `Module '"@prisma/client"' has no exported member 'BulletFramework'.`
+3. `Module '"@prisma/client"' has no exported member '$Enums'.`
+4. `Parameter 'cv' implicitly has an 'any' type.` (Line 30, `listUserCvs`)
+5. `Parameter 'tx' implicitly has an 'any' type.` (Lines 45 & 247, `createCv` and `updateCv` transactions)
+
+### 12.2 Root Cause Analysis
+- **Prisma Client Enum Export Architecture:** In Prisma v5, enums defined in `prisma/schema.prisma` (`enum SectionType` and `enum BulletFramework`) are generated under internal `.prisma/client` paths and namespace bundles. Under TypeScript `NodeNext` module resolution within monorepos, direct named imports or internal `$Enums` imports can fail to resolve through barrel re-exports (`default.d.ts`), leading to language server diagnostic errors.
+- **Strict Implicit-Any Inference:** When complex relational database query chains are parsed in IDEs or when type inference is deferred, parameter types inside anonymous arrow functions (`(cv) => ...` and `(tx) => ...`) trigger strict `noImplicitAny` errors if not explicitly annotated.
+
+### 12.3 Permanent Architectural Resolution
+In `backend/src/services/cv.service.ts`:
+1. **Self-Contained Enum Dictionaries & Types:** Defined `SectionType` and `BulletFramework` using `as const` object dictionaries with matching derived union types matching Prisma schema enums exactly:
+   ```typescript
+   export const SectionType = {
+     EXPERIENCE: 'EXPERIENCE',
+     EDUCATION: 'EDUCATION',
+     PROJECTS: 'PROJECTS',
+     SKILLS: 'SKILLS',
+     CERTIFICATIONS: 'CERTIFICATIONS',
+     CUSTOM: 'CUSTOM',
+   } as const;
+   export type SectionType = (typeof SectionType)[keyof typeof SectionType];
+
+   export const BulletFramework = {
+     STAR: 'STAR',
+     XYZ: 'XYZ',
+     STANDARD: 'STANDARD',
+   } as const;
+   export type BulletFramework = (typeof BulletFramework)[keyof typeof BulletFramework];
+   ```
+   This ensures complete type safety, dual value/type usage at runtime and compile-time, zero dependency on deep Prisma namespaces, and 100% compatibility with Prisma query inputs.
+
+2. **Explicit Parameter Annotations:**
+   - Typed `cv` explicitly in `listUserCvs` mapping:
+     ```typescript
+     return cvs.map((cv: any) => ({ ... }));
+     ```
+   - Typed `tx` in both database transactions using Prisma's official transaction client interface:
+     ```typescript
+     return prisma.$transaction(async (tx: Prisma.TransactionClient) => { ... });
+     ```
+
+### 12.4 Verification
+- `npx tsc --project backend/tsconfig.json --noEmit` exits with **0 errors**.
+- `npm --workspace=backend run build` (`tsc`) exits with code **0**.
+- Docker container reloaded with clean database seeding and operational status on port 5000.
+
+---
+
+## 13. ATS Persistence & History Feature Roadmap (Phase 13 / User Story 10)
+
+Speckit tasks `T105`–`T115` have been formalized in `specs/001-cv-editor/tasks.md` to establish end-to-end ATS score persistence and retrieval:
+1. **Database Persistence on Audit:** Automatically persist calculated ATS audits to MySQL (`ats_reports` table) with overall score, pillar breakdowns (parsability, impact, skills, brevity), detailed findings, and optional target job description.
+2. **Relational Score Aggregation in CV Listing:** Update `CvService.listUserCvs` to query `atsReports: { orderBy: { createdAt: 'desc' }, take: 1 }` so `GET /api/cvs` delivers the latest `atsScore` directly in the listing payload.
+3. **Dedicated Retrieval Endpoint:** Add `GET /api/ats/:cvId/latest` allowing the client to reload full historical audits without requiring re-scoring.
+4. **History Dashboard Visualization:** Update `/history` cards to render dynamic color-coded ATS score badges and provide direct navigation to view detailed audits in the editor.
+
+---
+
+*Report generated and validated for the CareerPrepster Backend API Module (`careerprepster-backend@1.0.0`).*
+

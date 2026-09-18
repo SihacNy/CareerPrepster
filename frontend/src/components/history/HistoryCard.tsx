@@ -12,7 +12,6 @@ import {
   Layers,
 } from "lucide-react";
 import { CVHistoryItem } from "@/types/cv";
-import { useCV } from "@/lib/store";
 
 interface HistoryCardProps {
   item: CVHistoryItem;
@@ -22,26 +21,15 @@ interface HistoryCardProps {
 
 export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
   const router = useRouter();
-  const { loadFromHistory } = useCV();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   const handleOpenEditor = () => {
-    if (item.snapshot) {
-      loadFromHistory(item.snapshot);
-      router.push("/editor");
-    } else {
-      router.push(`/editor?id=${item.id}`);
-    }
+    router.push(`/editor?id=${item.id}`);
   };
 
   const handleOpenAts = () => {
-    if (item.snapshot) {
-      loadFromHistory(item.snapshot);
-      router.push("/editor/ats");
-    } else {
-      router.push(`/editor/ats?id=${item.id}`);
-    }
+    router.push(`/editor/ats?id=${item.id}`);
   };
 
   const handleDuplicate = () => {
@@ -141,7 +129,12 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
             {item.fullName || "Unnamed Candidate"}
           </p>
           <p className="text-slate-500 truncate">
-            Role: <span className="font-medium text-slate-700">{item.targetRole || "General"}</span>
+            Role:{" "}
+            <span className="font-medium text-slate-700">
+              {item.targetRole && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.targetRole)
+                ? item.targetRole
+                : "General"}
+            </span>
           </p>
         </div>
 

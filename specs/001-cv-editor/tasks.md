@@ -70,7 +70,7 @@ description: "Task list for fixing backend/frontend integration, database seedin
 
 **Independent Test**:
 1. Type into personal info or education fields on the left -> right-pane preview updates in under 100ms.
-2. Toggle between `ClassicAts` and `ModernCompact` -> layout refreshes cleanly with zero data loss.
+2. Select a template via the dedicated `TemplateSelector` card picker (Classic ATS vs Modern Compact) -> card highlights with active badge and right-pane preview switches layout cleanly with zero data loss.
 3. Save as a guest -> draft persists in localStorage after reload.
 4. Sign in -> the same draft is saved to MySQL and survives across sessions.
 
@@ -83,14 +83,22 @@ description: "Task list for fixing backend/frontend integration, database seedin
 - [ ] T025 [P] [US2] Refactor `frontend/src/components/editor/sections/EducationSection.tsx` to consume generic `sectionType: "EDUCATION"` items
 - [ ] T026 [P] [US2] Refactor `frontend/src/components/editor/sections/ExperienceSection.tsx` to consume generic `sectionType: "EXPERIENCE"` items
 - [ ] T027 [P] [US2] Refactor `frontend/src/components/editor/sections/ProjectsSection.tsx` to consume generic `sectionType: "PROJECTS"` items
-- [ ] T028 [P] [US2] Refactor `frontend/src/components/editor/sections/SkillsSection.tsx` to consume the `skillGroups` array
+- [x] T028 [P] [US2] Refactor `frontend/src/components/editor/sections/SkillsSection.tsx` to consume `skillGroups` and fix the fallback bug where empty groups revert to `cvData.skills`
+- [x] T028a [P] [US2] Implement interactive tag/chip skill editor in `frontend/src/components/editor/sections/SkillsSection.tsx` with dedicated remove (`×`) buttons for individual skills and backspace-to-delete
+- [x] T028b [P] [US2] Fix comma and space input handling in `frontend/src/components/editor/sections/SkillsSection.tsx` allowing smooth typing of commas, spaces, and multi-word skills without premature trimming or state reset
+- [x] T028c [P] [US2] Synchronize `skillGroups` and legacy `skills` in `frontend/src/lib/store.tsx` during `updateSkillGroups` to ensure complete removal persists across storage
 - [ ] T029 [US2] Refactor `frontend/src/components/editor/CVForm.tsx` to assemble generic sections and support adding custom sections
+- [x] T029a [P] [US2] Create `TemplateDefinition` interface and `TEMPLATE_CATALOG` metadata in `frontend/src/types/templates.ts`
+- [x] T029b [P] [US2] Create dedicated `TemplateSelector` component with interactive cards, typography indicators, and store integration in `frontend/src/components/editor/TemplateSelector.tsx`
+- [x] T029c [US2] Integrate `TemplateSelector` into `frontend/src/components/editor/CVForm.tsx` and add template navigation anchor to jump dropdown
+- [x] T029d [US2] Synchronize `frontend/src/components/preview/LivePreview.tsx` template switcher with `TemplateSelector` state in `frontend/src/lib/store.tsx`
+- [x] T029e [P] [US2] Create dedicated Template Gallery page in `frontend/src/app/editor/templates/page.tsx` retaining Stage 1 status with live filtering and fullscreen modal preview
 - [ ] T030 [P] [US2] Refactor `frontend/src/components/editor/MobileViewToggle.tsx` to preserve state across form/preview switches
 - [ ] T031 [US2] Refactor `frontend/src/components/editor/ContinueActionBar.tsx` to trigger the correct save path (localStorage for guests, MySQL for authenticated users)
 - [ ] T032 [US2] Refactor `frontend/src/app/editor/page.tsx` to hydrate from localStorage for guests and from `GET /api/cvs/:id` for authenticated users
 - [ ] T033 [US2] Refactor `frontend/src/lib/store.tsx` to autosave to localStorage for guests and to MySQL for authenticated users with conflict-safe merging
 
-**Checkpoint**: Core CV Authoring editor is fully functional with real-time preview, template switching, mobile responsiveness, and correct dual persistence.
+**Checkpoint**: Core CV Authoring editor is fully functional with real-time preview, dedicated template picker, mobile responsiveness, and correct dual persistence.
 
 ---
 
@@ -256,6 +264,75 @@ description: "Task list for fixing backend/frontend integration, database seedin
 
 ---
 
+## Phase 12: User Story 9 - Multi-Archetype Templates, Color Customization & Photo Support (Priority: P2)
+
+**Goal**: Expand the template catalog to support 3 distinct archetypes (Minimalist ATS, Modern Color Accent, Visual / Photo-Enabled) with customizable professional color palettes and profile headshot support, with full MySQL and local persistence.
+
+**Independent Test**:
+1. Backend: Call `POST /api/cvs` and `PUT /api/cvs/:id` with `photoUrl` (up to 10MB) and `accentColor` -> database persists and returns both fields.
+2. Open `/editor/templates` -> filter by `Minimalist ATS`, `Color Accent`, and `Photo / Visual`.
+3. Select `Executive Accent` -> pick an accent color from the 6 palette swatches -> live preview tints header rules and titles with the selected color.
+4. Select `Modern Photo` -> upload a profile photo (verify files > 10MB are rejected with validation error, files <= 10MB are accepted) -> live preview displays headshot in header.
+5. Export PDF -> downloaded document reflects the chosen template, accent color, and photo with 100% selectable vector text.
+
+### Phase 12A: Backend & Shared Schema (Assignable to Backend Developer)
+
+- [ ] T088 [P] [US9] Update `shared/src/schemas/cv.schema.ts` to add `photoUrl` (with strict <= 10MB image validation) to `personalInfoSchema`, `accentColor` to `cvDataSchema`, and update `createCvSchema` & `updateCvSchema` preprocessing
+- [ ] T089 [P] [US9] Update `backend/prisma/schema.prisma` to add `photoUrl String? @db.MediumText` and `accentColor String? @default("#0284c7") @db.VarChar(30)` to `model CV`
+- [ ] T090 [US9] Execute Prisma schema migration and client generation (`npx prisma db push && npx prisma generate`) in `backend/`
+- [ ] T091 [US9] Update `backend/src/services/cv.service.ts` to persist `photoUrl` and `accentColor` in `createCv` and `updateCv`, and include them in `getCvById` queries and responses
+- [ ] T092 [P] [US9] Update `backend/test-backend.mjs` smoke tests to verify creating, updating, and fetching CVs with `photoUrl` (including large base64 data URIs up to 10MB) and custom `accentColor`
+
+### Phase 12B: Frontend UI, Templates & PDF Export (Assignable to Frontend Developer)
+
+- [X] T093 [P] [US9] Update `frontend/src/types/cv.ts` to include `photoUrl` in `PersonalInfo` and `accentColor` in `CVData`
+- [X] T094 [P] [US9] Update `frontend/src/types/templates.ts` to add `archetype` (`"minimalist"` | `"color-accent"` | `"visual-photo"`), `COLOR_PALETTES`, and catalog entries (`classic`, `modern`, `executive-accent`, `modern-photo`)
+- [X] T095 [US9] Update `frontend/src/lib/store.tsx` to add `setAccentColor` action and persist `accentColor` and `personalInfo.photoUrl` across local draft and MySQL cloud sync
+- [X] T096 [P] [US9] Implement `ExecutiveAccent.tsx` in `frontend/src/components/preview/templates/ExecutiveAccent.tsx` (modern single-column layout with dynamic accent color rules and styled headings)
+- [X] T097 [P] [US9] Implement `ModernPhoto.tsx` in `frontend/src/components/preview/templates/ModernPhoto.tsx` (visual template with circular/rounded headshot thumbnail and dynamic accent styling)
+- [X] T098 [US9] Update `frontend/src/components/preview/LivePreview.tsx` to dynamically render the active template component based on `cvData.templateId`
+- [X] T099 [P] [US9] Implement `ExecutiveAccentPdfDocument.tsx` in `frontend/src/lib/pdf/ExecutiveAccentPdfDocument.tsx` for `@react-pdf/renderer` vector PDF generation with accent colors
+- [X] T100 [P] [US9] Implement `ModernPhotoPdfDocument.tsx` in `frontend/src/lib/pdf/ModernPhotoPdfDocument.tsx` for `@react-pdf/renderer` vector PDF generation with headshot photo
+- [X] T101 [US9] Update `frontend/src/components/export/ExportPdfButton.tsx` to dispatch PDF generation to the matching PDF document component
+- [X] T102 [P] [US9] Update `frontend/src/components/editor/sections/PersonalSection.tsx` to add profile photo upload with strict <= 10MB image size validation (PNG, JPEG, WebP) and avatar preview
+- [X] T103 [US9] Update `frontend/src/app/editor/templates/page.tsx` with archetype category filters (`All Styles`, `Minimalist ATS`, `Color Accent`, `Photo / Visual`) and 6-swatch color palette picker for color-enabled templates
+- [X] T104 [P] [US9] Validate end-to-end template switching, color selection, <= 10MB photo upload validation, live preview, and vector PDF download across all 4 templates with zero content loss
+
+**Checkpoint**: Multi-archetype templates, color customization, and photo support are fully functional in both live preview and PDF export, backed by persistent MySQL and shared schemas.
+
+---
+
+## Phase 13: User Story 10 - Full-Stack ATS Report Persistence & History Audit Integration (Priority: P2)
+
+**Goal**: Persist computed 4-pillar ATS audit reports directly into MySQL (`ats_reports` table), surface the latest overall ATS score on CV cards in `/history`, and enable students to inspect, review, and reload past ATS audits directly from their history dashboard without losing audit findings.
+
+**Independent Test**:
+1. Run ATS audit on an authenticated CV via `/editor/ats` -> verify record is inserted into MySQL `ats_reports` table with `cvId`, `userId`, `overallScore`, and `findings`.
+2. Navigate to `/history` -> verify the CV card displays the ATS score badge (e.g. `Score: 88/100` with high/medium/low tint).
+3. Click "Audit" on the history card -> verify navigation to `/editor/ats?id=<cvId>` immediately renders the saved 4-pillar audit report, keyword matches, and remediation findings without requiring a forced re-scan.
+4. Guest flow: audit scores persist in localStorage and sync smoothly to MySQL upon account sign-in.
+
+### Phase 13A: Backend & Shared Schema (Assignable to Backend Developer)
+
+- [ ] T105 [P] [US10] Update `backend/src/services/ats.service.ts` to persist `ATSReport` in MySQL (`prisma.aTSReport.create`) when scoring authenticated CVs with `cvId` and `userId`
+- [ ] T106 [P] [US10] Update `backend/src/services/cv.service.ts` in `listUserCvs` to join latest `atsReports: { orderBy: { createdAt: 'desc' }, take: 1 }` and return mapped `atsScore: number | null`
+- [ ] T107 [P] [US10] Update `backend/src/services/cv.service.ts` in `getCvById` to return mapped `latestAtsReport` alongside `atsScore` in the response payload
+- [ ] T108 [P] [US10] Create endpoint `GET /api/ats/:cvId/latest` in `backend/src/controllers/ats.controller.ts` and `backend/src/routes/ats.routes.ts` to fetch the most recent audit report for a given CV
+- [ ] T109 [P] [US10] Update `shared/src/types/cv.types.ts` and `shared/src/types/ats.types.ts` to add `atsScore?: number | null` and `latestAtsReport?: ATSReportData | null` to shared schema definitions
+
+### Phase 13B: Frontend API, Editor & History Integration (Assignable to Frontend Developer)
+
+- [ ] T110 [P] [US10] Update `frontend/src/lib/api.ts` to add `atsScore?: number | null` to `CVListItem`, pass `cvId` in `atsApi.score`, and add `atsApi.getLatestReport(cvId)` method
+- [ ] T111 [US10] Update `frontend/src/lib/store.tsx` to synchronize `atsScore` in `CVData` state and persist it during local draft and MySQL cloud saves
+- [ ] T112 [US10] Update `frontend/src/app/editor/ats/page.tsx` and `frontend/src/components/ats/ATSScoringStage.tsx` to load and display persisted `ATSReport` from MySQL when opening an existing CV ID
+- [ ] T113 [P] [US10] Update `frontend/src/app/history/page.tsx` and `frontend/src/lib/historyStore.ts` to map `atsScore` from `cvApi.list()` and supply it to history cards
+- [ ] T114 [US10] Update `frontend/src/components/history/HistoryCard.tsx` to render dynamic ATS score badges (`Score: XX/100`) and ensure the "Audit" button routes directly to `/editor/ats?id=<cvId>`
+- [ ] T115 [P] [US10] End-to-end verification of ATS audit flow: score CV -> check MySQL persistence -> check History badge -> inspect loaded audit report in `/editor/ats`
+
+**Checkpoint**: ATS audit reports are fully persisted in MySQL, displayed on history cards, and restorable on-demand.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -269,7 +346,9 @@ description: "Task list for fixing backend/frontend integration, database seedin
 - **User Story 6 (Phase 8)**: Depends on Foundational — sign-in triggers draft promotion to MySQL.
 - **User Story 7 (Phase 9)**: Depends on Foundational — cloud save requires the persistence dispatcher.
 - **User Story 8 (Phase 10)**: Depends on Foundational — history requires the persistence dispatcher.
-- **Polish (Phase 11)**: Depends on all user stories being complete.
+- **Polish (Phase 11)**: Depends on all foundational stories being complete.
+- **User Story 9 (Phase 12)**: Depends on User Story 2 (Phase 4) and Export pipeline (T028c/T029b).
+- **User Story 10 (Phase 13)**: Depends on User Story 5 (Phase 7), User Story 8 (Phase 10), and User Story 7 (Phase 9) for MySQL `cvId` linkage. Phase 13A (Backend) and Phase 13B (Frontend) can proceed in parallel once shared schema (T109) is aligned.
 
 ### User Story Dependencies
 - **User Story 1 (P1)**: Depends on Foundational — can start after Phase 2.
@@ -280,6 +359,7 @@ description: "Task list for fixing backend/frontend integration, database seedin
 - **User Story 6 (P3)**: Depends on Foundational — can start after Phase 2.
 - **User Story 7 (P4)**: Depends on Foundational — can start after Phase 2.
 - **User Story 8 (P3)**: Depends on Foundational — can start after Phase 2.
+- **User Story 9 (P2)**: Depends on User Story 2 — builds on existing template catalog and PDF export.
 
 ### Within Each User Story
 - Core implementation before integration
@@ -290,7 +370,7 @@ description: "Task list for fixing backend/frontend integration, database seedin
 - **Phase 1**: T005 and T006 can run in parallel.
 - **Phase 2**: T007, T008, T009, T010, T011, T012, T013, T014, T015 can run in parallel (different files).
 - **Phase 3**: T016, T017, T018, T019, T020 can run in parallel.
-- **Phase 4**: T021, T022, T024, T025, T026, T027, T028, T030 can run in parallel.
+- **Phase 4**: T021, T022, T024, T025, T026, T027, T028, T028a, T028b, T028c, T029a, T029b, T029e, T030 can run in parallel.
 - **Phase 5**: T034, T035, T036, T037, T038 can run in parallel.
 - **Phase 6**: T039, T040, T041, T042, T043 can run in parallel.
 - **Phase 7**: T044, T045, T046, T047, T048, T049, T050, T051 can run in parallel.
@@ -298,6 +378,10 @@ description: "Task list for fixing backend/frontend integration, database seedin
 - **Phase 9**: T058, T059, T060, T061, T062, T063, T064 can run in parallel.
 - **Phase 10**: T065, T066, T067, T068, T069, T070 can run in parallel.
 - **Phase 11**: T071, T072, T073, T074, T075, T076, T077, T078, T079, T080, T081, T082, T083, T084, T085, T086, T087 can run in parallel.
+- **Phase 12A (Backend)**: T088, T089, T092 can run in parallel (different files).
+- **Phase 12B (Frontend)**: T093, T094, T096, T097, T099, T100, T102, T104 can run in parallel (different files, independent components).
+- **Phase 13A (Backend)**: T105, T106, T107, T108, T109 can run in parallel (independent service, query, and route files).
+- **Phase 13B (Frontend)**: T110, T113, T115 can run in parallel (API, history list, and verification layers).
 
 ---
 
@@ -338,6 +422,8 @@ Task: "Add clear UI feedback in frontend/src/components/editor/ContinueActionBar
 8. Add User Story 7 -> Test independently -> Deploy/Demo
 9. Add User Story 8 -> Test independently -> Deploy/Demo
 10. Complete Polish phase -> Full-stack validation
+11. Add User Story 9 -> Multi-archetype templates, color swatches & photo upload
+12. Add User Story 10 -> Persist ATS reports in MySQL & display audit badges/reports in History
 
 ### Parallel Team Strategy
 With multiple developers:
@@ -348,6 +434,12 @@ With multiple developers:
    - Developer C: User Story 3
    - Developer D: User Story 4
 3. Stories complete and integrate independently
+4. Multi-Archetype Templates & Photo (User Story 9):
+   - **Backend Developer**: Assigned to **Phase 12A (T088–T092)** — Prisma schema migration (`photoUrl` MediumText & `accentColor`), `@careerprepster/shared` Zod schema validation (<= 10MB limit), `CvService` database persistence, and API smoke testing.
+   - **Frontend Developer**: Assigned to **Phase 12B (T093–T104)** — Client state store, HTML live preview templates, PDF export generators, photo upload UI with <= 10MB validation, and template gallery swatches.
+5. ATS Report Persistence & History Integration (User Story 10):
+   - **Backend Developer**: Assigned to **Phase 13A (T105–T109)** — `ATSReport` creation in `ATSService`, joining latest report score in `listUserCvs` and `getCvById`, adding `GET /api/ats/:cvId/latest` route, and updating shared schema types.
+   - **Frontend Developer**: Assigned to **Phase 13B (T110–T115)** — `atsApi.score` and `atsApi.getLatestReport` client endpoints, `store.tsx` score synchronization, `/editor/ats` report pre-loading, `/history` score badge rendering, and end-to-end audit inspection flow.
 
 ---
 

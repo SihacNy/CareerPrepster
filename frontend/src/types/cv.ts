@@ -1,92 +1,15 @@
 import { z } from "zod";
-
-export type TemplateId = "classic" | "modern";
-
-export interface PersonalInfo {
-  fullName: string;
-  email: string;
-  phone: string;
-  location: string;
-  linkedinUrl: string;
-  githubUrl: string;
-  summary: string;
-  websiteUrl?: string;
-  portfolioUrl?: string;
-}
-
-export interface BulletPoint {
-  id: string;
-  text: string;
-  actionVerb?: string;
-  hasMetric?: boolean;
-  framework?: "STAR" | "XYZ" | "STANDARD";
-  orderIndex?: number;
-}
-
-export interface CVItem {
-  id: string;
-  sectionId?: string;
-  title: string;       // Job Role, Degree/Major, or Project Name
-  subtitle?: string;   // Company, University, or Subtitle
-  location?: string;
-  startDate?: string;
-  endDate?: string;
-  isCurrent?: boolean;
-  url?: string;
-  gpa?: string;
-  techStack?: string[];
-  orderIndex?: number;
-  bulletPoints: BulletPoint[];
-  // Optional legacy aliases for seamless transitional compatibility
-  institution?: string;
-  degree?: string;
-  company?: string;
-  role?: string;
-  name?: string;
-  linkUrl?: string;
-}
-
-export type SectionType = "EXPERIENCE" | "EDUCATION" | "PROJECTS" | "SKILLS" | "CERTIFICATIONS" | "CUSTOM";
-
-export interface CVSection {
-  id: string;
-  sectionType: SectionType;
-  title: string;
-  orderIndex?: number;
-  isVisible?: boolean;
-  items: CVItem[];
-}
-
-export interface SkillGroup {
-  id: string;
-  categoryName: string;
-  skills: string[];
-  orderIndex?: number;
-}
-
-// Legacy type aliases for backward compatibility during refactor
-export type EducationItem = CVItem;
-export type ExperienceItem = CVItem;
-export type ProjectItem = CVItem;
-export type SkillCategory = SkillGroup;
-
-export interface CVData {
-  id: string;
-  title: string;
-  templateId: TemplateId;
-  targetRole: string;
-  targetRoleId?: string;
-  personalInfo: PersonalInfo;
-  sections: CVSection[];
-  skillGroups: SkillGroup[];
-  updatedAt: string;
-  atsScore?: number;
-  // Legacy accessors for convenience
-  education?: CVItem[];
-  experience?: CVItem[];
-  projects?: CVItem[];
-  skills?: SkillGroup[];
-}
+export * from "@careerprepster/shared";
+import type {
+  TemplateId,
+  SectionType,
+  BulletPoint,
+  CVItem,
+  CVSection,
+  SkillGroup,
+  PersonalInfo,
+  CVData,
+} from "@careerprepster/shared";
 
 /**
  * Helper to extract items for a given section type from CVData
@@ -148,7 +71,7 @@ export function normalizeCVData(input: any): CVData {
       ...input.sections.map((sec: any, sIdx: number) => ({
         id: sec.id || `sec-${sIdx}`,
         sectionType: sec.sectionType || "CUSTOM",
-        title: sec.title || sec.sectionType,
+        title: sec.customTitle || sec.title || sec.sectionType,
         orderIndex: sec.orderIndex !== undefined ? sec.orderIndex : sIdx,
         isVisible: sec.isVisible !== false,
         items: (sec.items || []).map((item: any, iIdx: number) => ({
@@ -231,9 +154,9 @@ export function normalizeCVData(input: any): CVData {
   }
 
   // Handle skill groups
-  if (Array.isArray(input.skillGroups) && input.skillGroups.length > 0) {
+  if (Array.isArray(input.skillGroups)) {
     skillGroups.push(...input.skillGroups);
-  } else if (Array.isArray(input.skills) && input.skills.length > 0) {
+  } else if (Array.isArray(input.skills)) {
     skillGroups.push(
       ...input.skills.map((sg: any, idx: number) => ({
         id: sg.id || `skill-${idx}`,
@@ -248,20 +171,43 @@ export function normalizeCVData(input: any): CVData {
   const expItems = sections.find((s) => s.sectionType === "EXPERIENCE")?.items || [];
   const projItems = sections.find((s) => s.sectionType === "PROJECTS")?.items || [];
 
+  const isUuid = (val: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+
+  let targetRole = "";
+  let targetRoleId = input.targetRoleId;
+
+  if (typeof input.targetRole === "string") {
+    if (isUuid(input.targetRole)) {
+      if (!targetRoleId) targetRoleId = input.targetRole;
+    } else {
+      targetRole = input.targetRole;
+    }
+  } else if (typeof input.targetRole === "object" && input.targetRole !== null) {
+    targetRole = (input.targetRole as any).title || "";
+    if (!targetRoleId && (input.targetRole as any).id) {
+      targetRoleId = (input.targetRole as any).id;
+    }
+  }
+
   return {
     id: input.id || `cv-${Date.now()}`,
     title: input.title || "My Resume",
     templateId: input.templateId || "classic",
-    targetRole: input.targetRole || "",
-    targetRoleId: input.targetRoleId,
-    personalInfo: input.personalInfo || {
-      fullName: "",
-      email: "",
-      phone: "",
-      location: "",
-      linkedinUrl: "",
-      githubUrl: "",
-      summary: "",
+    accentColor: input.accentColor || "#0284c7",
+    targetRole,
+    targetRoleId,
+    personalInfo: {
+      fullName: input.personalInfo?.fullName || "",
+      email: input.personalInfo?.email || "",
+      phone: input.personalInfo?.phone || "",
+      location: input.personalInfo?.location || "",
+      linkedinUrl: input.personalInfo?.linkedinUrl || "",
+      githubUrl: input.personalInfo?.githubUrl || "",
+      summary: input.personalInfo?.summary || "",
+      websiteUrl: input.personalInfo?.websiteUrl || "",
+      portfolioUrl: input.personalInfo?.portfolioUrl || "",
+      photoUrl: input.personalInfo?.photoUrl || input.photoUrl || "",
     },
     sections,
     skillGroups,
@@ -279,6 +225,7 @@ export const BLANK_CV: CVData = {
   id: "cv-new",
   title: "Untitled Resume",
   templateId: "classic",
+  accentColor: "#0284c7",
   targetRole: "",
   targetRoleId: undefined,
   personalInfo: {
@@ -291,6 +238,7 @@ export const BLANK_CV: CVData = {
     summary: "",
     websiteUrl: "",
     portfolioUrl: "",
+    photoUrl: "",
   },
   sections: [
     {
@@ -362,47 +310,6 @@ export const BLANK_CV: CVData = {
   ],
   updatedAt: new Date().toISOString(),
 };
-
-export interface JobRole {
-  id: string;
-  name: string;
-  track: string;
-}
-
-export interface RoleBulletTemplate {
-  id: string;
-  roleId: string;
-  category: "Technical Implementation" | "System Performance" | "Collaboration & Delivery" | "Problem Solving";
-  text: string;
-}
-
-export interface ATSFinding {
-  id: string;
-  type: "critical" | "suggestion" | "passed";
-  pillar: "parsability" | "impact" | "skills" | "brevity";
-  message: string;
-  recommendation: string;
-  suggestedFix?: string;
-  sectionTarget?: "personalInfo" | "education" | "experience" | "projects" | "skills";
-}
-
-export interface ATSReport {
-  overallScore: number;
-  wordCount: number;
-  estimatedPages: number;
-  breakdown: {
-    parsabilityScore: number; // Max 25
-    impactScore: number;      // Max 30
-    skillsScore: number;      // Max 25
-    brevityScore: number;     // Max 20
-  };
-  keywordAnalysis?: {
-    matchPercentage: number;
-    matchedKeywords: { keyword: string; count: number }[];
-    missingKeywords: string[];
-  };
-  findings: ATSFinding[];
-}
 
 // Zod Schema for validation
 export const PersonalInfoSchema = z.object({

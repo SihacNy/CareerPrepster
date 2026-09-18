@@ -442,3 +442,111 @@ model ATSReport {
   @@map("ats_reports")
 }
 ```
+
+---
+
+## 4. Template Catalog & Visual Theming Data Model
+
+### 4.1. Template Entity Definition (`TemplateDefinition`)
+
+```typescript
+export type TemplateArchetype = "minimalist" | "color-accent" | "visual-photo";
+
+export interface ColorPaletteOption {
+  id: string;
+  name: string;
+  hex: string;
+  contrastText: string; // "#ffffff" or "#0f172a"
+}
+
+export interface TemplateDefinition {
+  id: string; // "classic" | "modern" | "executive-accent" | "modern-photo"
+  name: string; // e.g. "Harvard Classic", "Executive Accent", "Modern Photo"
+  subtitle: string;
+  archetype: TemplateArchetype;
+  badge?: string; // "MOST POPULAR", "TECH FAVORITE", "CREATIVE & INT'L", "EXECUTIVE"
+  fontFamily: string; // e.g. "Merriweather", "Inter", "Plus Jakarta Sans"
+  fontCategory: "serif" | "sans-serif";
+  description: string;
+  previewFeatures: string[];
+  recommendedIndustries: string[];
+  supportsPhoto: boolean;
+  supportsColor: boolean;
+  defaultColor: string; // Default hex e.g. "#0284c7"
+  availablePalettes?: ColorPaletteOption[];
+}
+```
+
+### 4.2. Curated Professional Color Palette Presets
+
+| Palette ID | Name | Hex Code | Purpose / Best Suited For |
+| :--- | :--- | :--- | :--- |
+| `sky-blue` | Tech Sky | `#0284c7` | Technology, Startups, Web & Software |
+| `exec-navy` | Executive Navy | `#1e3a8a` | Finance, Management, Corporate Consulting |
+| `emerald-teal` | Forest Teal | `#0f766e` | Sustainability, Healthcare, Environmental |
+| `slate-steel` | Slate Steel | `#334155` | Engineering, Data Science, Operations |
+| `burgundy` | Classic Burgundy | `#881337` | Law, Academia, Executive Leadership |
+| `royal-indigo`| Royal Indigo | `#4338ca` | Design, Marketing, Product Strategy |
+
+### 4.3. Document State Extensions (`CVData`)
+
+```typescript
+export interface PersonalInfo {
+  fullName: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  portfolioUrl?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  summary?: string;
+  photoUrl?: string; // Optional user avatar/headshot URL for photo-enabled templates
+}
+
+export interface CVData {
+  id: string;
+  title: string;
+  templateId: string; // "classic" | "modern" | "executive-accent" | "modern-photo"
+  accentColor?: string; // Hex color code e.g. "#0284c7"
+  targetRole?: string;
+  targetRoleId?: string;
+  personalInfo: PersonalInfo;
+  sections: CVSection[];
+  skillGroups: SkillGroup[];
+  updatedAt?: string;
+  atsScore?: number;
+}
+```
+
+### 4.4. MySQL & Prisma Backend Schema Extensions (`backend/prisma/schema.prisma`)
+
+To store `photoUrl` (either base64 data URI up to 10MB or hosted URL) and user-chosen `accentColor` in MySQL:
+
+```prisma
+model CV {
+  id           String        @id @default(uuid())
+  userId       String
+  title        String        @default("Untitled CV") @db.VarChar(150)
+  templateId   String        @default("classic-ats") @db.VarChar(50)
+  accentColor  String?       @default("#0284c7") @db.VarChar(30)
+  targetRoleId String?
+  targetRole   JobRole?      @relation(fields: [targetRoleId], references: [id], onDelete: SetNull)
+
+  // Personal / Header Info
+  fullName     String        @db.VarChar(100)
+  email        String        @db.VarChar(150)
+  phone        String?       @db.VarChar(50)
+  location     String?       @db.VarChar(100)
+  websiteUrl   String?       @db.VarChar(255)
+  linkedinUrl  String?       @db.VarChar(255)
+  githubUrl    String?       @db.VarChar(255)
+  photoUrl     String?       @db.MediumText // MediumText supports up to 16MB (required for <= 10MB base64 images)
+  summary      String?       @db.Text
+  ...
+}
+```
+
+- **Prisma Generator target**: Binary targets must remain `["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]` for Docker/Alpine compatibility.
+- **Migration**: Run `npx prisma db push && npx prisma generate` in `backend/`.
+
+
