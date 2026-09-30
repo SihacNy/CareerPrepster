@@ -136,7 +136,7 @@ export function AnswerInputArea({
 
         {/* Pacing Timer & Word Count */}
         <div className="flex items-center space-x-4 text-xs text-slate-500">
-          <div className="flex items-center space-x-1 font-mono font-medium">
+          <div className="flex items-center space-x-1.5 font-sans tabular-nums font-semibold text-slate-600">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>{formatTimer(elapsedSeconds)}</span>
           </div>

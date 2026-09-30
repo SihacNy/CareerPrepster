@@ -438,7 +438,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
 
   const saveDraft = async (): Promise<boolean> => {
     try {
-      const normalized = normalizeCVData(cvData);
+      let normalized = normalizeCVData(cvData);
       const now = new Date();
       setLastSaved(now);
       setIsDirty(false);
@@ -463,7 +463,12 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         // Authenticated: save to MySQL
         try {
           if (normalized.id && !isLocalDraftId(normalized.id)) {
-            await cvApi.update(normalized.id, normalized);
+            const updated = await cvApi.update(normalized.id, normalized);
+            if (updated && (updated.id || updated.sections)) {
+              const fresh = normalizeCVData(updated);
+              setCVDataState(fresh);
+              normalized = fresh;
+            }
           } else {
             // New draft or promoted local guest draft: create in MySQL
             const created = await cvApi.create(normalized);

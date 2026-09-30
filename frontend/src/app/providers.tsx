@@ -4,6 +4,7 @@ import React from "react";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { CVProvider } from "@/lib/store";
 import { AuthProvider } from "@/lib/auth";
+import { GoogleOneTapPrompt } from "@/components/auth/GoogleOneTapPrompt";
 
 const GOOGLE_CLIENT_ID =
   process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
@@ -13,6 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AuthProvider>
+        <GoogleOneTapPrompt />
         <CVProvider>{children}</CVProvider>
       </AuthProvider>
     </GoogleOAuthProvider>

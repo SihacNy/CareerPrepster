@@ -43,24 +43,35 @@ function decodeJwt(token: string) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  // True only when the backend confirmed the session via /auth/me or the
-  // Google token exchange succeeded. A localStorage-restored profile is NOT a
-  // real session, so cloud writes must not be attempted with it.
   const [isBackendSession, setIsBackendSession] = useState<boolean>(false);
 
-  // Restore user from backend session first, with localStorage fallback
+  // Restore user from storage upon client mounting, then verify with backend
   useEffect(() => {
     let isMounted = true;
+
+    // Immediately hydrate cached user to avoid unauthenticated flicker
+    try {
+      const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+      const savedToken = localStorage.getItem("careerprepster_auth_token");
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
+        setIsBackendSession(Boolean(savedToken));
+      }
+    } catch (e) {
+      console.warn("Could not restore user from storage:", e);
+    }
+
     async function checkSession() {
       try {
         const { authApi } = await import("@/lib/api");
-        const res = await authApi.getMe();
-        if (isMounted && res?.user) {
+        const res: any = await authApi.getMe();
+        const userData = res?.user || (res?.id ? res : null);
+        if (isMounted && userData?.id) {
           const remoteUser: User = {
-            id: res.user.id,
-            name: res.user.name || "Student",
-            email: res.user.email,
-            avatarUrl: res.user.avatarUrl || undefined,
+            id: userData.id,
+            name: userData.name || "Student",
+            email: userData.email,
+            avatarUrl: userData.avatarUrl || undefined,
             provider: "google",
           };
           setUser(remoteUser);
@@ -69,16 +80,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(false);
           return;
         }
-      } catch (err) {
-        // Not authenticated on backend or offline; fallback to localStorage
+      } catch (err: any) {
+        // If the backend explicitly denied the session with 401, clear stale credentials
+        if (err?.code === "UNAUTHORIZED" || err?.code === "HTTP_401") {
+          if (isMounted) {
+            setUser(null);
+            setIsBackendSession(false);
+          }
+          localStorage.removeItem(USER_STORAGE_KEY);
+          localStorage.removeItem("careerprepster_auth_token");
+        }
       }
 
       if (isMounted) {
-        setIsBackendSession(false);
         try {
           const savedUser = localStorage.getItem(USER_STORAGE_KEY);
           if (savedUser) {
             setUser(JSON.parse(savedUser));
+            setIsBackendSession(Boolean(localStorage.getItem("careerprepster_auth_token")));
           }
         } catch (e) {
           console.warn("Could not restore user from storage:", e);
@@ -103,6 +122,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { authApi } = await import("@/lib/api");
       const res = await authApi.loginWithGoogle(credential);
       if (res?.user) {
+        if (res.token) {
+          localStorage.setItem("careerprepster_auth_token", res.token);
+        }
         const newUser: User = {
           id: res.user.id,
           name: res.user.name || payload?.name || payload?.email?.split("@")[0] || "Student",
@@ -169,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(USER_STORAGE_KEY);
       localStorage.removeItem(CV_DRAFT_STORAGE_KEY);
       localStorage.removeItem(HISTORY_STORAGE_KEY);
+      localStorage.removeItem("careerprepster_auth_token");
       import("@/lib/api").then(({ authApi }) => {
         authApi.logout().catch(() => {});
       });

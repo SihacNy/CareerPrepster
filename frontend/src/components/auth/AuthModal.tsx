@@ -37,6 +37,9 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           const { authApi } = await import("@/lib/api");
           const backendRes = await authApi.loginWithGoogle(tokenResponse.access_token);
           if (backendRes?.user) {
+            if (backendRes.token) {
+              localStorage.setItem("careerprepster_auth_token", backendRes.token);
+            }
             loginWithProfile({
               id: backendRes.user.id,
               name: backendRes.user.name || "Google User",
@@ -49,7 +52,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           }
         } catch (apiErr) {
           // Backend offline or token rejected: proceed with client-only profile
-          console.info("Backend session sync skipped (offline or token rejected):", apiErr);
+          console.error("Backend session sync error:", apiErr);
         }
 
         // 2. Fallback: fetch profile info from Google and sign in client-side only

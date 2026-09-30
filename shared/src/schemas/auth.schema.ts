@@ -1,8 +1,13 @@
 import { z } from 'zod';
 
-export const googleAuthSchema = z.object({
-  idToken: z.string().min(10, 'Google ID token is required'),
-});
+export const googleAuthSchema = z
+  .object({
+    idToken: z.string().optional(),
+    accessToken: z.string().optional(),
+  })
+  .refine((data) => Boolean(data.idToken || data.accessToken), {
+    message: 'Google token (idToken or accessToken) is required',
+  });
 
 export const userProfileSchema = z.object({
   id: z.string(),

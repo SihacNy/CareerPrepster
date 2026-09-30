@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, ChevronDown, Clock, Sparkles } from "lucide-react";
+import { LogOut, ChevronDown, Clock, Sparkles, FileText, LayoutGrid, Info, Workflow, LayoutTemplate } from "lucide-react";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/lib/auth";
 
@@ -14,9 +14,21 @@ interface HeaderProps {
 export function Header({ }: HeaderProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isFeaturesOpen, setIsFeaturesOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const featuresRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const isTemplatesActive = pathname?.startsWith("/editor/templates");
+  const isFeaturePage =
+    (pathname?.startsWith("/editor") && !isTemplatesActive) ||
+    pathname?.startsWith("/interview");
+  const isFeaturesActive = isFeaturesOpen || isFeaturePage;
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -24,8 +36,11 @@ export function Header({ }: HeaderProps) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
+      if (featuresRef.current && !featuresRef.current.contains(event.target as Node)) {
+        setIsFeaturesOpen(false);
+      }
     }
-    if (isDropdownOpen) {
+    if (isDropdownOpen || isFeaturesOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
@@ -49,31 +64,101 @@ export function Header({ }: HeaderProps) {
           {/* Center Nav */}
           <nav className="hidden md:flex items-center space-x-6">
             <Link
-              href="/editor"
-              className={`text-xs font-semibold transition-colors ${
-                pathname?.startsWith("/editor")
-                  ? "text-sky-600"
-                  : "text-slate-600 hover:text-slate-900"
+              href="/editor/templates"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                isTemplatesActive
+                  ? "bg-sky-500/10 text-sky-600"
+                  : "text-slate-600 hover:text-sky-600 hover:bg-sky-500/10"
               }`}
             >
-              CV Editor
+              <LayoutTemplate className="w-4 h-4" />
+              <span>Templates</span>
+            </Link>
+
+            <div className="relative" ref={featuresRef}>
+              <button
+                type="button"
+                onClick={() => setIsFeaturesOpen((prev) => !prev)}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                  isFeaturesActive
+                    ? "bg-sky-500/10 text-sky-600"
+                    : "text-slate-600 hover:text-sky-600 hover:bg-sky-500/10"
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span>Features</span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    isFeaturesOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {isFeaturesOpen && (
+                <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-52 bg-white rounded-xl shadow-lg border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <Link
+                    href="/editor"
+                    onClick={() => setIsFeaturesOpen(false)}
+                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                      pathname?.startsWith("/editor") && !isTemplatesActive
+                        ? "bg-sky-50"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <FileText className={`w-4 h-4 transition-colors ${
+                      pathname?.startsWith("/editor") && !isTemplatesActive
+                        ? "text-sky-600"
+                        : "text-slate-400 group-hover:text-sky-600"
+                    }`} />
+                    <p className={`text-sm font-semibold ${
+                      pathname?.startsWith("/editor") && !isTemplatesActive ? "text-sky-700" : "text-slate-800"
+                    }`}>
+                      CV Editor
+                    </p>
+                  </Link>
+
+                  <Link
+                    href="/interview"
+                    onClick={() => setIsFeaturesOpen(false)}
+                    className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                      pathname?.startsWith("/interview")
+                        ? "bg-sky-50"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <Sparkles className={`w-4 h-4 transition-colors ${
+                      pathname?.startsWith("/interview")
+                        ? "text-sky-600"
+                        : "text-slate-400 group-hover:text-sky-600"
+                    }`} />
+                    <p className={`text-sm font-semibold ${
+                      pathname?.startsWith("/interview") ? "text-sky-700" : "text-slate-800"
+                    }`}>
+                      Interview Coach
+                    </p>
+                  </Link>
+                </div>
+              )}
+            </div>
+            <Link
+              href="/#how-it-works"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-slate-600 hover:text-sky-600 hover:bg-sky-500/10 transition-colors"
+            >
+              <Workflow className="w-4 h-4" />
+              <span>How It Works</span>
             </Link>
             <Link
-              href="/interview"
-              className={`text-xs font-semibold transition-colors flex items-center space-x-1.5 ${
-                pathname?.startsWith("/interview")
-                  ? "text-sky-600"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
+              href="/#about"
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-slate-600 hover:text-sky-600 hover:bg-sky-500/10 transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5 text-sky-500" />
-              <span>Interview Coach</span>
+              <Info className="w-4 h-4" />
+              <span>About Us</span>
             </Link>
           </nav>
 
           {/* Right Actions */}
           <div className="flex items-center space-x-3">
-            {user ? (
+            {mounted && user ? (
               <div className="relative" ref={dropdownRef}>
                 {/* Avatar Trigger Button */}
                 <button

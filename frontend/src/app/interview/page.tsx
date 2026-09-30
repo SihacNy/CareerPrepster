@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Sparkles,
+  Plus,
   PlayCircle,
   Clock,
   Award,
@@ -18,9 +18,11 @@ import { SessionSetupModal } from "@/components/interview/SessionSetupModal";
 import { SessionHistoryTable } from "@/components/interview/SessionHistoryTable";
 import { CreateInterviewSessionPayload } from "@/types/interview";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 export default function InterviewHubPage() {
   const router = useRouter();
+  const { user, isBackendSession } = useAuth();
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
@@ -41,7 +43,7 @@ export default function InterviewHubPage() {
 
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [user, isBackendSession]);
 
   const handleStartSession = async (payload: CreateInterviewSessionPayload) => {
     const response = await api.interviews.createSession(payload);
@@ -62,11 +64,6 @@ export default function InterviewHubPage() {
         {/* Hero Section */}
         <div className="relative rounded-3xl bg-gradient-to-br from-white via-sky-50/40 to-white border border-slate-200/80 p-8 sm:p-12 overflow-hidden shadow-xs">
           <div className="max-w-3xl space-y-5 relative z-10">
-            <div className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-sky-100/80 border border-sky-200 text-sky-800 text-xs font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-sky-600" />
-              <span>AI Mock Interview Drills & Rubric Feedback</span>
-            </div>
-
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
               Master Your Interview Answers with{" "}
               <span className="text-sky-600">Real-Time STAR Coaching</span>
@@ -137,15 +134,15 @@ export default function InterviewHubPage() {
               <h2 className="text-xl font-bold text-slate-900 tracking-tight">
                 Your Practice History
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 mt-0.5">
                 Track your readiness score progression across behavioral and technical drills
               </p>
             </div>
             <button
               onClick={() => setIsSetupOpen(true)}
-              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 font-semibold text-xs transition-colors"
+              className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-sm hover:shadow transition-all"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" />
               <span>New Drill</span>
             </button>
           </div>

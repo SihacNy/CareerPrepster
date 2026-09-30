@@ -22,6 +22,22 @@
 9. [PDF Generation & Template Architecture](#9-pdf-generation--template-architecture)
 10. [Local Development & Build Guide](#10-local-development--build-guide)
 11. [Recent Technical Fixes & Stability Hardening](#11-recent-technical-fixes--stability-hardening)
+12. [Template Synchronization Architecture](#12-template-synchronization-architecture)
+13. [Dual-Theme CSS Variables & Dark Mode Polish](#13-dual-theme-css-variables--dark-mode-polish)
+14. [Multi-Template PDF Export Architecture](#14-multi-template-pdf-export-architecture)
+15. [PDF Engine Bug Fixes & Regression Hardening](#15-pdf-engine-bug-fixes--regression-hardening)
+16. [PDF Profile Avatar Aspect Ratio & Circular Clipping Fix](#16-pdf-profile-avatar-aspect-ratio--circular-clipping-fix)
+17. [Git Change Audit & Justification Breakdown](#17-git-change-audit--justification-breakdown)
+18. [Authentication Resilience, Google One Tap & Interview UX Overhaul](#18-authentication-resilience-google-one-tap--interview-ux-overhaul)
+    - [18.1 Persistent Backend Session Restoration & Refresh Fixes](#181-persistent-backend-session-restoration--refresh-fixes)
+    - [18.2 Google One Tap Integration with FedCM Support](#182-google-one-tap-integration-with-fedcm-support-googleonetapprompttsx)
+    - [18.3 Header Navigation Redesign & Spacing](#183-header-navigation-redesign--spacing-headertsx)
+    - [18.4 Practice Drill Configuration Modal Scaling](#184-practice-drill-configuration-modal-scaling-sessionsetupmodaltsx)
+    - [18.5 Interview Drill Timer Typography Harmonization](#185-interview-drill-timer-typography-harmonization-answerinputareatsx)
+    - [18.6 Full Scoreboard UX & Legibility Overhaul](#186-full-scoreboard-ux--legibility-overhaul)
+    - [18.7 Next.js SSR Hydration Guarding & Dual-Stage State Reconciliation](#187-nextjs-ssr-hydration-guarding--dual-stage-state-reconciliation-authtsx--headertsx)
+    - [18.8 Landing Page Feature Showcase & Smooth Navigation](#188-landing-page-feature-showcase--smooth-navigation-pagetsx-footertsx)
+    - [18.9 Dual-Transport Bearer Token Resilience](#189-dual-transport-bearer-token-resilience-apits-authmodaltsx)
 
 ---
 
@@ -601,5 +617,132 @@ A comprehensive audit of the 15 modified files across `module/cv-editor` to veri
   - *Rationale*: Center-crops uploaded photos to a 1:1 square upon selection before storing to state, reducing payload size and preventing aspect ratio squishing.
 - **`report_frontend.md` (+120, -0)**:
   - *Rationale*: Comprehensive engineering audit and historical documentation of bugs, root causes, and architectural solutions.
+
+---
+
+## 18. Authentication Resilience, Google One Tap & Interview UX Overhaul
+
+### 18.1 Persistent Backend Session Restoration & Refresh Fixes
+1. **Root Cause Analysis:**
+   - Previous versions of `AuthProvider` initialized `user` and `isBackendSession` as `null`/`false`. On initial hydration, `checkSession()` called `authApi.getMe()`, which received the unwrapped user payload (`data: user`). The code checked `if (res?.user)`, which evaluated to `undefined` because `res` was already the flat user object.
+   - Consequently, every browser page refresh reset `isBackendSession` to `false`, treating active users as unauthenticated and locking the interview creation flow behind 401 error gates.
+2. **Two-Stage Session Hydration Architecture (`frontend/src/lib/auth.tsx`):**
+   - Direct lazy initializers reading `localStorage` in `useState` initially caused Next.js SSR hydration mismatches (see Section 18.7).
+   - The architecture was refined to initialize clean baseline state for SSR safety (`user: null`, `isLoading: true`, `isBackendSession: false`), immediately populating cached credentials synchronously on client mounting inside `useEffect`:
+     ```typescript
+     useEffect(() => {
+       let isMounted = true;
+       try {
+         const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+         const savedToken = localStorage.getItem("careerprepster_auth_token");
+         if (savedUser) {
+           setUser(JSON.parse(savedUser));
+           setIsBackendSession(Boolean(savedToken));
+         }
+       } catch (e) {
+         console.warn("Could not restore user from storage:", e);
+       }
+       // Continues with backend verification via checkSession()
+     }, []);
+     ```
+   - Updated `checkSession()` to verify both nested `res?.user` and flat `res?.id`, ensuring that confirmed backend sessions never drop during navigation or reload.
+   - Added automatic storage clearance upon verified `401 UNAUTHORIZED` responses from the server.
+
+### 18.2 Google One Tap Integration with FedCM Support (`GoogleOneTapPrompt.tsx`)
+1. **Zero-Click Authentication:**
+   - Implemented a dedicated `<GoogleOneTapPrompt />` component leveraging `useGoogleOneTapLogin` from `@react-oauth/google`.
+   - Enabled Chrome's modern Federated Credential Management standard (`use_fedcm_for_prompt: true`).
+2. **Reload-Flicker Suppression:**
+   - Gated the prompt using `disabled: isLoading || Boolean(user)`.
+   - Prevents Google One Tap from flashing or asking already-authenticated users to log in on page refresh.
+3. **Mounted Globally in Providers Tree (`frontend/src/app/providers.tsx`):**
+   - Embedded within `GoogleOAuthProvider` and `AuthProvider` so the passive One Tap experience operates harmoniously alongside the active OAuth button modal.
+
+### 18.3 Header Navigation Redesign & Spacing (`Header.tsx`)
+1. **Templates Navigation Priority:**
+   - Added **Templates** as the very first link in the center navigation, linking directly to `/editor/templates` with a dedicated `LayoutTemplate` icon.
+   - Refined active route matching so `/editor/templates` highlights the Templates link while keeping the Features dropdown focused on general editing and interview workflows.
+2. **Breathing Room & Spacing:**
+   - Increased navigation item spacing from `space-x-2` (8px) to `space-x-6` (24px) for modern, clean visual hierarchy.
+3. **Logo Modernization:**
+   - Removed decorative sparkle icons from the branding logo to emphasize crisp, editorial typography.
+
+### 18.4 Practice Drill Configuration Modal Scaling (`SessionSetupModal.tsx`)
+1. **Input Sizing & Typography Alignment:**
+   - Scaled the **Target Job Description** textarea from `text-xs` (12px) and `py-2.5` to `text-sm` (14px) and `py-3` with 3 rows, matching the exact sizing, height, and placeholder prominence of the **Target Career Role** input.
+   - Scaled all selection cards (**Contextual CV Baseline**, **Interview Track**, **Drill Length**, and **Practice Mode**) to `p-3.5` / `px-4 py-3` with `text-sm font-semibold` titles and `text-xs` descriptions.
+2. **Header Cleanup & Direct Auth Gate:**
+   - Removed the sparkle icon box from the modal header to present a minimalist, typography-led dialog.
+   - Integrated a direct "Sign In" button inside the auth gate banner and error banner, launching `<AuthModal />` immediately if a user attempts to start a drill without a session.
+
+### 18.5 Interview Drill Timer Typography Harmonization (`AnswerInputArea.tsx`)
+- Replaced the browser-default `font-mono` styling on the drill timer (`00:16`) with the application's primary brand font family (`font-sans`) paired with `tabular-nums font-semibold`.
+- Eliminates font mismatch while ensuring numbers tick smoothly without horizontal layout shifting.
+
+### 18.6 Full Scoreboard UX & Legibility Overhaul
+1. **Question-by-Question Review Accordion (`QuestionReviewAccordion.tsx`):**
+   - Removed premature text truncation (`truncate`), allowing full interview questions to display legibly across desktop and mobile screens.
+   - Upgraded question typography from `text-xs` (12px) to `text-sm sm:text-base font-bold` (15-16px).
+   - Enlarged question counter badges from `w-6 h-6 text-xs` dots to `w-8 h-8 rounded-xl text-sm font-extrabold` badges with subtle border styling.
+   - Enlarged candidate answers (`p-4 text-sm sm:text-base`), STAR rubric scoring cards (`text-lg font-black`), and AI exemplar model answers.
+   - Removed icon boxes from section headers for a clean editorial design.
+2. **Readiness Summary Dashboard (`ScorecardSummary.tsx`):**
+   - Scaled the composite score badge from `w-24 h-24` to `w-28 h-28` with `text-4xl font-black` numerical display.
+   - Enlarged readiness tier headers and upgraded the 4 dimensional competency cards to `p-5` with thicker `h-3` animated progress bars.
+   - Enhanced key strengths and growth area items with `text-sm` typography and `p-6` cards.
+3. **CV Recommendations & Alignment Cards (`CVRecommendationsCard.tsx`):**
+   - Upgraded both populated and empty-state containers to `p-6 sm:p-10 space-y-3.5` with `text-xl font-bold` headings and `text-sm sm:text-base` body text.
+   - Removed icon boxes from section headings to match the streamlined scoreboard aesthetic.
+
+### 18.7 Next.js SSR Hydration Guarding & Dual-Stage State Reconciliation (`auth.tsx` & `Header.tsx`)
+1. **SSR Hydration Failure Diagnostics:**
+   - **Symptom:** Next.js App Router thrown error:
+     ```
+     Hydration failed because the initial UI does not match what was rendered on the server.
+     Expected server HTML to contain a matching <div> in <div>.
+     ```
+   - **Root Cause:** In Next.js App Router, components pre-render into static HTML on the server where `window` is `undefined`. When using lazy initializers like `useState(() => localStorage.getItem(...))`, the server rendered the unauthenticated state (`<button>Sign In</button>`), whereas the client's initial render encountered a populated `localStorage` and immediately rendered the user profile dropdown (`<div className="relative">...</div>`). React 18 reconciliation detected the mismatched virtual DOM trees and threw a fatal hydration crash.
+2. **Deterministic Dual-Stage Resolution:**
+   - **Stage 1 (Server-Safe Synchronous Pass):** `AuthProvider` initial state is kept identical between server pre-rendering and initial client DOM creation (`user = null`, `isLoading = true`, `isBackendSession = false`).
+   - **Stage 2 (Post-Mount Client Hydration):** Inside `useEffect()`, client-side storage is accessed to restore user profile and JWT tokens without causing initial tree divergence.
+   - **Header Mounting Guard (`Header.tsx`):**
+     ```tsx
+     const [mounted, setMounted] = useState(false);
+     useEffect(() => {
+       setMounted(true);
+     }, []);
+
+     // In JSX:
+     {mounted && user ? (
+       <div className="relative" ref={dropdownRef}>
+         {/* Authenticated Avatar & Menu */}
+       </div>
+     ) : (
+       <button
+         onClick={() => setIsAuthModalOpen(true)}
+         className="px-4 py-2 text-sm font-semibold text-white bg-sky-600 rounded-lg hover:bg-sky-700"
+       >
+         Sign In
+       </button>
+     )}
+     ```
+   - **Result:** Complete elimination of SSR hydration mismatches while maintaining zero perceived latency for returning authenticated users.
+
+### 18.8 Landing Page Feature Showcase & Smooth Navigation (`page.tsx`, `Footer.tsx`)
+1. **Dedicated "Our Features" Section (`frontend/src/app/page.tsx`):**
+   - Added a high-contrast features grid prominently showcasing **CV Editor** and **Interview Coach**, directly mirroring the header dropdown navigation.
+   - Each card features custom hover elevation (`hover:-translate-y-1.5`, `hover:shadow-xl`), dynamic gradient border reveals, and capability badges (*ATS Templates*, *STAR/XYZ Refinement*, *Vector PDF Export*, *Adaptive Probing*).
+2. **Anchor Target Alignment (`Footer.tsx`):**
+   - Added `id="about"` with `scroll-mt-16` offset to `<Footer />`, allowing top-bar navigation ("About Us") to smoothly scroll into view without header occlusion.
+
+### 18.9 Dual-Transport Bearer Token Resilience (`api.ts`, `AuthModal.tsx`)
+1. **HttpOnly Cookie + Bearer Authorization Dual Vector:**
+   - Next.js and cross-port development setups (e.g. `localhost:3000` to `localhost:5000`) or third-party cookie restrictions (Safari ITP, Brave Shields) can intermittently drop HttpOnly session cookies.
+   - `frontend/src/lib/api.ts` was updated to read `localStorage.getItem("careerprepster_auth_token")` and automatically inject `Authorization: Bearer <token>` into all outbound requests.
+2. **Token Ingestion in Google OAuth Flow (`AuthModal.tsx`):**
+   - Upon receiving `{ user, token }` from `POST /api/auth/google`, `AuthModal` automatically writes `careerprepster_auth_token` to `localStorage`.
+   - Guarantees seamless, authenticated communication across both stateful cookies and stateless bearer headers.
+
+---
 
 *Report generated and validated for the CareerPrepster Frontend Module (`careerprepster-frontend@0.1.0`).*

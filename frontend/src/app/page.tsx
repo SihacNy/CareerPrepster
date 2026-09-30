@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   Layers,
   Sparkles,
-  BarChart3
+  BarChart3,
+  LayoutGrid
 } from "lucide-react";
 import { Header } from "@/components/navigation/Header";
 import { Footer } from "@/components/navigation/Footer";
@@ -99,7 +100,7 @@ export default function LandingPage() {
         </section>
 
         {/* Feature Pillars Grid */}
-        <section className="py-16 sm:py-20 bg-slate-50 border-b border-slate-200">
+        <section id="how-it-works" className="py-16 sm:py-20 bg-slate-50 border-b border-slate-200 scroll-mt-16">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-6">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -163,6 +164,97 @@ export default function LandingPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Our Features Section */}
+        <section id="features" className="py-20 sm:py-24 bg-white border-b border-slate-200 scroll-mt-16">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Section Header */}
+            <div className="text-center max-w-2xl mx-auto mb-14">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight inline-flex items-center justify-center gap-3">
+                <LayoutGrid className="w-7 h-7 sm:w-8 sm:h-8 text-sky-600" />
+                <span>Our Features</span>
+              </h2>
+              <p className="mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">
+                Everything you need to craft an ATS-optimized CV and master behavioral and technical interview questions.
+              </p>
+            </div>
+
+            {/* Feature Cards Grid (matching the 2 header features) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Card 1: CV Editor */}
+              <Link
+                href="/editor"
+                className="group relative p-8 sm:p-10 rounded-2xl bg-white border border-slate-200/90 shadow-card hover:shadow-xl hover:shadow-sky-500/10 hover:border-sky-300 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <FileText className="w-7 h-7 text-sky-600 group-hover:scale-110 group-hover:text-sky-500 transition-transform duration-300" />
+                    <h3 className="text-2xl font-bold text-slate-900 group-hover:text-sky-950 transition-colors">
+                      CV Editor
+                    </h3>
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed mt-2">
+                    Build professional ATS-tested resumes using Harvard Classic and Jake&apos;s Tech standard templates. Includes STAR/XYZ bullet AI refinement and instant vector PDF export.
+                  </p>
+
+                  <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">
+                      ATS Templates
+                    </span>
+                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">
+                      STAR/XYZ Refinement
+                    </span>
+                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">
+                      Vector PDF Export
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-5 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-sky-600 group-hover:text-sky-700">
+                  <span>Open CV Editor</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+                </div>
+              </Link>
+
+              {/* Card 2: Interview Coach */}
+              <Link
+                href="/interview"
+                className="group relative p-8 sm:p-10 rounded-2xl bg-white border border-slate-200/90 shadow-card hover:shadow-xl hover:shadow-sky-500/10 hover:border-sky-300 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Sparkles className="w-7 h-7 text-sky-600 group-hover:scale-110 group-hover:text-sky-500 transition-transform duration-300" />
+                    <h3 className="text-2xl font-bold text-slate-900 group-hover:text-sky-950 transition-colors">
+                      Interview Coach
+                    </h3>
+                  </div>
+                  <p className="text-sm text-slate-600 leading-relaxed mt-2">
+                    Practice real-world behavioral and technical mock interviews derived directly from your resume claims. Features adaptive follow-up probing and immediate rubric scoring.
+                  </p>
+
+                  <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">
+                      STAR Feedback
+                    </span>
+                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">
+                      Adaptive Probing
+                    </span>
+                    <span className="px-3 py-1.5 rounded-lg bg-slate-100 group-hover:bg-sky-50 group-hover:text-sky-700 transition-colors">
+                      CV Feedback Loop
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-8 pt-5 border-t border-slate-100 flex items-center justify-between text-sm font-bold text-sky-600 group-hover:text-sky-700">
+                  <span>Start Interview Coach</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+                </div>
+              </Link>
             </div>
           </div>
         </section>

@@ -48,6 +48,13 @@ async function fetchApi<T>(
     defaultHeaders["Content-Type"] = "application/json";
   }
 
+  if (typeof window !== "undefined") {
+    const savedToken = localStorage.getItem("careerprepster_auth_token");
+    if (savedToken) {
+      defaultHeaders["Authorization"] = `Bearer ${savedToken}`;
+    }
+  }
+
   const response = await fetch(url, {
     ...options,
     credentials: "include", // Enforces sending and receiving HttpOnly JWT cookies
@@ -93,10 +100,10 @@ export interface AuthUser {
 }
 
 export const authApi = {
-  loginWithGoogle: (accessToken: string) =>
-    fetchApi<{ user: AuthUser }>("/auth/google", {
+  loginWithGoogle: (token: string) =>
+    fetchApi<{ user: AuthUser; token?: string }>("/auth/google", {
       method: "POST",
-      body: JSON.stringify({ accessToken }),
+      body: JSON.stringify({ accessToken: token, idToken: token }),
     }),
 
   getMe: () =>

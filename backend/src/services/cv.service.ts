@@ -312,18 +312,27 @@ export class CvService {
 
       // 2. Sync sections if provided
       if (input.sections) {
-        const inputSectionIds = input.sections.map((s) => s.id).filter(Boolean) as string[];
+        const existingSections = await tx.cVSection.findMany({
+          where: { cvId },
+          select: { id: true },
+        });
+        const existingSectionIds = new Set(existingSections.map((s) => s.id));
+        const retainedSectionIds = input.sections
+          .map((s) => s.id)
+          .filter((id): id is string => Boolean(id && existingSectionIds.has(id)));
+
         await tx.cVSection.deleteMany({
           where: {
             cvId,
-            id: { notIn: inputSectionIds },
+            id: { notIn: retainedSectionIds },
           },
         });
 
         for (const [secIdx, sec] of input.sections.entries()) {
           let sectionId = sec.id;
+          const sectionExists = Boolean(sectionId && existingSectionIds.has(sectionId));
 
-          if (sectionId) {
+          if (sectionExists && sectionId) {
             await tx.cVSection.update({
               where: { id: sectionId },
               data: {
@@ -348,18 +357,27 @@ export class CvService {
 
           // Sync items within section
           if (sec.items) {
-            const inputItemIds = sec.items.map((i) => i.id).filter(Boolean) as string[];
+            const existingItems = await tx.cVItem.findMany({
+              where: { sectionId },
+              select: { id: true },
+            });
+            const existingItemIds = new Set(existingItems.map((i) => i.id));
+            const retainedItemIds = sec.items
+              .map((i) => i.id)
+              .filter((id): id is string => Boolean(id && existingItemIds.has(id)));
+
             await tx.cVItem.deleteMany({
               where: {
                 sectionId,
-                id: { notIn: inputItemIds },
+                id: { notIn: retainedItemIds },
               },
             });
 
             for (const [itemIdx, item] of sec.items.entries()) {
               let itemId = item.id;
+              const itemExists = Boolean(itemId && existingItemIds.has(itemId));
 
-              if (itemId) {
+              if (itemExists && itemId) {
                 await tx.cVItem.update({
                   where: { id: itemId },
                   data: {
@@ -392,18 +410,29 @@ export class CvService {
 
               // Sync bullets within item
               if (item.bulletPoints) {
-                const inputBulletIds = item.bulletPoints.map((b) => b.id).filter(Boolean) as string[];
+                const existingBullets = await tx.bulletPoint.findMany({
+                  where: { itemId },
+                  select: { id: true },
+                });
+                const existingBulletIds = new Set(existingBullets.map((b) => b.id));
+                const retainedBulletIds = item.bulletPoints
+                  .map((b) => b.id)
+                  .filter((id): id is string => Boolean(id && existingBulletIds.has(id)));
+
                 await tx.bulletPoint.deleteMany({
                   where: {
                     itemId,
-                    id: { notIn: inputBulletIds },
+                    id: { notIn: retainedBulletIds },
                   },
                 });
 
                 for (const [bIdx, bullet] of item.bulletPoints.entries()) {
-                  if (bullet.id) {
+                  let bulletId = bullet.id;
+                  const bulletExists = Boolean(bulletId && existingBulletIds.has(bulletId));
+
+                  if (bulletExists && bulletId) {
                     await tx.bulletPoint.update({
-                      where: { id: bullet.id },
+                      where: { id: bulletId },
                       data: {
                         text: bullet.text,
                         actionVerb: bullet.actionVerb,
@@ -433,18 +462,29 @@ export class CvService {
 
       // 3. Sync skill groups if provided
       if (input.skillGroups) {
-        const inputSgIds = input.skillGroups.map((sg) => sg.id).filter(Boolean) as string[];
+        const existingSkillGroups = await tx.skillGroup.findMany({
+          where: { cvId },
+          select: { id: true },
+        });
+        const existingSgIds = new Set(existingSkillGroups.map((sg) => sg.id));
+        const retainedSgIds = input.skillGroups
+          .map((sg) => sg.id)
+          .filter((id): id is string => Boolean(id && existingSgIds.has(id)));
+
         await tx.skillGroup.deleteMany({
           where: {
             cvId,
-            id: { notIn: inputSgIds },
+            id: { notIn: retainedSgIds },
           },
         });
 
         for (const [sgIdx, sg] of input.skillGroups.entries()) {
-          if (sg.id) {
+          let sgId = sg.id;
+          const sgExists = Boolean(sgId && existingSgIds.has(sgId));
+
+          if (sgExists && sgId) {
             await tx.skillGroup.update({
-              where: { id: sg.id },
+              where: { id: sgId },
               data: {
                 categoryName: sg.categoryName,
                 skills: sg.skills,

@@ -20,6 +20,10 @@
 9. [Step-by-Step Postman Testing Guide](#9-step-by-step-postman-testing-guide)
 10. [Local Development & Docker Run Guide](#10-local-development--docker-run-guide)
 11. [Recent Backend Enhancements & Target Role Resolution](#11-recent-backend-enhancements--target-role-resolution)
+12. [TypeScript Strict Compilation & Dual-Enum Unification](#12-typescript-strict-compilation--dual-enum-unification)
+13. [ATS Persistence & History Feature Roadmap](#13-ats-persistence--history-feature-roadmap-phase-13--user-story-10)
+14. [Google OAuth Multi-Token Ingestion & Session State Architecture](#14-google-oauth-multi-token-ingestion--session-state-architecture)
+15. [CV Relational Synchronization & Prisma P2025 Prevention](#15-cv-relational-synchronization--prisma-p2025-prevention)
 
 ---
 
@@ -533,7 +537,118 @@ Speckit tasks `T105`–`T115` have been formalized in `specs/001-cv-editor/tasks
 1. **Database Persistence on Audit:** Automatically persist calculated ATS audits to MySQL (`ats_reports` table) with overall score, pillar breakdowns (parsability, impact, skills, brevity), detailed findings, and optional target job description.
 2. **Relational Score Aggregation in CV Listing:** Update `CvService.listUserCvs` to query `atsReports: { orderBy: { createdAt: 'desc' }, take: 1 }` so `GET /api/cvs` delivers the latest `atsScore` directly in the listing payload.
 3. **Dedicated Retrieval Endpoint:** Add `GET /api/ats/:cvId/latest` allowing the client to reload full historical audits without requiring re-scoring.
-4. **History Dashboard Visualization:** Update `/history` cards to render dynamic color-coded ATS score badges and provide direct navigation to view detailed audits in the editor.
+---
+
+## 14. Google OAuth Multi-Token Ingestion & Session State Architecture
+
+### 14.1 Problem Identification & Root Cause Analysis
+During integration testing of the mock interview feature (`POST /api/interviews/sessions`), clients that appeared authenticated on the frontend encountered `401 Unauthorized` responses:
+1. **Zod Validation Rejection (`POST /api/auth/google`)**:
+   - `shared/src/schemas/auth.schema.ts` strictly required `idToken: z.string()`.
+   - The frontend's Google popup authentication (`useGoogleLogin`) provided an OAuth `access_token` rather than an OpenID `id_token`.
+   - The validation middleware rejected requests containing `{ accessToken }` with `400 Bad Request: Invalid request payload`.
+2. **Session Verification Mismatch (`GET /api/auth/me`)**:
+   - `AuthController.getMe` returned `{ success: true, data: user }`.
+   - The frontend API client unwrapped `response.data`, resulting in `res` being the user object directly.
+   - Frontend validation expecting `res?.user` evaluated to `undefined`, causing the client to downgrade to an unauthenticated backend state on page refresh.
+
+### 14.2 Technical Architecture & Resolution
+
+#### A. Multi-Token Ingestion in Shared Schema (`shared/src/schemas/auth.schema.ts`)
+The shared validation schema was updated with a refined object schema accepting `accessToken`, `idToken`, or both:
+```typescript
+export const googleAuthSchema = z
+  .object({
+    idToken: z.string().min(1).optional(),
+    accessToken: z.string().min(1).optional(),
+  })
+  .refine((data) => Boolean(data.idToken || data.accessToken), {
+    message: 'Either idToken or accessToken must be provided',
+    path: ['idToken'],
+  });
+```
+
+#### B. Dual-Flow Token Verification (`backend/src/services/auth.service.ts`)
+The `AuthService.googleAuth` method was updated to handle both token types transparently:
+1. **OpenID Connect ID Token Flow:** Verified against Google's public key certificates using `googleClient.verifyIdToken`. User payload (`sub`, `email`, `name`, `picture`) is extracted locally in `<1ms`.
+2. **OAuth 2.0 Access Token Flow:** When token verification identifies an access token, it queries Google's `tokeninfo` and `userinfo` endpoints (`https://www.googleapis.com/oauth2/v3/userinfo`) with bearer authorization to retrieve the verified email and profile.
+3. **User Record Upsert & JWT Generation:** Automatically links the user's Google ID, persists or updates the MySQL `users` table, and issues a 7-day signed JWT.
+
+#### C. Session Endpoint Harmonization (`backend/src/controllers/auth.controller.ts`)
+Updated `AuthController.getMe` to return both nested and flat structures inside `data`:
+```typescript
+static async getMe(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = await AuthService.getMe(req.user!.userId);
+    return res.status(200).json({
+      success: true,
+      data: {
+        user,
+        ...user,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+```
+
+#### D. Hybrid Cookie & Bearer Authorization Support
+The `requireAuth` middleware supports dual authentication vectors:
+- **Primary:** `req.cookies?.token` (HttpOnly, SameSite, Secure in production).
+- **Secondary:** `req.headers.authorization` (`Bearer <token>`), guaranteeing session stability across cross-port development servers (`localhost:3000` to `localhost:5000`).
+
+---
+
+## 15. CV Relational Synchronization & Prisma P2025 Prevention
+
+### 15.1 Problem Identification & Bug Trace
+During CV editing (`PUT /api/cvs/:id`), requests crashed with an unhandled 500 error:
+```
+PrismaClientKnownRequestError:
+Invalid `tx.cVItem.update()` invocation in cv.service.ts:363:33
+An operation failed because it depends on one or more records that were required but not found. Record to update not found.
+Code: P2025
+```
+
+### 15.2 Root Cause Analysis
+1. **Client-Generated Ephemeral IDs:**
+   When users add items, sections, bullets, or skills in the frontend WYSIWYG editor, the frontend assigns temporary client identifiers (e.g., `item-1741234567890`, `edu-1741234567890`, `bp-1741234567890`).
+2. **Naive Truthy ID Assumption:**
+   In `CvService.updateCv()`, the synchronization loop checked `if (itemId)` / `if (sectionId)` / `if (bullet.id)`. Because the string was non-empty, the service blindly executed `tx.cVItem.update({ where: { id: itemId } })`.
+3. **Prisma P2025 Contract Violation:**
+   In Prisma ORM, `.update()` strictly requires the target record to already exist in MySQL. Since the client ID only existed in browser memory, Prisma threw a `P2025: Record to update not found` error, aborting the transaction and returning a `500 Internal Server Error`.
+
+### 15.3 Architectural Resolution & Existence Verification
+The synchronization pipeline in `cv.service.ts` was refactored with pre-queried existence sets for all 4 relational child models:
+1. **Pre-Querying Database State:**
+   ```typescript
+   const existingItems = await tx.cVItem.findMany({
+     where: { sectionId },
+     select: { id: true },
+   });
+   const existingItemIds = new Set(existingItems.map((i) => i.id));
+   ```
+2. **Selective Deletion & Update Routing:**
+   - **Retained IDs:** Only IDs present in both the input payload AND `existingItemIds` are protected from deletion (`deleteMany({ where: { sectionId, id: { notIn: retainedItemIds } } })`).
+   - **Conditional Update vs Create:**
+     ```typescript
+     const itemExists = Boolean(itemId && existingItemIds.has(itemId));
+     if (itemExists && itemId) {
+       await tx.cVItem.update({ where: { id: itemId }, data: { ... } });
+     } else {
+       const newItem = await tx.cVItem.create({ data: { sectionId, ... } });
+       itemId = newItem.id;
+     }
+     ```
+3. **Hierarchical Coverage:**
+   The exact same existence-guarded pattern was implemented across:
+   - `CVSection` (`existingSectionIds`)
+   - `CVItem` (`existingItemIds`)
+   - `BulletPoint` (`existingBulletIds`)
+   - `SkillGroup` (`existingSgIds`)
+4. **Client State Adoption:**
+   In `frontend/src/lib/store.tsx`, `saveDraft` now immediately ingests the canonical database response returned by `cvApi.update()`, replacing all client-generated ephemeral IDs in React state and `localStorage` with permanent MySQL UUIDs.
 
 ---
 

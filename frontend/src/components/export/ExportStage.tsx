@@ -22,7 +22,7 @@ export function ExportStage() {
               <ArrowLeft className="w-3 h-3 mr-1 text-slate-400" />
               <span>Back to ATS Review</span>
             </Link>
-            <span className="text-slate-300">•</span>
+            <span className="text-slate-400 select-none">{"<"}</span>
             <Link href="/editor" className="hover:text-sky-600 flex items-center transition-colors">
               <PenLine className="w-3 h-3 mr-1 text-slate-400" />
               <span>Edit CV Form</span>
