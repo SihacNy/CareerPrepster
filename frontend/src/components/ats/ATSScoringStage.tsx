@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useCV } from "@/lib/store";
 import { ATSReport } from "@/types/cv";
 import { atsApi } from "@/lib/api";
@@ -9,7 +10,7 @@ import { PillarBreakdown } from "./PillarBreakdown";
 import { JobDescriptionInput } from "./JobDescriptionInput";
 import { ActionableFindingsList } from "./ActionableFindingsList";
 import { StageActions } from "./StageActions";
-import { FileCheck, Sparkles, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { FileCheck, Sparkles, AlertCircle, Loader2, RefreshCw, LayoutTemplate, ArrowRight } from "lucide-react";
 
 interface ATSScoringStageProps {
   isFromUpload?: boolean;
@@ -89,16 +90,26 @@ export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) 
     <div className="w-full flex flex-col flex-1 pb-16">
       {/* Upload Diagnostic Banner if Flow B */}
       {isFromUpload && (
-        <div className="mb-6 p-4 rounded-xl bg-sky-50 border border-sky-200 text-xs text-sky-900 flex items-start space-x-3">
-          <FileCheck className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h4 className="font-bold text-sky-950">
-              Initial Resume Diagnostic Audit Complete
-            </h4>
-            <p className="mt-0.5 text-sky-800 leading-relaxed">
-              We parsed your uploaded resume and calculated your baseline ATS score. Review your findings below, then click &ldquo;Improve in Editor&rdquo; to enhance weak bullets and format with our Harvard &amp; Jake&apos;s templates.
-            </p>
+        <div className="mb-6 p-4.5 rounded-2xl bg-sky-50/90 border border-sky-200 text-xs text-sky-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start space-x-3">
+            <FileCheck className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-bold text-sky-950 text-sm">
+                Resume Diagnostic Complete! Baseline ATS Score Calculated
+              </h4>
+              <p className="mt-0.5 text-sky-800 leading-relaxed max-w-2xl">
+                We successfully extracted your experience, education, and skills. Now choose an ATS-certified template to reformat your resume and fix identified gaps.
+              </p>
+            </div>
           </div>
+          <Link
+            href="/editor/templates?from=upload"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-semibold shadow-2xs transition-all shrink-0 text-xs group"
+          >
+            <LayoutTemplate className="w-4 h-4" />
+            <span>Choose Template &amp; Improve</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+          </Link>
         </div>
       )}
 

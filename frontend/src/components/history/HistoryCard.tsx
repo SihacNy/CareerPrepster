@@ -12,7 +12,7 @@ import {
   Layers,
 } from "lucide-react";
 import { CVHistoryItem } from "@/types/cv";
-import { useCV } from "@/lib/store";
+import { getTemplateById } from "@/types/templates";
 
 interface HistoryCardProps {
   item: CVHistoryItem;
@@ -22,26 +22,15 @@ interface HistoryCardProps {
 
 export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
   const router = useRouter();
-  const { loadFromHistory } = useCV();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   const handleOpenEditor = () => {
-    if (item.snapshot) {
-      loadFromHistory(item.snapshot);
-      router.push("/editor");
-    } else {
-      router.push(`/editor?id=${item.id}`);
-    }
+    router.push(`/editor?id=${item.id}`);
   };
 
   const handleOpenAts = () => {
-    if (item.snapshot) {
-      loadFromHistory(item.snapshot);
-      router.push("/editor/ats");
-    } else {
-      router.push(`/editor/ats?id=${item.id}`);
-    }
+    router.push(`/editor/ats?id=${item.id}`);
   };
 
   const handleDuplicate = () => {
@@ -141,7 +130,12 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
             {item.fullName || "Unnamed Candidate"}
           </p>
           <p className="text-slate-500 truncate">
-            Role: <span className="font-medium text-slate-700">{item.targetRole || "General"}</span>
+            Role:{" "}
+            <span className="font-medium text-slate-700">
+              {item.targetRole && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.targetRole)
+                ? item.targetRole
+                : "General"}
+            </span>
           </p>
         </div>
 
@@ -149,7 +143,7 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
         <div className="flex items-center gap-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500 font-medium mb-4">
           <span className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 group-hover:border-slate-300/80 transition-colors">
             <Layers className="w-3 h-3 text-slate-400" />
-            {item.templateId === "modern" ? "Jake's Tech" : "Harvard Classic"}
+            {getTemplateById(item.templateId).name}
           </span>
           {item.wordCount ? (
             <span className="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200/60 group-hover:border-slate-300/80 transition-colors">

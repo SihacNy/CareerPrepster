@@ -58,8 +58,23 @@ export function RoleAutocomplete({
   );
 
   useEffect(() => {
-    setQuery(cvData.targetRole || "");
-  }, [cvData.targetRole]);
+    const isUuid = (val?: string) =>
+      Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
+    if (cvData.targetRole && !isUuid(cvData.targetRole)) {
+      setQuery(cvData.targetRole);
+    } else if (cvData.targetRoleId && rolesCatalog.length > 0) {
+      const match = rolesCatalog.find((r) => r.id === cvData.targetRoleId);
+      if (match) {
+        setQuery(match.name);
+        setTargetRole(match.name, match.id);
+      } else {
+        setQuery("");
+      }
+    } else {
+      setQuery("");
+    }
+  }, [cvData.targetRole, cvData.targetRoleId, rolesCatalog, setTargetRole]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -118,11 +133,8 @@ export function RoleAutocomplete({
                 setIsOpenAutocomplete(true);
               }}
               placeholder="e.g. Software Engineer, Data Analyst, Frontend Developer..."
-              className="w-full text-sm text-slate-900 bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-9 py-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors shadow-2xs"
+              className="w-full text-sm text-slate-900 bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors shadow-2xs"
             />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-              <ChevronDown className="w-4 h-4" />
-            </div>
           </div>
 
           {/* Dropdown list */}

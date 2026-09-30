@@ -142,7 +142,9 @@ CareerPrepster/
         │   │       └── import/
         │   │           └── route.ts  # [TEMP] Server-side PDF/DOCX text extraction (migrates to Express)
         │   └── editor/
-        │       ├── page.tsx       # Stage 1: Dual-pane CV Editor (Form + Live Preview + Desktop Workspace Switcher)
+        │       ├── page.tsx       # Stage 1: Dual-pane CV Editor (Form + Template Selector + Live Preview + Desktop Workspace Switcher)
+        │       ├── templates/
+        │       │   └── page.tsx   # Stage 1 Sub-page: Dedicated Template Gallery & Fullscreen Visual Document Comparison
         │       ├── job-match/
         │       │   └── page.tsx   # Dedicated Target Role Job Description Matcher (Spacious JD textarea + Keyword matcher)
         │       ├── ats/
@@ -151,7 +153,7 @@ CareerPrepster/
         │           └── page.tsx   # Stage 3: Dedicated Final Review & Vector PDF Export Stage
         ├── components/
         │   ├── navigation/
-        │   │   ├── EditorStepper.tsx     # Progress indicator: [1. Author CV] -> [2. ATS Review] -> [3. Export PDF]
+        │   │   ├── EditorStepper.tsx     # 3-stage progress indicator: [1. Author CV] -> [2. ATS Review] -> [3. Export PDF]
         │   │   ├── Header.tsx            # Logo, Draft Status indicator, Profile & Primary Sign In button
         │   │   └── Footer.tsx            # Multi-column footer with brand, resources, and privacy guarantees
         │   ├── auth/
@@ -159,9 +161,8 @@ CareerPrepster/
         │   ├── onboarding/
         │   │   ├── OnboardingModal.tsx   # "Create from Scratch" vs "Upload Existing"
         │   │   └── UploadDropzone.tsx    # Drag-and-drop PDF/DOCX file uploader
-        │   ├── landing/
-        │   │   └── FAQSection.tsx        # Interactive FAQ accordion with ambient dark theme
         │   ├── editor/
+        │   │   ├── TemplateSelector.tsx  # Dedicated visual template picker with cards, typography specs, and live switching
         │   │   ├── CVForm.tsx            # Main editor container (Clean Jump to section, Collapse All, Clear All)
         │   │   ├── RoleAutocomplete.tsx  # Target role search & catalog selection
         │   │   ├── DateRangePicker.tsx   # Standardized date picker with "Present" toggle (42px height, rounded-xl)
@@ -334,6 +335,23 @@ Because resumes require high horizontal precision and mobile screens have limite
     - **Preview Mode**: The resume preview dynamically scales to fit the mobile device width with zero state loss.
     - **Preview Mode**: The resume preview dynamically scales to fit the mobile device width (with clean pinch/zoom) so students can inspect layout fidelity on the go.
   - **1-Tap Quick Switch**: Floating badge button (`<Eye /> Preview` while editing, `<PenLine /> Edit Form` while previewing) allows instant switching with zero state loss.
+
+### 8. Multi-Archetype Template System (Minimalist, Color Accent, Visual/Photo)
+
+To support diverse student career trajectories and international application requirements:
+- **Archetype 1: Minimalist ATS** (`classic` Harvard Classic, `modern` Jake's Tech)
+  - Pure black-and-white, zero tables, 100% single-column linear text flow for enterprise ATS parsers (Workday, Greenhouse, Taleo).
+- **Archetype 2: Modern Color Accent** (`executive-accent`)
+  - Single-column ATS structure with customizable professional accent color theming (divider rules, section headings, skill tags).
+  - 6 curated palettes (`sky-blue`, `exec-navy`, `emerald-teal`, `slate-steel`, `burgundy`, `royal-indigo`).
+- **Archetype 3: Visual / Photo-Enabled** (`modern-photo`)
+  - Integrated headshot/avatar thumbnail in the personal info header for creative, marketing, and international positions (EU/Asia/MENA).
+  - Optional `photoUrl` in `personalInfo`; gracefully collapses when no photo is provided.
+- **Dual-Engine Synchronization**:
+  - Live HTML previews (`ClassicAts`, `ModernCompact`, `ExecutiveAccent`, `ModernPhoto`) and `@react-pdf/renderer` documents (`ClassicPdfDocument`, `ModernPdfDocument`, `ExecutiveAccentPdfDocument`, `ModernPhotoPdfDocument`) consume identical color and photo states.
+- **Backend & Frontend Architecture Separation**:
+  - **Backend Layer (Phase 12A)**: MySQL persistence via Prisma (`photoUrl String? @db.MediumText` for base64 up to 10MB, `accentColor String? @default("#0284c7") @db.VarChar(30)`), Zod validation schemas in `@careerprepster/shared`, atomic transaction handling in `CvService`, and smoke tests.
+  - **Frontend Layer (Phase 12B)**: Local draft store updates, HTML live preview templates, PDF export generators, photo upload with strict <= 10MB validation, and template gallery swatches.
 
 ---
 

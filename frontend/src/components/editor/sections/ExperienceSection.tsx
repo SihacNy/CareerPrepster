@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Briefcase, Plus, Trash2, ChevronDown, Pencil } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { CVItem, getSectionItems, getBulletTexts, createBulletPoints } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
 import { DateRangePicker } from "../DateRangePicker";
+import { buildValidationMap } from "@/lib/cvValidation";
+import {
+  FieldError,
+  fieldErrorInputClass,
+  useReopenErroredEntries,
+} from "@/components/editor/FieldError";
 
 interface ExperienceSectionProps {
   onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
@@ -23,10 +29,31 @@ const EXPERIENCE_SUGGESTIONS = [
 ];
 
 export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: ExperienceSectionProps) {
-  const { cvData, updateSectionItems } = useCV();
+  const { cvData, updateSectionItems, persistence } = useCV();
   const experience = getSectionItems(cvData, "EXPERIENCE");
+  const sectionIdx = cvData.sections.findIndex((s) => s.sectionType === "EXPERIENCE");
+  const validationMap = useMemo(
+    () => buildValidationMap(persistence.validationErrors ?? []),
+    [persistence.validationErrors]
+  );
   const [internalOpen, setInternalOpen] = useState(true);
   const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({});
+
+  const erroredIds = useMemo(
+    () =>
+      experience
+        .map((exp, index) => ({
+          id: exp.id,
+          hasError: !!(
+            validationMap[`sections.${sectionIdx}.items.${index}.title`] ||
+            validationMap[`sections.${sectionIdx}.items.${index}.subtitle`]
+          ),
+        }))
+        .filter((e) => e.hasError)
+        .map((e) => e.id),
+    [experience, sectionIdx, validationMap]
+  );
+  useReopenErroredEntries(erroredIds, persistence.validationRunId, setCollapsedEntries);
 
   const toggleEntryCollapse = (id: string) => {
     setCollapsedEntries((prev) => ({
@@ -65,6 +92,20 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
       }
       if (field === "role") {
         return { ...item, title: value };
+      }
+      if (field === "isCurrent") {
+        return {
+          ...item,
+          isCurrent: value,
+          endDate: value ? "Present" : (item.endDate?.toLowerCase() === "present" ? "" : item.endDate),
+        };
+      }
+      if (field === "endDate") {
+        return {
+          ...item,
+          endDate: value,
+          isCurrent: value?.toLowerCase() === "present" ? true : (item.endDate?.toLowerCase() === "present" ? false : item.isCurrent),
+        };
       }
       return { ...item, [field]: value };
     });
@@ -126,6 +167,8 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
         ) : (
           <div className="space-y-6">
           {experience.map((exp, index) => {
+            const companyError = validationMap[`sections.${sectionIdx}.items.${index}.subtitle`];
+            const roleError = validationMap[`sections.${sectionIdx}.items.${index}.title`];
             const isCollapsed = !!collapsedEntries[exp.id];
 
             return (
@@ -180,26 +223,34 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
                       <div>
                         <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                           Company / Organization <span className="text-red-500 font-semibold">*</span>
+                          <FieldError message={companyError} inline />
                         </label>
                         <input
                           type="text"
                           value={exp.subtitle || ""}
                           onChange={(e) => handleUpdateEntry(exp.id, "company", e.target.value)}
+                          data-validate={`sections.${sectionIdx}.items.${index}.subtitle`}
                           placeholder="e.g. Acme Tech Solutions"
-                          className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                          className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
+                            companyError ? fieldErrorInputClass : ""
+                          }`}
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                           Job Title / Role <span className="text-red-500 font-semibold">*</span>
+                          <FieldError message={roleError} inline />
                         </label>
                         <input
                           type="text"
                           value={exp.title || ""}
                           onChange={(e) => handleUpdateEntry(exp.id, "role", e.target.value)}
+                          data-validate={`sections.${sectionIdx}.items.${index}.title`}
                           placeholder="e.g. Junior Frontend Developer"
-                          className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                          className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
+                            roleError ? fieldErrorInputClass : ""
+                          }`}
                         />
                       </div>
 
@@ -218,7 +269,7 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
                         <DateRangePicker
                           startDate={exp.startDate || ""}
                           endDate={exp.endDate || ""}
-                          isCurrent={!!exp.isCurrent}
+                          isCurrent={!!exp.isCurrent || exp.endDate?.toLowerCase() === "present"}
                           onStartDateChange={(val) => handleUpdateEntry(exp.id, "startDate", val)}
                           onEndDateChange={(val) => handleUpdateEntry(exp.id, "endDate", val)}
                           onIsCurrentChange={(isCurrent) => handleUpdateEntry(exp.id, "isCurrent", isCurrent)}

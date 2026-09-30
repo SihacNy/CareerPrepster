@@ -35,7 +35,6 @@ const styles = StyleSheet.create({
   summary: {
     fontSize: 8.5,
     color: "#475569",
-    fontStyle: "italic",
     marginTop: 4,
     textAlign: "center",
   },
@@ -68,7 +67,6 @@ const styles = StyleSheet.create({
   entrySubHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    fontStyle: "italic",
     fontSize: 9,
     color: "#334155",
     marginBottom: 2,
@@ -283,8 +281,8 @@ export function ClassicPdfDocument({ data }: { data: CVData }) {
                 <View key={item.id} style={{ marginBottom: 4 }}>
                   <View style={styles.entryHeader}>
                     <Text style={styles.entryTitle}>{item.title}</Text>
-                    {item.location && (
-                      <Text style={styles.entryLocation}>{item.location}</Text>
+                    {(item.location || item.url) && (
+                      <Text style={styles.entryLocation}>{item.location || item.url}</Text>
                     )}
                   </View>
                   {item.subtitle && (

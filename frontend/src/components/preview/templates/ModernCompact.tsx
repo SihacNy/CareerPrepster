@@ -203,9 +203,9 @@ export function ModernCompact({ data }: TemplateProps) {
                 <div key={item.id}>
                   <div className="flex justify-between items-baseline font-bold text-slate-900">
                     <span>{item.title}</span>
-                    {item.location && (
+                    {(item.location || item.url) && (
                       <span className="text-[11.5px] font-normal text-slate-600">
-                        {item.location}
+                        {item.location || item.url}
                       </span>
                     )}
                   </div>

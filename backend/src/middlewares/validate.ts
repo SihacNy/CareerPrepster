@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { ZodTypeAny, ZodError } from 'zod';
 import { logger } from '../utils/logger.js';
 
 export const validate =
-  (schema: AnyZodObject, source: 'body' | 'query' | 'params' = 'body') =>
+  (schema: ZodTypeAny, source: 'body' | 'query' | 'params' = 'body') =>
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const parsed = await schema.parseAsync(req[source]);

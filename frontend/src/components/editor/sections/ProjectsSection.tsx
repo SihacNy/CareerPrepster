@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
-import { FolderGit2, Plus, Trash2, ChevronDown, Pencil } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { FolderGit2, Plus, Trash2, ChevronDown, Pencil, X } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { CVItem, getSectionItems, getBulletTexts, createBulletPoints } from "@/types/cv";
 import { RichBulletEditor } from "../RichBulletEditor";
 import { DateRangePicker } from "../DateRangePicker";
+import { buildValidationMap } from "@/lib/cvValidation";
+import {
+  FieldError,
+  fieldErrorInputClass,
+  useReopenErroredEntries,
+} from "@/components/editor/FieldError";
 
 interface ProjectsSectionProps {
   onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
@@ -22,11 +28,126 @@ const PROJECT_SUGGESTIONS = [
   "Designed responsive interactive analytics dashboards utilizing Next.js, Tailwind CSS, and Recharts.",
 ];
 
+interface TechStackInputProps {
+  technologies: string[];
+  onChange: (techs: string[]) => void;
+}
+
+function TechStackInput({ technologies, onChange }: TechStackInputProps) {
+  const [inputValue, setInputValue] = useState("");
+
+  const addTechsFromText = (text: string) => {
+    const tokens = text
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (tokens.length === 0) return;
+
+    const currentTechs = [...technologies];
+    for (const token of tokens) {
+      if (!currentTechs.includes(token)) {
+        currentTechs.push(token);
+      }
+    }
+    onChange(currentTechs);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      if (inputValue.trim()) {
+        addTechsFromText(inputValue);
+        setInputValue("");
+      }
+    } else if (e.key === "Backspace" && inputValue === "" && technologies.length > 0) {
+      onChange(technologies.slice(0, -1));
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val.includes(",")) {
+      addTechsFromText(val);
+      setInputValue("");
+    } else {
+      setInputValue(val);
+    }
+  };
+
+  const handleBlur = () => {
+    if (inputValue.trim()) {
+      addTechsFromText(inputValue);
+      setInputValue("");
+    }
+  };
+
+  const handleRemoveTech = (index: number) => {
+    onChange(technologies.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 min-h-[44px] p-1.5 px-2 bg-white border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 shadow-2xs transition-all">
+      <input
+        type="text"
+        value={inputValue}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+        placeholder={
+          technologies.length === 0
+            ? "e.g. React, Node.js, TypeScript, Docker"
+            : "Add tech..."
+        }
+        className={`${
+          technologies.length === 0
+            ? "flex-1 min-w-[200px]"
+            : "shrink-0 min-w-[100px] w-28 focus:w-52 transition-all"
+        } text-sm text-slate-800 bg-transparent px-2 py-1 outline-none placeholder:text-slate-400`}
+      />
+      {technologies.map((tech, idx) => (
+        <span
+          key={`${tech}-${idx}`}
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 text-xs font-medium border border-sky-100 hover:bg-sky-100 transition-colors group"
+        >
+          <span>{tech}</span>
+          <button
+            type="button"
+            onClick={() => handleRemoveTech(idx)}
+            className="text-sky-400 hover:text-rose-600 rounded p-0.5 transition-colors focus:outline-none cursor-pointer"
+            title={`Remove ${tech}`}
+            aria-label={`Remove ${tech}`}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSectionProps) {
-  const { cvData, updateSectionItems } = useCV();
+  const { cvData, updateSectionItems, persistence } = useCV();
   const projects = getSectionItems(cvData, "PROJECTS");
+  const sectionIdx = cvData.sections.findIndex((s) => s.sectionType === "PROJECTS");
+  const validationMap = useMemo(
+    () => buildValidationMap(persistence.validationErrors ?? []),
+    [persistence.validationErrors]
+  );
   const [internalOpen, setInternalOpen] = useState(true);
   const [collapsedEntries, setCollapsedEntries] = useState<Record<string, boolean>>({});
+
+  const erroredIds = useMemo(
+    () =>
+      projects
+        .map((proj, index) => ({
+          id: proj.id,
+          hasError: !!validationMap[`sections.${sectionIdx}.items.${index}.title`],
+        }))
+        .filter((e) => e.hasError)
+        .map((e) => e.id),
+    [projects, sectionIdx, validationMap]
+  );
+  useReopenErroredEntries(erroredIds, persistence.validationRunId, setCollapsedEntries);
 
   const toggleEntryCollapse = (id: string) => {
     setCollapsedEntries((prev) => ({
@@ -73,6 +194,20 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
       if (field === "bulletPoints") {
         const bps = typeof value[0] === "string" ? createBulletPoints(value) : value;
         return { ...item, bulletPoints: bps };
+      }
+      if (field === "isCurrent") {
+        return {
+          ...item,
+          isCurrent: value,
+          endDate: value ? "Present" : (item.endDate?.toLowerCase() === "present" ? "" : item.endDate),
+        };
+      }
+      if (field === "endDate") {
+        return {
+          ...item,
+          endDate: value,
+          isCurrent: value?.toLowerCase() === "present" ? true : (item.endDate?.toLowerCase() === "present" ? false : item.isCurrent),
+        };
       }
       return { ...item, [field]: value };
     });
@@ -137,6 +272,7 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
         ) : (
           <div className="space-y-6">
           {projects.map((proj, index) => {
+            const projectNameError = validationMap[`sections.${sectionIdx}.items.${index}.title`];
             const isCollapsed = !!collapsedEntries[proj.id];
 
             return (
@@ -191,32 +327,33 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
                       <div>
                         <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                           Project Name <span className="text-red-500 font-semibold">*</span>
+                          <FieldError message={projectNameError} inline />
                         </label>
                         <input
                           type="text"
                           value={proj.title || (proj as any).name || ""}
                           onChange={(e) => handleUpdateEntry(proj.id, "name", e.target.value)}
+                          data-validate={`sections.${sectionIdx}.items.${index}.title`}
                           placeholder="e.g. Distributed Task Queue / E-Commerce App"
-                          className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                          className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors ${
+                            projectNameError ? fieldErrorInputClass : ""
+                          }`}
                         />
                       </div>
 
                       <div>
                         <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
-                          Technologies Used (comma separated)
+                          Technologies Used
                         </label>
-                        <input
-                          type="text"
-                          value={proj.techStack ? proj.techStack.join(", ") : (proj.subtitle || "")}
-                          onChange={(e) =>
-                            handleUpdateEntry(
-                              proj.id,
-                              "techStack",
-                              e.target.value.split(",").map((s) => s.trim()).filter(Boolean)
-                            )
+                        <TechStackInput
+                          technologies={
+                            proj.techStack && proj.techStack.length > 0
+                              ? proj.techStack
+                              : proj.subtitle
+                              ? proj.subtitle.split(",").map((s) => s.trim()).filter(Boolean)
+                              : []
                           }
-                          placeholder="e.g. React, Node.js, TypeScript, Docker"
-                          className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-2xs transition-colors"
+                          onChange={(techs) => handleUpdateEntry(proj.id, "techStack", techs)}
                         />
                       </div>
 
@@ -235,13 +372,10 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
                         <DateRangePicker
                           startDate={proj.startDate || ""}
                           endDate={proj.endDate || ""}
-                          isCurrent={proj.isCurrent || proj.endDate?.toLowerCase() === "present"}
+                          isCurrent={!!proj.isCurrent || proj.endDate?.toLowerCase() === "present"}
                           onStartDateChange={(val) => handleUpdateEntry(proj.id, "startDate", val)}
                           onEndDateChange={(val) => handleUpdateEntry(proj.id, "endDate", val)}
-                          onIsCurrentChange={(isCurrent) => {
-                            handleUpdateEntry(proj.id, "isCurrent", isCurrent);
-                            handleUpdateEntry(proj.id, "endDate", isCurrent ? "Present" : "");
-                          }}
+                          onIsCurrentChange={(isCurrent) => handleUpdateEntry(proj.id, "isCurrent", isCurrent)}
                           currentLabel="Ongoing project"
                         />
                       </div>

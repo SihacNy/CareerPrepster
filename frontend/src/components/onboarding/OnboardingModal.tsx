@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PlusCircle, UploadCloud, X, ArrowRight, CheckCircle2 } from "lucide-react";
+import { PlusCircle, UploadCloud, X, ArrowRight } from "lucide-react";
 import { UploadDropzone } from "./UploadDropzone";
 import { useCV } from "@/lib/store";
 import { BLANK_CV } from "@/types/cv";
@@ -31,7 +31,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
       updatedAt: new Date().toISOString(),
     });
     onClose();
-    router.push("/editor");
+    router.push("/editor/templates");
   };
 
   const handleFileSelected = async (file: File) => {
@@ -56,8 +56,8 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <div className="relative w-full max-w-xl bg-white rounded-2xl border border-slate-200 shadow-card p-6 sm:p-8 animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full p-6 border border-slate-200 relative">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
@@ -77,6 +77,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
               </p>
             </div>
 
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Option 1: Scratch */}
               <div
@@ -91,11 +92,11 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
                     Create from Scratch
                   </h3>
                   <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    Start with a clean Harvard or Jake&apos;s tech template. Pick from pre-curated bullet points.
+                    Choose from certified Harvard or Jake&apos;s tech templates, then build with pre-curated bullet points.
                   </p>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center text-xs font-semibold text-sky-600 group-hover:translate-x-0.5 transition-transform">
-                  <span>Start Editing</span>
+                  <span>Choose Template</span>
                   <ArrowRight className="w-3.5 h-3.5 ml-1" />
                 </div>
               </div>

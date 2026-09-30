@@ -127,7 +127,7 @@ function JumpSectionDropdown({
 }
 
 export function CVForm() {
-  const { cvData, clearAll, addCustomSection } = useCV();
+  const { cvData, clearAll, addCustomSection, persistence } = useCV();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const customSections = (cvData.sections || []).filter((s) => s.sectionType === "CUSTOM");
 
@@ -223,6 +223,68 @@ export function CVForm() {
   };
 
   const allOpen = Object.values(openSections).every(Boolean);
+
+  // When a save/continue is blocked by validation, expand the section that
+  // contains the first invalid field, scroll it into view, and focus that
+  // specific input (never the section's first input) so an already-filled
+  // field is not re-selected on the next attempt.
+  useEffect(() => {
+    const errors = persistence.validationErrors;
+    if (!errors || errors.length === 0) return;
+
+    const firstField = errors[0].field;
+    let sectionKey: keyof typeof openSections | null = null;
+    let customSectionId: string | null = null;
+
+    if (firstField.startsWith("personalInfo.")) {
+      sectionKey = "personal";
+    } else if (firstField.startsWith("skillGroups.")) {
+      sectionKey = "skills";
+    } else if (firstField.startsWith("sections.")) {
+      const idx = Number(firstField.split(".")[1]);
+      const sec = cvData.sections?.[idx];
+      if (sec?.sectionType === "EDUCATION") sectionKey = "education";
+      else if (sec?.sectionType === "EXPERIENCE") sectionKey = "experience";
+      else if (sec?.sectionType === "PROJECTS") sectionKey = "projects";
+      else if (sec?.sectionType === "SKILLS" || !sec) sectionKey = "skills";
+      else customSectionId = sec.id;
+    }
+
+    const focusTarget = (containerId: string | null) => {
+      // Prefer the exact invalid field so a fixed field is never re-focused.
+      const exact = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+        `[data-validate="${CSS.escape(firstField)}"]`
+      );
+      if (exact) {
+        exact.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (document.activeElement !== exact) {
+          exact.focus({ preventScroll: true });
+        }
+        return;
+      }
+      // Fallback: first input of the containing section.
+      if (!containerId) return;
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.querySelector<HTMLInputElement | HTMLTextAreaElement>("input, textarea")?.focus({
+        preventScroll: true,
+      });
+    };
+
+    if (customSectionId) {
+      setCustomOpen((prev) => ({ ...prev, [customSectionId]: true }));
+      setTimeout(() => focusTarget(`section-${customSectionId}`), 80);
+      return;
+    }
+
+    if (!sectionKey) return;
+    if (!openSections[sectionKey]) {
+      toggleSection(sectionKey);
+    }
+    setTimeout(() => focusTarget(`section-${sectionKey}`), 80);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [persistence.validationErrors]);
 
   return (
     <div className="w-full pb-16">

@@ -1,17 +1,26 @@
-FROM node:22-alpine AS base
+FROM node:22-slim AS base
 
-# Install OpenSSL and libc compatibility for Alpine Linux
-RUN apk add --no-cache openssl libc6-compat
+# OpenSSL is pre-installed on Debian slim; install openssl CLI for Prisma detection
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Copy package manifests for workspace installation
 COPY package*.json ./
-COPY prisma ./prisma/
+COPY shared/package*.json ./shared/
+COPY backend/package*.json ./backend/
+COPY backend/prisma ./backend/prisma/
 
-RUN npm install
+RUN npm install --workspace=@careerprepster/shared --workspace=careerprepster-backend
 
-COPY . .
+# Copy and build shared library
+COPY shared ./shared/
+RUN npm run build --workspace=@careerprepster/shared
 
+# Copy backend source code
+COPY backend ./backend/
+
+WORKDIR /app/backend
 RUN npx prisma generate
 
 EXPOSE 5000

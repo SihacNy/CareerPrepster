@@ -1,38 +1,70 @@
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import { prisma } from '../config/prisma.js';
 import { env } from '../config/env.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { logger } from '../utils/logger.js';
 
-export class AuthService {
-  static async googleAuth(accessToken: string) {
-    logger.debug('AuthService', 'Google OAuth login attempt via userinfo endpoint');
+const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
-    // Verify access token by calling Google's userinfo API (works with implicit flow access tokens)
-    let googleProfile: { sub: string; email?: string; name?: string; picture?: string };
+export class AuthService {
+  static async googleAuth(idToken: string) {
+    logger.debug('AuthService', 'Google OAuth login attempt received');
+
+    let googleId = '';
+    let email = '';
+    let name = '';
+    let avatarUrl: string | null = null;
+
     try {
-      const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      // Case 1: Google ID token JWT (from a "Sign in with Google" credential or
+      // one-tap flow). Verified against Google's certs via google-auth-library.
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: env.GOOGLE_CLIENT_ID || undefined,
       });
-      if (!infoRes.ok) {
-        const errText = await infoRes.text();
-        throw new Error(`userinfo status ${infoRes.status}: ${errText}`);
+      const payload = ticket.getPayload();
+      if (payload) {
+        googleId = payload.sub || '';
+        email = (payload.email || '').toLowerCase();
+        name = payload.name || email.split('@')[0] || '';
+        avatarUrl = payload.picture || null;
       }
-      googleProfile = await infoRes.json() as { sub: string; email?: string; name?: string; picture?: string };
-    } catch (error: any) {
-      logger.error('AuthService', 'Google userinfo fetch failed', error);
-      throw new AppError(`Google authentication failed: ${error.message || 'Invalid access token'}`, 401, 'INVALID_GOOGLE_TOKEN');
+    } catch (jwtError: any) {
+      // Case 2: OAuth access token from the implicit popup flow (useGoogleLogin).
+      // Verify it against Google's tokeninfo endpoint, then pull the profile from
+      // the userinfo endpoint.
+      try {
+        logger.debug('AuthService', 'ID token verification failed, attempting access-token verification');
+        const tokenInfo = await googleClient.getTokenInfo(idToken);
+        email = (tokenInfo.email || '').toLowerCase();
+        googleId = tokenInfo.sub || tokenInfo.email || '';
+        name = email.split('@')[0] || '';
+
+        const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        if (resp.ok) {
+          const profile: any = await resp.json();
+          if (profile.email) email = profile.email.toLowerCase();
+          if (profile.sub) googleId = profile.sub;
+          name = profile.name || name;
+          avatarUrl = profile.picture || null;
+        }
+      } catch (tokenError: any) {
+        logger.error('AuthService', 'Google token verification failed', tokenError);
+        throw new AppError(
+          `Google authentication failed: ${jwtError?.message || tokenError?.message || 'Invalid token'}`,
+          401,
+          'INVALID_GOOGLE_TOKEN'
+        );
+      }
     }
 
-    if (!googleProfile.email) {
-      logger.warn('AuthService', 'Google userinfo returned no email');
+    if (!email) {
+      logger.warn('AuthService', 'Google token verified but email is missing');
       throw new AppError('Google account does not contain a verified email address', 400, 'INVALID_PAYLOAD');
     }
-
-    const googleId = googleProfile.sub;
-    const email = googleProfile.email.toLowerCase().trim();
-    const name = googleProfile.name || email.split('@')[0];
-    const avatarUrl = googleProfile.picture || null;
 
     // Check if user already exists by googleId or email
     let user = await prisma.user.findFirst({

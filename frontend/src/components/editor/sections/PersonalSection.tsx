@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { User, Mail, Phone, MapPin, Linkedin, Github, ChevronDown } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { User, Mail, Phone, MapPin, Linkedin, Github, ChevronDown, Trash2, Upload } from "lucide-react";
 import { useCV } from "@/lib/store";
+import { buildValidationMap } from "@/lib/cvValidation";
+import { FieldError, fieldErrorInputClass } from "@/components/editor/FieldError";
+import { getTemplateById } from "@/types/templates";
 
 export function PersonalSection({
   isOpen,
@@ -11,9 +14,24 @@ export function PersonalSection({
   isOpen?: boolean;
   onToggle?: () => void;
 } = {}) {
-  const { cvData, updatePersonalInfo } = useCV();
+  const { cvData, updatePersonalInfo, persistence } = useCV();
   const { personalInfo } = cvData;
   const [internalOpen, setInternalOpen] = useState(true);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoFileName, setPhotoFileName] = useState<string>("");
+
+  const templateDef = getTemplateById(cvData.templateId);
+  const supportsPhoto = templateDef.supportsPhoto;
+
+  const validationMap = useMemo(
+    () => buildValidationMap(persistence.validationErrors ?? []),
+    [persistence.validationErrors]
+  );
+  const fullNameError = validationMap["personalInfo.fullName"];
+  const emailError = validationMap["personalInfo.email"];
+  const linkedinError = validationMap["personalInfo.linkedinUrl"];
+  const githubError = validationMap["personalInfo.githubUrl"];
+  const photoFieldError = validationMap["personalInfo.photoUrl"];
 
   const isSectionOpen = isOpen !== undefined ? isOpen : internalOpen;
   const toggleSection = onToggle || (() => setInternalOpen(!internalOpen));
@@ -45,18 +63,166 @@ export function PersonalSection({
 
       {isSectionOpen && (
         <>
+          {/* Profile Photo Uploader (Only visible on templates that support photo) */}
+          {supportsPhoto && (
+            <div className="mb-5 pb-5 border-b border-slate-100">
+              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
+                Profile Photo <span className="text-red-500 font-semibold">*</span>
+                <FieldError message={photoFieldError} inline />
+              </label>
+
+              {/* Profile Card with Big Photo and Controls */}
+              <div
+                className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50/70 border rounded-2xl p-4 shadow-2xs transition-colors ${
+                  photoFieldError ? "border-rose-300 ring-1 ring-rose-200" : "border-slate-200"
+                }`}
+              >
+                {/* Big Profile Avatar with Dashed Stroke */}
+                <label
+                  htmlFor="photo-upload-input"
+                  className={`w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-2 border-dashed overflow-hidden bg-white flex items-center justify-center flex-shrink-0 shadow-xs cursor-pointer hover:border-sky-500 hover:bg-sky-50/20 transition-all ${
+                    photoFieldError ? "border-rose-300" : "border-slate-300"
+                  }`}
+                  title="Click to choose profile photo"
+                >
+                  {personalInfo.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={personalInfo.photoUrl}
+                      alt="Profile Avatar"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className={`w-12 h-12 ${photoFieldError ? "text-rose-300" : "text-slate-300"}`} />
+                  )}
+                </label>
+
+                {/* Controls & Details */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    <label
+                      htmlFor="photo-upload-input"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all cursor-pointer active:scale-[0.98]"
+                    >
+                      <Upload className="w-4 h-4" />
+                      <span>Choose File</span>
+                    </label>
+
+                    {personalInfo.photoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updatePersonalInfo("photoUrl" as any, "");
+                          setPhotoFileName("");
+                        }}
+                        className="text-slate-400 hover:text-rose-600 p-2 rounded-xl hover:bg-rose-50 transition-colors"
+                        title="Remove photo"
+                        aria-label="Remove photo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    <span className="text-xs sm:text-sm text-slate-600 font-medium truncate max-w-xs">
+                      {photoFileName || (personalInfo.photoUrl ? "Photo uploaded" : "No file chosen")}
+                    </span>
+
+                    <input
+                      type="file"
+                      id="photo-upload-input"
+                      accept="image/png, image/jpeg, image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        const MAX_SIZE = 10 * 1024 * 1024; // 10MB limit
+                        const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+                        if (!ALLOWED_TYPES.includes(file.type)) {
+                          setPhotoError("Only PNG, JPEG, and WebP images are supported.");
+                          e.target.value = "";
+                          return;
+                        }
+
+                        if (file.size > MAX_SIZE) {
+                          setPhotoError("Image exceeds the 10MB limit. Please upload a smaller image.");
+                          e.target.value = "";
+                          return;
+                        }
+
+                        setPhotoError(null);
+                        setPhotoFileName(file.name);
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          if (typeof reader.result === "string") {
+                            const rawDataUrl = reader.result;
+                            const img = new Image();
+                            img.onload = () => {
+                              try {
+                                const canvas = document.createElement("canvas");
+                                const targetDim = 500;
+                                canvas.width = targetDim;
+                                canvas.height = targetDim;
+                                const ctx = canvas.getContext("2d");
+                                if (ctx) {
+                                  const rawWidth = img.naturalWidth || img.width || targetDim;
+                                  const rawHeight = img.naturalHeight || img.height || targetDim;
+                                  const squareSize = Math.min(rawWidth, rawHeight);
+                                  const sx = (rawWidth - squareSize) / 2;
+                                  const sy = (rawHeight - squareSize) / 2;
+
+                                  ctx.drawImage(img, sx, sy, squareSize, squareSize, 0, 0, targetDim, targetDim);
+                                  const jpegUrl = canvas.toDataURL("image/jpeg", 0.95);
+                                  updatePersonalInfo("photoUrl" as any, jpegUrl);
+                                  return;
+                                }
+                              } catch (err) {
+                                console.warn("Canvas conversion fallback:", err);
+                              }
+                              updatePersonalInfo("photoUrl" as any, rawDataUrl);
+                            };
+                            img.onerror = () => {
+                              updatePersonalInfo("photoUrl" as any, rawDataUrl);
+                            };
+                            img.src = rawDataUrl;
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                      className="hidden"
+                    />
+                  </div>
+
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Required for photo-enabled templates ({templateDef.name}). Max file size: 10MB (PNG, JPEG, WebP).
+                  </p>
+
+                  {photoError && (
+                    <p className="mt-2 text-xs text-rose-600 font-medium">
+                      {photoError}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Full Name */}
             <div>
               <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                 Full Name <span className="text-red-500 font-semibold">*</span>
+                <FieldError message={fullNameError} inline />
               </label>
               <input
                 type="text"
                 value={personalInfo.fullName}
                 onChange={(e) => updatePersonalInfo("fullName", e.target.value)}
+                data-validate="personalInfo.fullName"
                 placeholder="e.g. Alex Rivera"
-                className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors"
+                className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors ${
+                  fullNameError ? fieldErrorInputClass : ""
+                }`}
               />
             </div>
 
@@ -64,13 +230,17 @@ export function PersonalSection({
             <div>
               <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
                 Email Address <span className="text-red-500 font-semibold">*</span>
+                <FieldError message={emailError} inline />
               </label>
               <input
                 type="email"
                 value={personalInfo.email}
                 onChange={(e) => updatePersonalInfo("email", e.target.value)}
+                data-validate="personalInfo.email"
                 placeholder="alex.rivera@university.edu"
-                className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors"
+                className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors ${
+                  emailError ? fieldErrorInputClass : ""
+                }`}
               />
             </div>
 
@@ -100,25 +270,37 @@ export function PersonalSection({
 
             {/* LinkedIn */}
             <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">LinkedIn Profile</label>
+              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
+                LinkedIn Profile
+                <FieldError message={linkedinError} inline />
+              </label>
               <input
                 type="text"
                 value={personalInfo.linkedinUrl}
                 onChange={(e) => updatePersonalInfo("linkedinUrl", e.target.value)}
+                data-validate="personalInfo.linkedinUrl"
                 placeholder="linkedin.com/in/username"
-                className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors"
+                className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors ${
+                  linkedinError ? fieldErrorInputClass : ""
+                }`}
               />
             </div>
 
             {/* GitHub */}
             <div>
-              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">GitHub / Portfolio</label>
+              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
+                GitHub / Portfolio
+                <FieldError message={githubError} inline />
+              </label>
               <input
                 type="text"
                 value={personalInfo.githubUrl}
                 onChange={(e) => updatePersonalInfo("githubUrl", e.target.value)}
+                data-validate="personalInfo.githubUrl"
                 placeholder="github.com/username"
-                className="w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors"
+                className={`w-full text-sm text-slate-900 bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none shadow-2xs transition-colors ${
+                  githubError ? fieldErrorInputClass : ""
+                }`}
               />
             </div>
           </div>

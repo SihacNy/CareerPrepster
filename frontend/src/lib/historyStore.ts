@@ -1,8 +1,18 @@
 "use client";
 
-import { CVData, CVHistoryItem, CVHistoryStatus, normalizeCVData, BLANK_CV } from "@/types/cv";
+import { CVData, CVHistoryItem, CVHistoryStatus, normalizeCVData, TemplateId } from "@/types/cv";
+import { cvApi, CVListItem } from "@/lib/api";
+import { HISTORY_STORAGE_KEY } from "@/lib/storageKeys";
+export { HISTORY_STORAGE_KEY };
 
-export const HISTORY_STORAGE_KEY = "careerprepster_cv_history_v1";
+// Purge any legacy localStorage history item on client start
+if (typeof window !== "undefined") {
+  try {
+    localStorage.removeItem(HISTORY_STORAGE_KEY);
+  } catch {
+    // Ignore storage access errors
+  }
+}
 
 // Helper to calculate total words in a CV
 export function countCVWords(cv: CVData): number {
@@ -59,126 +69,98 @@ export function countCVWords(cv: CVData): number {
     .filter(Boolean).length;
 }
 
+/**
+ * Local storage no longer stores CV history.
+ * CV history is strictly loaded and persisted in MySQL via cvApi.
+ */
 export function getHistory(): CVHistoryItem[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return parsed;
-    }
-    return [];
-  } catch (err) {
-    console.error("Failed to read CV history from localStorage:", err);
-    return [];
-  }
+  return [];
 }
 
-export function saveToHistory(
-  cv: CVData,
-  status: CVHistoryStatus = "draft",
-  atsScore?: number
-): CVHistoryItem {
-  const history = getHistory();
-  const now = new Date().toISOString();
-  const wordCount = countCVWords(cv);
-
-  // Check if an entry with this cvId already exists
-  const existingIndex = history.findIndex((item) => item.cvId === cv.id);
-
-  let updatedItem: CVHistoryItem;
-
-  if (existingIndex >= 0) {
-    const existing = history[existingIndex];
-    updatedItem = {
-      ...existing,
-      title: cv.title || cv.targetRole || "Untitled Resume",
-      targetRole: cv.targetRole || "General Candidate",
-      fullName: cv.personalInfo.fullName || "Unnamed Candidate",
-      templateId: cv.templateId,
-      atsScore: atsScore !== undefined ? atsScore : existing.atsScore,
-      wordCount,
-      status,
-      updatedAt: now,
-      snapshot: { ...cv },
-    };
-    history[existingIndex] = updatedItem;
-  } else {
-    updatedItem = {
-      id: `hist-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+/**
+ * Fetch all CVs for the authenticated user directly from MySQL.
+ */
+export async function getCloudHistory(): Promise<CVHistoryItem[]> {
+  try {
+    const list = await cvApi.list();
+    return list.map((cv: CVListItem) => ({
+      id: cv.id,
       cvId: cv.id,
-      title: cv.title || cv.targetRole || "Untitled Resume",
-      targetRole: cv.targetRole || "General Candidate",
-      fullName: cv.personalInfo.fullName || "Unnamed Candidate",
-      templateId: cv.templateId,
-      atsScore,
-      wordCount,
-      status,
-      createdAt: now,
-      updatedAt: now,
-      snapshot: { ...cv },
+      title: cv.title || "Untitled Resume",
+      targetRole:
+        typeof cv.targetRole === "string" && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cv.targetRole)
+          ? cv.targetRole
+          : typeof cv.targetRole === "object" && cv.targetRole !== null
+          ? (cv.targetRole as any).title || "General Candidate"
+          : "General Candidate",
+      fullName: cv.fullName || "Candidate",
+      templateId: (cv.templateId as TemplateId) || "classic",
+      wordCount: 0,
+      status: "draft",
+      createdAt: cv.createdAt,
+      updatedAt: cv.updatedAt,
+      snapshot: undefined,
+    }));
+  } catch (err) {
+    console.error("Failed to read CV history from MySQL:", err);
+    return [];
+  }
+}
+
+export async function getUnifiedHistory(cloudAuth: boolean): Promise<CVHistoryItem[]> {
+  if (cloudAuth) {
+    return getCloudHistory();
+  }
+  return [];
+}
+
+/**
+ * Delete a CV from MySQL.
+ */
+export async function deleteFromHistory(id: string): Promise<CVHistoryItem[]> {
+  try {
+    await cvApi.delete(id);
+  } catch (err) {
+    console.error("Failed to delete CV from MySQL:", err);
+  }
+  return getCloudHistory();
+}
+
+/**
+ * Duplicate a CV in MySQL.
+ */
+export async function duplicateHistoryItem(id: string): Promise<CVHistoryItem | null> {
+  try {
+    const existing = await cvApi.getById(id);
+    if (!existing) return null;
+    const cloned: CVData = normalizeCVData({
+      ...existing,
+      id: undefined,
+      title: `${existing.title || "Untitled Resume"} (Copy)`,
+      updatedAt: new Date().toISOString(),
+    });
+    const created = await cvApi.create(cloned);
+    return {
+      id: created.id,
+      cvId: created.id,
+      title: created.title,
+      targetRole:
+        typeof created.targetRole === "string" && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(created.targetRole)
+          ? created.targetRole
+          : typeof created.targetRole === "object" && created.targetRole !== null
+          ? (created.targetRole as any).title || "General Candidate"
+          : "General Candidate",
+      fullName: created.fullName || "Candidate",
+      templateId: (created.templateId as TemplateId) || "classic",
+      atsScore: created.atsScore,
+      wordCount: 0,
+      status: "draft",
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+      snapshot: undefined,
     };
-    history.unshift(updatedItem);
-  }
-
-  try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
   } catch (err) {
-    console.error("Failed to save CV history item to localStorage:", err);
+    console.error("Failed to duplicate CV in MySQL:", err);
+    return null;
   }
-
-  return updatedItem;
-}
-
-export function deleteFromHistory(id: string): CVHistoryItem[] {
-  const history = getHistory();
-  const filtered = history.filter((item) => item.id !== id);
-  try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(filtered));
-  } catch (err) {
-    console.error("Failed to delete CV history item from localStorage:", err);
-  }
-  return filtered;
-}
-
-export function duplicateHistoryItem(id: string): CVHistoryItem | null {
-  const history = getHistory();
-  const item = history.find((i) => i.id === id);
-  if (!item) return null;
-
-  const newCvId = `cv-copy-${Date.now()}`;
-  const now = new Date().toISOString();
-
-  const clonedSnapshot: CVData = normalizeCVData({
-    ...(item.snapshot || BLANK_CV),
-    id: newCvId,
-    title: `${item.title} (Copy)`,
-    templateId: item.templateId || item.snapshot?.templateId || "classic",
-    updatedAt: now,
-  });
-
-  const newItem: CVHistoryItem = {
-    id: `hist-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    cvId: newCvId,
-    title: `${item.title} (Copy)`,
-    targetRole: item.targetRole,
-    fullName: item.fullName,
-    templateId: item.templateId,
-    atsScore: item.atsScore,
-    wordCount: item.wordCount,
-    status: "draft",
-    createdAt: now,
-    updatedAt: now,
-    snapshot: clonedSnapshot,
-  };
-
-  const updatedHistory = [newItem, ...history];
-  try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory));
-  } catch (err) {
-    console.error("Failed to save duplicated history item to localStorage:", err);
-  }
-
-  return newItem;
 }

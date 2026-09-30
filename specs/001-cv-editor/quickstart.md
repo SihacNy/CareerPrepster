@@ -68,8 +68,28 @@ docker compose exec backend npx prisma db seed
 3. **Expected Outcome**: Within 3 seconds, 2–3 personalized XYZ variations appear.
 4. Click **"Accept"** to replace the draft text.
 
-### Scenario 5: Check ATS Score & Export PDF
-1. Click **"Check ATS Score"** in the top bar.
-2. **Expected Outcome**: 4-pillar score breakdown (Parsability, Impact, Skills, Brevity) appears with actionable green/yellow/red findings.
-3. Click **"Save CV"** → Confirmed saved to MySQL.
-4. Click **"Export PDF"** → A clean, selectable vector PDF downloads matching the chosen template.
+### Scenario 5: Template Selection in Author CV (Stage 1)
+1. In Stage 1 (`/editor`), view the dedicated **Template Selection** section/studio at the top of the workspace.
+2. Review the template cards for **Harvard Classic ATS** and **Jake's Tech (Modern Compact)** with typography, density, and recommended industries.
+3. Switch active template:
+   - Click **"Harvard Classic ATS"** or **"Jake's Tech"**.
+   - **Expected Outcome**: The live preview updates immediately to the chosen layout, preserving all entered data without page navigation.
+
+### Scenario 6: Check ATS Score & Export PDF
+1. Click **"Continue to ATS Review →"** to advance to Stage 2 (`/editor/ats`).
+2. View the 4-pillar score breakdown (Parsability, Impact, Skills, Brevity) with actionable green/yellow/red findings.
+3. Click **"Continue to Export"** to advance to Stage 3 (`/editor/export`).
+4. Click **"Download Deliverable"** → A clean, selectable vector PDF downloads matching the chosen template.
+
+### Scenario 7: Multi-Archetype Templates, Color Swatches & Photo Support
+1. Navigate to the Template Gallery at `/editor/templates`.
+2. Use category tabs to filter between **All Styles**, **Minimalist ATS**, **Color Accent**, and **Photo / Visual**.
+3. Select **Executive Accent** (`color-accent`):
+   - Choose a color from the 6 palette swatches (e.g. `Executive Navy` `#1e3a8a` or `Tech Sky` `#0284c7`).
+   - Observe header accent and section dividers update with the chosen color.
+4. Select **Modern Photo** (`visual-photo`):
+   - Provide a photo URL or upload an avatar in Personal Information.
+   - Observe the photo appear in the header next to contact info.
+5. Navigate to `/editor/export` and click **"Download Deliverable"**:
+   - Verify that the downloaded vector PDF honors the selected accent color, typography, and profile headshot with zero content loss.
+

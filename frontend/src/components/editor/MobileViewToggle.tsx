@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { PenLine, Eye } from "lucide-react";
+import Link from "next/link";
+import { PenLine, Eye, ArrowLeft } from "lucide-react";
 import { useCV } from "@/lib/store";
 
 export function MobileViewToggle() {
@@ -10,8 +11,15 @@ export function MobileViewToggle() {
   return (
     <>
       {/* Top Segmented Control (Visible only on mobile/tablet < 1024px) */}
-      <div className="lg:hidden w-full bg-white border-b border-slate-200 px-3 py-1.5 sticky top-14 sm:top-16 z-30 flex items-center justify-center">
-        <div className="flex w-full max-w-sm bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+      <div className="lg:hidden w-full bg-white border-b border-slate-200 px-3 py-1.5 sticky top-14 sm:top-16 z-30 flex items-center justify-between gap-2">
+        <Link
+          href="/editor/templates"
+          className="p-1.5 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors"
+          title="Back to Template Selection"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+        <div className="flex flex-1 max-w-sm bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
           <button
             type="button"
             onClick={() => setMobileView("form")}

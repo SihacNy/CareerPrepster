@@ -24,8 +24,8 @@ services:
   # -------------------------------------------------------------
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: careerprepster-backend
     restart: always
     ports:
@@ -40,20 +40,24 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-AQ.Ab8RN6Iy6mRLxxlTkbT5gabr-sg3jw8n_X4WWcCNeGmfVJIcLQ}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: 500
     depends_on:
       mysql:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ./shared:/app/shared
+      - ./backend:/app/backend
       - /app/node_modules
+      - /app/backend/node_modules
 
   # -------------------------------------------------------------
   # Next.js Frontend Web Application Service
   # -------------------------------------------------------------
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     container_name: careerprepster-frontend
     restart: always
     ports:
@@ -62,12 +66,16 @@ services:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://localhost:5000/api
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
     depends_on:
       - backend
     volumes:
-      - ./frontend:/app
+      - ./shared:/app/shared
+      - ./frontend:/app/frontend
       - /app/node_modules
-      - /app/.next
+      - /app/frontend/node_modules
+      - /app/frontend/.next
 
 volumes:
   mysql_data:

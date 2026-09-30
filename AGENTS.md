@@ -1,31 +1,34 @@
 # AGENTS.md
 
-Full-stack AI CV editor (Next.js 14 App Router + Tailwind frontend, Express + Prisma/MySQL backend, Gemini for AI rewrites). Spec-driven workflow via Git Spec Kit. Active branch `module/cv-editor` is a WIP integration replacing frontend mocks with live backend calls.
-
-## Layout
-
-- `backend/` — Express TS/ESM API (port 5000). Entry `src/index.ts`. Architecture: routes → controllers → services; Zod validation; `src/schemas/*`.
-- `frontend/` — Next.js 14 App Router app (port 3000). Pages under `src/app`; shared state `src/lib/store.tsx`, API client `src/lib/api.ts`.
-- `docker-compose.yml` — dev stack: mysql (host port **3307**), backend, frontend. Source is volume-mounted, so edits hot-reload (`tsx watch` / `next dev`).
-- `specs/<feature-id>/` — spec/plan/tasks artifacts; `.specify/memory/constitution.md` = project rules; `SPEC_GUIDE.md` = workflow. Backend API reference: `backend/backend.md`. State audits: `report_backend.md`, `report_frontend.md`, `COVERAGE_MATRIX.md`.
+CareerPrepster: full-stack AI CV editor (Next.js 14 + Express + MySQL/Prisma + Gemini). Root npm workspaces link `shared/` (`@careerprepster/shared`), `backend/`, and `frontend/`. Run npm commands from each package dir or with `--workspace=<name>`; `docker compose` from the root.
 
 ## Commands
 
-- Full stack: `docker compose up -d` (then backend :5000, frontend :3000, mysql on localhost:3307).
-- Backend: `npm run dev` (tsx watch), `npm run build` (`tsc`, also the typecheck — no separate lint/typecheck script), `npm run test:api`.
-- DB (in `backend/`): `npx prisma db push`, `npx prisma db seed`, `npx prisma studio`. Uses **`db push`, no migrations folder** — `schema.prisma` is the source of truth.
-- Frontend: `npm run dev`, `npm run build`, `npm run lint` (`next lint`). No frontend test suite.
+Backend (`backend/`) — Express + TS **ESM**, Prisma/MySQL, Google Gemini:
+- `npm run dev` — tsx watch `src/index.ts` (port 5000)
+- `npm run build` — `tsc`; requires `npx prisma generate` first
+- Tests: `npm run test:api` runs `test-backend.mjs`, a smoke suite against a live server. Needs MySQL up, DB seeded, and `GEMINI_API_KEY` set. No unit-test framework.
+- DB: `npx prisma migrate dev`, `npx prisma db push`, `npx prisma db seed`, `npx prisma studio`. Seed populates 15+ job roles + 50 starter bullets.
+- Copy `backend/.env.example` → `backend/.env` before first run.
+
+Frontend (`frontend/`) — Next.js 14 App Router + Tailwind:
+- `npm run dev` (port 3000), `npm run build`
+- There is no ESLint config/dependency: `npm run lint` (= `next lint`) will prompt interactively and hang. Typecheck with `npx tsc --noEmit` instead. No test setup.
+- Copy `frontend/.env.example` → `frontend/.env.local` for `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+
+Docker (root `docker-compose.yml`): `docker compose up -d` brings up mysql → backend → frontend. MySQL is exposed on **host port 3307** (local dev DB URL uses 3306). Compose hardcodes a dev `JWT_SECRET` and a default `GEMINI_API_KEY` — never log or commit them.
 
 ## Gotchas
 
-- **Auth is Google-OAuth-only.** Actual routes are `/api/auth/google|me|logout`. `backend.md`'s route table and `test-backend.mjs` still reference `/api/auth/register|login` (stale — `npm run test:api` will fail at the auth step). Don't reintroduce email/password auth without a spec; `COVERAGE_MATRIX.md` codifies the OAuth-only policy.
-- **Backend is NodeNext ESM**: relative imports in `backend/src` must use explicit `.js` extensions (e.g. `import { env } from './config/env.js'`) or `tsc` fails. Mirror existing imports.
-- `backend/src/config/env.ts` validates env at boot with Zod and throws if `DATABASE_URL` or `JWT_SECRET` (min 8 chars) is missing. Copy `backend/.env.example`; pass `GEMINI_API_KEY` to use AI endpoints.
-- After editing `schema.prisma` run `npx prisma db push && npx prisma generate`. `binaryTargets` includes `linux-musl-openssl-3.0.x` for the Alpine Docker build — keep it.
-- API response shape is `{ success, data }` / `{ success, error: { code, message, details } }`. Frontend `api.ts` sends `credentials: include` (HttpOnly JWT cookie); backend CORS is locked to `CLIENT_URL`.
-- `DATABASE_URL` differs: `mysql:3306` inside Docker vs `localhost:3306` for local `npm run dev`; the compose MySQL port is 3307, not 3306.
+- Backend is ESM (`"type": "module"`, NodeNext): relative imports MUST include `.js` extension (`import x from '../config/env.js'`). The `@/*` alias in `backend/tsconfig.json` is unused — keep it that way.
+- After any `prisma/schema.prisma` change run `npx prisma generate`, or `tsc`/dev fail. The generator pins `linux-musl-openssl-3.0.x`/`debian-openssl-3.0.x` binary targets for the Alpine Docker images.
+- Auth is a JWT in an HttpOnly cookie; `frontend/src/lib/api.ts` fetches with `credentials: "include"`. The frontend is intentionally Google-OAuth-only (no password forms) even though the backend still exposes `POST /api/auth/register|login`.
+- The Docker backend image runs `npx prisma db push && npx prisma db seed` on every start.
 
-## Workflow
+## Data model
 
-- Follow the spec-driven lifecycle (SPEC_GUIDE.md + constituent in `.specify/memory/constitution.md`): new features go through `/speckit-*` skills producing `specs/<id>/{spec,plan,tasks}.md` before code.
-- Remaining integration work for the current branch is tracked in `specs/001-cv-editor/tasks.md` (T081–T089: replace mock data/utils with `lib/api.ts` calls).
+Prisma relational CV tree: `CV → CVSection → CVItem → BulletPoint`, plus `SkillGroup`, `ATSReport`, `JobRole`/`RoleBulletTemplate`. `frontend/src/types/cv.ts` and `frontend/src/lib/store.tsx` mirror it but wrap header fields in a nested `personalInfo` object — NOT the flat `fullName`/`email` shape drawn in `COVERAGE_MATRIX.md`. The report files (`report_backend.md`, `report_frontend.md`, `COVERAGE_MATRIX.md`) drift from the code; verify against source. The frontend↔backend integration is incomplete and mid-refactor (uncommitted changes at HEAD `e27fbf6 "heavily buggy integration"`).
+
+## Spec-driven workflow
+
+The project uses Speckit (spec → plan → tasks → implement), with skills under `.agents/skills/` (speckit-*) and the constitution at `.specify/memory/constitution.md`. Feature artifacts live in `specs/<feature-id>/` (`001-cv-editor`, `002-backend-api`). `SPEC_GUIDE.md` describes the lifecycle. Work happens on `module/*` branches (current: `module/cv-editor`).

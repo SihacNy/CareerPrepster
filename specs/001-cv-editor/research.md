@@ -122,3 +122,39 @@
 - **Alternatives Evaluated & Rejected**:
   - *Email + Password Authentication*: Evaluated and explicitly rejected per user directive. Introducing password forms creates friction, requires salt/hash/reset pipelines, and duplicates existing verified Google identity systems without adding value for student users.
 
+---
+
+## 10. Dedicated Template Selection Experience Within Author CV (Stage 1)
+
+### Decision: Dedicated Template Picker Section/Studio Within Stage 1 ("Author CV"), Preserving 3-Stage Pipeline
+- **Rationale**:
+  - **User Directive**: Do not add a 4th stage to the pipeline. Stage progression remains strictly:
+    - **Stage 1: Author CV** (`/editor`): Comprehensive section authoring, role setup, STAR/XYZ in-line enhancement, starter bullets, and dedicated template selection.
+    - **Stage 2: ATS Review** (`/editor/ats`): 4-pillar ATS audit, critical issue remediations, and optional targeted job description alignment.
+    - **Stage 3: Export PDF** (`/editor/export`): Vector PDF document preview, page-budget audit, and download deliverable.
+  - **Embedded Dedicated Template Selection**:
+    - Instead of a tiny, obscure toggle inside the preview toolbar, provide a prominent, dedicated template picker within the Author CV stage (e.g., a top collapsible or expandable Template card section in the editor form and/or a prominent switcher with rich cards, typography tags, and recommended industry guidance).
+    - Preserves user workflow: users can switch templates right where they are typing and seeing live updates, without page transitions or breaking the 3-step mental model.
+- **Alternatives Evaluated & Rejected**:
+  - *Adding a separate route & 4th stage in the stepper*: Rejected per user instruction. Adding another stage creates unnecessary friction and fragments the authoring process.
+
+---
+
+## 11. Multi-Archetype Template System: Minimalist, Color Accent, and Photo/Visual Templates
+
+### Decision: Curated 3-Archetype Catalog with Dynamic Color Theming and Optional Headshot Support
+- **Rationale**:
+  - **Diverse Industry Needs**: Students apply across different sectors with distinct expectations:
+    1. **Minimalist ATS** (`classic` Harvard Classic, `modern` Jake's Tech): Standard black-and-white, zero tables, 100% vector text for traditional corporate, finance, software engineering, and US/UK enterprise ATS filters.
+    2. **Modern Color Accent** (`executive-accent`, `modern-slate`): Subtle professional color accents (divider rules, section header titles, skill badges) tailored for consulting, modern tech, startups, and marketing, while strictly maintaining single-column linear text flow for ATS compliance.
+    3. **Visual / Photo-Enabled** (`modern-photo`, `creative-visual`): Profile image / avatar thumbnail placed in the header alongside name and contact info. Ideal for creative roles, portfolios, and international job markets (e.g. EU, Middle East, Asia) where photos are standard or expected.
+  - **User-Selectable Color System**:
+    - Users can select their desired accent color from a curated palette of 6 accessible, high-contrast professional hex codes (`#0284c7` Sky Blue, `#1e3a8a` Executive Navy, `#0f766e` Emerald Teal, `#334155` Slate Steel, `#b91c1c` Crimson Burgundy, `#4338ca` Royal Indigo) or custom hex.
+    - Colors dynamically style header accents, divider rules, and category labels across both the web preview and `@react-pdf/renderer` exports.
+  - **ATS Transparency & Student Guidance**:
+    - The Template Gallery explicitly tags each archetype (e.g., `100% ATS Corporate Standard` for Minimalist vs. `International / Creative` for Photo-enabled) so students make informed choices depending on their target country and industry.
+  - **Synchronized Dual-Engine Rendering**:
+    - Every template is implemented as a paired set: an interactive HTML/Tailwind component for the real-time editor preview, and a matching `@react-pdf/renderer` component for crisp vector PDF export.
+- **Alternatives Evaluated & Rejected**:
+  - *Free-form Drag-and-Drop Page Builder*: Rejected per Principle 2 of the Constitution. Generative unconstrained layouts break ATS text extraction order and introduce parsing bugs.
+  - *Hard-coded Fixed Colors*: Rejected because students want agency to match their personal brand or target company branding.

@@ -4,6 +4,10 @@ out
 build
 dist
 .git
+.agent
+.agents
+*.md
+**/*.md
 .env*.local
 npm-debug.log*
 yarn-debug.log*

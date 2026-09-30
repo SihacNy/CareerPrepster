@@ -4,8 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, PenLine } from "lucide-react";
 import { useCV } from "@/lib/store";
-import { ClassicAts } from "@/components/preview/templates/ClassicAts";
-import { ModernCompact } from "@/components/preview/templates/ModernCompact";
+import { CVTemplateRenderer } from "@/components/preview/CVTemplateRenderer";
 import { ExportPdfButton } from "./ExportPdfButton";
 import { DraftViewModal } from "./DraftViewModal";
 
@@ -53,11 +52,7 @@ export function ExportStage() {
             title="Click to view full draft"
           >
             <div className="p-1 sm:p-2 pointer-events-none select-none">
-              {cvData.templateId === "classic" ? (
-                <ClassicAts data={cvData} />
-              ) : (
-                <ModernCompact data={cvData} />
-              )}
+              <CVTemplateRenderer data={cvData} />
             </div>
           </div>
         </div>
