@@ -7,3 +7,5 @@ export type * from '../schemas/ai.schema.js';
 export type * from '../schemas/job-role.schema.js';
 export type * from '../schemas/auth.schema.js';
 export type * from '../schemas/import.schema.js';
+export type * from './jobs.types.js';
+export type * from '../schemas/jobs.schema.js';

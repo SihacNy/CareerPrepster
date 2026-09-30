@@ -169,4 +169,143 @@ Please rewrite this bullet into 2-3 distinct executive-level options with strong
       ],
     };
   }
+
+  /**
+   * Semantically analyzes a candidate's CV against an external scraped job description using Google Gemini.
+   */
+  static async evaluateJobMatch(params: {
+    candidateProfile: {
+      skills: string[];
+      roleTitle?: string | null;
+      experienceMonths: number;
+      projects: string[];
+      experiences: string[];
+    };
+    job: {
+      title: string;
+      company: string;
+      description: string;
+      requiredSkills: string[];
+      workArrangement: string;
+      location: string;
+    };
+  }): Promise<{
+    summary: string;
+    evidenceReasons: string[];
+    skillGaps: Array<{
+      skill: string;
+      criticality: 'HIGH' | 'MEDIUM' | 'LOW';
+      recommendation: string;
+    }>;
+  }> {
+    if (!env.GEMINI_API_KEY) {
+      return this.generateDefaultMatchReasoning(params);
+    }
+
+    try {
+      const genAI = this.getClient();
+      const model = genAI.getGenerativeModel({
+        model: env.GEMINI_MODEL || 'gemini-1.5-flash',
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.OBJECT,
+            properties: {
+              summary: { type: SchemaType.STRING },
+              evidenceReasons: {
+                type: SchemaType.ARRAY,
+                items: { type: SchemaType.STRING },
+              },
+              skillGaps: {
+                type: SchemaType.ARRAY,
+                items: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    skill: { type: SchemaType.STRING },
+                    criticality: {
+                      type: SchemaType.STRING,
+                      format: 'enum',
+                      enum: ['HIGH', 'MEDIUM', 'LOW'],
+                    },
+                    recommendation: { type: SchemaType.STRING },
+                  },
+                  required: ['skill', 'criticality', 'recommendation'],
+                },
+              },
+            },
+            required: ['summary', 'evidenceReasons', 'skillGaps'],
+          },
+        },
+      });
+
+      const prompt = `You are an AI Executive Career Coach. Compare this candidate's parsed CV against the following job vacancy.
+Provide an honest, evidence-based evaluation.
+
+=== CANDIDATE PROFILE ===
+Skills: ${params.candidateProfile.skills.join(', ')}
+Target Role: ${params.candidateProfile.roleTitle || 'Software Engineer'}
+Experience Months: ${params.candidateProfile.experienceMonths}
+Projects: ${params.candidateProfile.projects.join('; ') || 'None listed'}
+Work History: ${params.candidateProfile.experiences.join('; ') || 'None listed'}
+
+=== JOB POSTING ===
+Title: ${params.job.title}
+Company: ${params.job.company}
+Location: ${params.job.location} (${params.job.workArrangement})
+Requirements: ${params.job.requiredSkills.join(', ')}
+Description: ${params.job.description.slice(0, 800)}
+
+Generate:
+1. "summary": A 1-2 sentence executive assessment of this candidate's fit for this specific job.
+2. "evidenceReasons": 2-3 specific evidence statements explaining HOW the candidate's actual skills or projects align with the employer's needs.
+3. "skillGaps": Up to 3 real missing skills or areas for improvement, with criticality (HIGH/MEDIUM/LOW) and a concrete recommendation on how to bridge the gap.`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      if (!text) throw new Error('Empty response from Gemini');
+
+      const parsed = JSON.parse(text);
+      return {
+        summary: parsed.summary || 'Strong candidate profile with relevant background.',
+        evidenceReasons: Array.isArray(parsed.evidenceReasons) ? parsed.evidenceReasons : [],
+        skillGaps: Array.isArray(parsed.skillGaps) ? parsed.skillGaps : [],
+      };
+    } catch (err: any) {
+      logger.warn('AIService', `Gemini job match evaluation failed (${err.message}). Using deterministic fallback.`);
+      return this.generateDefaultMatchReasoning(params);
+    }
+  }
+
+  private static generateDefaultMatchReasoning(params: any) {
+    const candidateSkills = params.candidateProfile.skills.map((s: string) => s.toLowerCase());
+    const matched = params.job.requiredSkills.filter((s: string) =>
+      candidateSkills.some((cs: string) => cs.includes(s.toLowerCase()) || s.toLowerCase().includes(cs))
+    );
+    const missing = params.job.requiredSkills.filter((s: string) => !matched.includes(s));
+
+    const evidenceReasons: string[] = [];
+    if (matched.length > 0) {
+      evidenceReasons.push(`Your CV demonstrates verified competency in key requirements: ${matched.slice(0, 3).join(', ')}.`);
+    }
+    if (params.candidateProfile.roleTitle) {
+      evidenceReasons.push(`Your target position (${params.candidateProfile.roleTitle}) directly matches this ${params.job.title} vacancy.`);
+    }
+    if (params.candidateProfile.projects.length > 0) {
+      evidenceReasons.push(`Relevant project experience: ${params.candidateProfile.projects[0]}.`);
+    }
+
+    return {
+      summary: matched.length >= 2
+        ? `High alignment! Your skills match ${matched.length} key requirements for this role.`
+        : `Moderate match. Bridging ${missing.slice(0, 2).join(' and ') || 'key skills'} will strengthen your candidacy.`,
+      evidenceReasons,
+      skillGaps: missing.slice(0, 3).map((skill: string) => ({
+        skill,
+        criticality: 'MEDIUM' as const,
+        recommendation: `Add coursework or a practical capstone project demonstrating ${skill}.`,
+      })),
+    };
+  }
 }
+

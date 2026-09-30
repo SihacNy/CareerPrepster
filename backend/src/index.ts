@@ -11,6 +11,8 @@ import { jobRoleRoutes } from './routes/job-role.routes.js';
 import { aiRoutes } from './routes/ai.routes.js';
 import { atsRoutes } from './routes/ats.routes.js';
 import { importRoutes } from './routes/import.routes.js';
+import { jobRoutes } from './routes/jobs.routes.js';
+import { JobQueueService } from './services/job-queue.service.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -48,12 +50,14 @@ app.use('/api/cvs', cvRoutes);
 app.use('/api/job-roles', jobRoleRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/ats', atsRoutes);
+app.use('/api/jobs', jobRoutes);
 
 // Global Centralized Error Boundary
 app.use(errorHandler);
 
 // Server Start
 if (process.env.NODE_ENV !== 'test') {
+  JobQueueService.initScheduler();
   app.listen(env.PORT, () => {
     logger.info(
       'Server',
