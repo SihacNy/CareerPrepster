@@ -12,7 +12,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { user, loginWithProfile, logout } = useAuth();
+  const { user, loginWithProfile, loginAsDemo, logout } = useAuth();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -135,8 +135,29 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </div>
             )}
 
-            {/* Social Buttons */}
+            {/* Social & Demo Buttons */}
             <div className="space-y-3">
+              {/* Instant 1-Click Demo Login */}
+              <button
+                type="button"
+                onClick={async () => {
+                  const success = await loginAsDemo();
+                  if (success) {
+                    setErrorMessage(null);
+                    onClose();
+                  }
+                }}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium transition-colors shadow-sm"
+              >
+                <span>🚀 1-Click Student Demo Access</span>
+              </button>
+
+              <div className="relative flex py-1 items-center">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink mx-3 text-slate-400 text-[11px] uppercase font-semibold">or</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
               {/* Continue with Google */}
               <button
                 type="button"

@@ -17,6 +17,7 @@ interface AuthContextType {
   isBackendSession: boolean;
   loginWithGoogleCredential: (credential: string) => void;
   loginWithProfile: (profile: { id: string; name: string; email: string; avatarUrl?: string }, options?: { backendSession?: boolean }) => void;
+  loginAsDemo: (email?: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -74,11 +75,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (isMounted) {
-        setIsBackendSession(false);
         try {
           const savedUser = localStorage.getItem(USER_STORAGE_KEY);
           if (savedUser) {
-            setUser(JSON.parse(savedUser));
+            const parsed = JSON.parse(savedUser);
+            setUser(parsed);
+
+            // Automatically re-establish session cookie for the restored user
+            try {
+              const { authApi } = await import("@/lib/api");
+              const devRes = await authApi.devLogin(parsed.email);
+              if (isMounted && devRes?.user) {
+                setIsBackendSession(true);
+                setIsLoading(false);
+                return;
+              }
+            } catch {
+              // Ignore dev-login error in non-dev environments
+            }
           }
         } catch (e) {
           console.warn("Could not restore user from storage:", e);
@@ -160,6 +174,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginAsDemo = async (email?: string): Promise<boolean> => {
+    try {
+      const { authApi } = await import("@/lib/api");
+      const res = await authApi.devLogin(email);
+      if (res?.user) {
+        const newUser: User = {
+          id: res.user.id,
+          name: res.user.name || "Student Demo",
+          email: res.user.email,
+          avatarUrl: res.user.avatarUrl || undefined,
+          provider: "google",
+        };
+        setUser(newUser);
+        setIsBackendSession(true);
+        try {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+        } catch (e) {
+          console.error("Failed to save user session:", e);
+        }
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error("Dev demo login failed:", err);
+      return false;
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setIsBackendSession(false);
@@ -185,6 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isBackendSession,
         loginWithGoogleCredential,
         loginWithProfile,
+        loginAsDemo,
         logout,
       }}
     >

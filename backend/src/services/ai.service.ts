@@ -205,7 +205,7 @@ Please rewrite this bullet into 2-3 distinct executive-level options with strong
     try {
       const genAI = this.getClient();
       const model = genAI.getGenerativeModel({
-        model: env.GEMINI_MODEL || 'gemini-1.5-flash',
+        model: env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
         generationConfig: {
           temperature: 0.3,
           responseMimeType: 'application/json',

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { LogOut, ChevronDown, Clock } from "lucide-react";
+import { LogOut, ChevronDown, Clock, Briefcase, Sparkles } from "lucide-react";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { useAuth } from "@/lib/auth";
 
@@ -35,14 +35,36 @@ export function Header({ }: HeaderProps) {
     <>
       <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo & Title */}
-          <Link href="/" className="flex items-center space-x-2.5 group">
-            <div>
-              <span className="font-semibold text-2xl text-slate-900 tracking-tight">
-                CareerPrepster
-              </span>
-            </div>
-          </Link>
+          {/* Logo & Navigation */}
+          <div className="flex items-center space-x-8">
+            <Link href="/" className="flex items-center space-x-2.5 group">
+              <div>
+                <span className="font-semibold text-2xl text-slate-900 tracking-tight">
+                  CareerPrepster
+                </span>
+              </div>
+            </Link>
+
+            {/* Desktop Navigation Links */}
+            <nav className="hidden md:flex items-center space-x-1">
+              <Link
+                href="/jobs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-sky-600 hover:bg-slate-50 transition-colors"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-sky-500" />
+                <span>Job Matches</span>
+                <span className="bg-sky-100 text-sky-700 text-[10px] font-bold px-1.5 py-0.2 rounded-full">New</span>
+              </Link>
+
+              <Link
+                href="/history"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-sky-600 hover:bg-slate-50 transition-colors"
+              >
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>My Resumes</span>
+              </Link>
+            </nav>
+          </div>
 
           {/* Right Actions */}
           <div className="flex items-center space-x-3">
@@ -102,7 +124,16 @@ export function Header({ }: HeaderProps) {
                     </div>
 
                     {/* Navigation Menu Items */}
-                    <div className="py-2 border-b border-slate-100">
+                    <div className="py-2 border-b border-slate-100 space-y-0.5">
+                      <Link
+                        href="/jobs"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="group flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-sky-600 transition-colors"
+                      >
+                        <Briefcase className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 transition-colors" />
+                        <span>Personalized Job Matches</span>
+                      </Link>
+
                       <Link
                         href="/history"
                         onClick={() => setIsDropdownOpen(false)}

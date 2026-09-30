@@ -101,6 +101,12 @@ export const authApi = {
     fetchApi<{ message: string }>("/auth/logout", {
       method: "POST",
     }),
+
+  devLogin: (email?: string) =>
+    fetchApi<{ user: AuthUser; token: string }>("/auth/dev-login", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
 };
 
 // -------------------------------------------------------------
@@ -298,6 +304,83 @@ export const importApi = {
   },
 };
 
+// -------------------------------------------------------------
+// 7. Personalized Job Match Endpoints
+// -------------------------------------------------------------
+import type {
+  JobListResponse,
+  JobListFilterParams,
+  JobMatchRecommendationDto,
+  JobSearchPreferenceDto,
+  RefreshStatusResponse,
+  RecommendationStatus,
+} from "@/types/jobs";
+
+export const jobsApi = {
+  listRecommendations: (params: JobListFilterParams = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.status && params.status !== "ALL") searchParams.set("status", params.status);
+    if (params.minScore) searchParams.set("minScore", params.minScore.toString());
+    if (params.arrangement && params.arrangement !== "ALL") searchParams.set("arrangement", params.arrangement);
+    if (params.employmentType && params.employmentType !== "ALL") searchParams.set("employmentType", params.employmentType);
+    if (params.search) searchParams.set("search", params.search);
+    if (params.sortBy) searchParams.set("sortBy", params.sortBy);
+    if (params.sortOrder) searchParams.set("sortOrder", params.sortOrder);
+    if (params.page) searchParams.set("page", params.page.toString());
+    if (params.limit) searchParams.set("limit", params.limit.toString());
+
+    const qs = searchParams.toString();
+    return fetchApi<JobListResponse>(`/jobs/recommendations${qs ? `?${qs}` : ""}`, {
+      method: "GET",
+    });
+  },
+
+  getRecommendationById: (id: string) =>
+    fetchApi<JobMatchRecommendationDto>(`/jobs/recommendations/${id}`, {
+      method: "GET",
+    }),
+
+  updateRecommendationStatus: (id: string, status: RecommendationStatus, userNotes?: string) =>
+    fetchApi<JobMatchRecommendationDto>(`/jobs/recommendations/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status, userNotes }),
+    }),
+
+  getPreferences: () =>
+    fetchApi<JobSearchPreferenceDto>("/jobs/preferences", {
+      method: "GET",
+    }),
+
+  updatePreferences: (preferences: Partial<JobSearchPreferenceDto>) =>
+    fetchApi<JobSearchPreferenceDto>("/jobs/preferences", {
+      method: "PUT",
+      body: JSON.stringify(preferences),
+    }),
+
+  triggerRefresh: () =>
+    fetchApi<{ cooldownSecondsRemaining: number }>("/jobs/refresh", {
+      method: "POST",
+    }),
+
+  getRefreshStatus: () =>
+    fetchApi<RefreshStatusResponse>("/jobs/refresh/status", {
+      method: "GET",
+    }),
+
+  adminDiscover: (keywords?: string, location?: string) => {
+    const searchParams = new URLSearchParams();
+    if (keywords) searchParams.set("keywords", keywords);
+    if (location) searchParams.set("location", location);
+    const qs = searchParams.toString();
+    return fetchApi<{ runId: string; jobsScanned: number; jobsInserted: number; jobsUpdated: number }>(
+      `/jobs/admin/discover${qs ? `?${qs}` : ""}`,
+      {
+        method: "POST",
+      }
+    );
+  },
+};
+
 // Unified Default Client
 export const api = {
   auth: authApi,
@@ -306,4 +389,5 @@ export const api = {
   ai: aiApi,
   ats: atsApi,
   import: importApi,
+  jobs: jobsApi,
 };
