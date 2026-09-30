@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { prisma } from '../config/prisma.js';
 import { JobSourceProvider, RawDiscoveredJob, JobDiscoveryQuery } from './providers/job-provider.interface.js';
+import { PlaywrightLinkedInProvider } from './providers/playwright-linkedin.provider.js';
 import { LinkedInJobProvider } from './providers/linkedin.provider.js';
 import { SeedJobProvider } from './providers/seed.provider.js';
 
@@ -10,7 +11,7 @@ export class JobDiscoveryService {
   constructor(providers?: JobSourceProvider[]) {
     this.providers = providers && providers.length > 0
       ? providers
-      : [new LinkedInJobProvider(), new SeedJobProvider()];
+      : [new PlaywrightLinkedInProvider(), new LinkedInJobProvider(), new SeedJobProvider()];
   }
 
   /**
@@ -53,48 +54,56 @@ export class JobDiscoveryService {
           continue;
         }
 
-        totalScanned += rawJobs.length;
+        if (rawJobs && rawJobs.length > 0) {
+          totalScanned += rawJobs.length;
 
-        for (const job of rawJobs) {
-          const dedupHash = JobDiscoveryService.generateDedupHash(job.company, job.title, job.location);
+          for (const job of rawJobs) {
+            const dedupHash = JobDiscoveryService.generateDedupHash(job.company, job.title, job.location);
 
-          const existing = await prisma.jobListing.findUnique({
-            where: { dedupHash },
-          });
-
-          if (existing) {
-            await prisma.jobListing.update({
-              where: { id: existing.id },
-              data: {
-                lastSeenAt: new Date(),
-                isActive: true,
-                applicationUrl: job.applicationUrl || existing.applicationUrl,
-                logoUrl: job.logoUrl || existing.logoUrl,
-              },
+            const existing = await prisma.jobListing.findUnique({
+              where: { dedupHash },
             });
-            totalUpdated++;
-          } else {
-            await prisma.jobListing.create({
-              data: {
-                title: job.title,
-                company: job.company,
-                logoUrl: job.logoUrl,
-                location: job.location,
-                workArrangement: job.workArrangement,
-                employmentType: job.employmentType,
-                description: job.description,
-                requiredSkills: job.requiredSkills,
-                preferredSkills: job.preferredSkills || [],
-                minExperienceYears: job.minExperienceYears,
-                sourcePlatform: job.sourcePlatform,
-                externalId: job.externalId,
-                applicationUrl: job.applicationUrl,
-                dedupHash,
-                isActive: true,
-                postedAt: job.postedAt || new Date(),
-              },
-            });
-            totalInserted++;
+
+            if (existing) {
+              await prisma.jobListing.update({
+                where: { id: existing.id },
+                data: {
+                  lastSeenAt: new Date(),
+                  isActive: true,
+                  applicationUrl: job.applicationUrl || existing.applicationUrl,
+                  logoUrl: job.logoUrl || existing.logoUrl,
+                },
+              });
+              totalUpdated++;
+            } else {
+              await prisma.jobListing.create({
+                data: {
+                  title: job.title,
+                  company: job.company,
+                  logoUrl: job.logoUrl,
+                  location: job.location,
+                  workArrangement: job.workArrangement,
+                  employmentType: job.employmentType,
+                  description: job.description,
+                  requiredSkills: job.requiredSkills,
+                  preferredSkills: job.preferredSkills || [],
+                  minExperienceYears: job.minExperienceYears,
+                  sourcePlatform: job.sourcePlatform,
+                  externalId: job.externalId,
+                  applicationUrl: job.applicationUrl,
+                  dedupHash,
+                  isActive: true,
+                  postedAt: job.postedAt || new Date(),
+                },
+              });
+              totalInserted++;
+            }
+          }
+
+          // If a real provider (Playwright or LinkedIn API) returned jobs, skip lower fallback providers
+          if (provider.sourceId.includes('linkedin') && totalScanned >= 5) {
+            console.log(`[JobDiscoveryService] Received ${totalScanned} live listings from ${provider.displayName}. Skipping secondary fallback.`);
+            break;
           }
         }
       }
