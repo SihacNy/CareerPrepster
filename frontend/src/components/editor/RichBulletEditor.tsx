@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Bold, Italic, Underline, Strikethrough, PenLine, Sparkles, Plus, Check, Undo2, Redo2 } from "lucide-react";
 
 interface RichBulletEditorProps {
@@ -8,7 +8,7 @@ interface RichBulletEditorProps {
   bullets: string[];
   suggestions?: string[];
   onChange: (newBullets: string[]) => void;
-  onRefineWithAI: (text: string, onApply: (newText: string) => void) => void;
+  onRefineWithAI: (text: string, onApply: (newText: string) => Promise<void> | void) => void;
 }
 
 /**
@@ -112,6 +112,31 @@ export function RichBulletEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalChange = useRef(false);
   const [addedIndex, setAddedIndex] = useState<number | null>(null);
+  const activeBulletIndexRef = useRef<number>(0);
+
+  // Tracks active LI index so Refine with AI targets the exact bullet
+  const updateActiveBullet = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.anchorNode) return;
+
+    let node: Node | null = sel.anchorNode;
+    while (node && node !== editor) {
+      if (node.nodeName === "LI") {
+        const ul = editor.querySelector("ul");
+        if (ul) {
+          const lis = Array.from(ul.querySelectorAll("li"));
+          const idx = lis.indexOf(node as HTMLLIElement);
+          if (idx !== -1) {
+            activeBulletIndexRef.current = idx;
+          }
+        }
+        break;
+      }
+      node = node.parentNode;
+    }
+  }, []);
 
   // History state for Undo & Redo
   const [history, setHistory] = useState<string[][]>(() => [bullets && bullets.length > 0 ? bullets : [""]]);
@@ -404,39 +429,79 @@ export function RichBulletEditor({
 
     const sel = window.getSelection();
     let selectedText = sel ? sel.toString().trim() : "";
-    let activeLi: HTMLLIElement | null = null;
+    let targetIdx = activeBulletIndexRef.current;
+
+    const ul = editor.querySelector("ul");
+    const lis = ul ? Array.from(ul.querySelectorAll("li")) : [];
 
     if (sel && sel.anchorNode) {
       let node: Node | null = sel.anchorNode;
       while (node && node !== editor) {
         if (node.nodeName === "LI") {
-          activeLi = node as HTMLLIElement;
+          const foundIdx = lis.indexOf(node as HTMLLIElement);
+          if (foundIdx !== -1) {
+            targetIdx = foundIdx;
+            activeBulletIndexRef.current = foundIdx;
+          }
+          if (!selectedText) {
+            selectedText = nodeToMarkdown(node).trim();
+          }
           break;
         }
         node = node.parentNode;
       }
     }
 
-    if (!selectedText && activeLi) {
-      selectedText = nodeToMarkdown(activeLi).trim();
+    if (!selectedText && targetIdx >= 0 && targetIdx < bullets.length) {
+      selectedText = bullets[targetIdx];
+    }
+
+    if (!selectedText && lis[targetIdx]) {
+      selectedText = nodeToMarkdown(lis[targetIdx]).trim();
     }
 
     if (!selectedText) {
-      selectedText = bullets[0] || "Engineered scalable software solutions.";
+      selectedText = bullets[0] || (lis[0] ? nodeToMarkdown(lis[0]).trim() : "") || "Engineered scalable software solutions.";
     }
 
+    const currentLen = Math.max(bullets.length, lis.length);
+    const finalTargetIdx = (targetIdx >= 0 && (currentLen === 0 || targetIdx < currentLen)) ? targetIdx : 0;
+
     onRefineWithAI(selectedText, (refinedText) => {
-      if (activeLi) {
-        activeLi.innerHTML = markdownToHtml(refinedText);
+      // Direct array update: guarantees React state receives the refined bullet
+      const editorBullets = editorRef.current ? extractBulletsFromEditor(editorRef.current) : [];
+      const baseBullets = bullets && bullets.length > 0 ? [...bullets] : (editorBullets.length > 0 ? [...editorBullets] : [""]);
+
+      const safeIdx = finalTargetIdx < baseBullets.length ? finalTargetIdx : (baseBullets.length > 0 ? 0 : 0);
+      if (baseBullets.length === 0) {
+        baseBullets.push(refinedText);
       } else {
-        const ul = editor.querySelector("ul");
-        if (ul) {
-          const newLi = document.createElement("li");
-          newLi.innerHTML = markdownToHtml(refinedText);
-          ul.appendChild(newLi);
+        baseBullets[safeIdx] = refinedText;
+      }
+
+      // Sync DOM elements directly
+      isInternalChange.current = true;
+      const currentEditor = editorRef.current;
+      if (currentEditor) {
+        let currentUl = currentEditor.querySelector("ul");
+        if (!currentUl) {
+          currentEditor.innerHTML = `<ul class="${UL_BULLET_CLASS}"><li><br></li></ul>`;
+          currentUl = currentEditor.querySelector("ul");
+        }
+        if (currentUl) {
+          const currentLis = currentUl.querySelectorAll("li");
+          if (currentLis[safeIdx]) {
+            currentLis[safeIdx].innerHTML = markdownToHtml(refinedText);
+          } else {
+            const newLi = document.createElement("li");
+            newLi.innerHTML = markdownToHtml(refinedText);
+            currentUl.appendChild(newLi);
+          }
         }
       }
-      handleInput(true);
+
+      pushHistory(baseBullets, true);
+      onChange(baseBullets);
     });
   };
 
@@ -674,6 +739,10 @@ export function RichBulletEditor({
         {/* Elevated Refine with AI button */}
         <button
           type="button"
+          onMouseDown={(e) => {
+            // Prevent editor from losing focus or collapsing selection
+            e.preventDefault();
+          }}
           onClick={handleTriggerRefine}
           className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs sm:text-[13px] font-semibold text-sky-700 bg-white hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600 transition-colors shadow-subtle cursor-pointer group"
           title="Highlight a bullet and refine with AI STAR/XYZ frameworks"
@@ -776,12 +845,20 @@ export function RichBulletEditor({
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          onInput={() => handleInput(false)}
+          onInput={() => {
+            handleInput(false);
+            updateActiveBullet();
+          }}
           onKeyDown={handleKeyDown}
-          onKeyUp={() => sanitizeEditor()}
+          onKeyUp={() => {
+            sanitizeEditor();
+            updateActiveBullet();
+          }}
+          onMouseUp={() => updateActiveBullet()}
           onBlur={() => sanitizeEditor()}
           onFocus={() => {
             sanitizeEditor();
+            updateActiveBullet();
             const editor = editorRef.current;
             if (!editor) return;
             const ul = editor.querySelector("ul");
@@ -800,6 +877,7 @@ export function RichBulletEditor({
           }}
           onClick={(e) => {
             sanitizeEditor();
+            updateActiveBullet();
             const editor = editorRef.current;
             if (!editor) return;
             const ul = editor.querySelector("ul");

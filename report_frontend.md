@@ -38,6 +38,8 @@
     - [18.7 Next.js SSR Hydration Guarding & Dual-Stage State Reconciliation](#187-nextjs-ssr-hydration-guarding--dual-stage-state-reconciliation-authtsx--headertsx)
     - [18.8 Landing Page Feature Showcase & Smooth Navigation](#188-landing-page-feature-showcase--smooth-navigation-pagetsx-footertsx)
     - [18.9 Dual-Transport Bearer Token Resilience](#189-dual-transport-bearer-token-resilience-apits-authmodaltsx)
+    - [18.10 Foreign Key Sanitization & Canonical Editor Ingestion](#1810-foreign-key-sanitization--canonical-editor-ingestion-apits-editorpagetsx)
+    - [18.11 Docker Multi-Platform SWC Binary Resilience](#1811-docker-multi-platform-swc-binary-resilience-frontenddockerfile)
 
 ---
 
@@ -742,6 +744,25 @@ A comprehensive audit of the 15 modified files across `module/cv-editor` to veri
 2. **Token Ingestion in Google OAuth Flow (`AuthModal.tsx`):**
    - Upon receiving `{ user, token }` from `POST /api/auth/google`, `AuthModal` automatically writes `careerprepster_auth_token` to `localStorage`.
    - Guarantees seamless, authenticated communication across both stateful cookies and stateless bearer headers.
+
+### 18.10 Foreign Key Sanitization & Canonical Editor Ingestion (`api.ts`, `editor/page.tsx`)
+1. **Target Role ID Sanitization (`frontend/src/lib/api.ts`):**
+   - Modified the `update` payload to use `targetRoleId: cvData.targetRoleId || null`. Empty strings `""` or undefined values are normalized to `null`, ensuring MySQL never encounters empty string foreign keys.
+2. **Comprehensive Remote Ingestion via `normalizeCVData` (`frontend/src/app/editor/page.tsx`):**
+   - Replaced manual field extraction with `loadCV(normalizeCVData(remoteCV))`.
+   - Ensures `photoUrl`, `portfolioUrl`, `websiteUrl`, and relational sections are fully restored when editing CVs directly from the History page.
+
+### 18.11 Docker Multi-Platform SWC Binary Resilience (`frontend/Dockerfile`)
+1. **Root Cause:**
+   - On machines where `package-lock.json` was committed from Windows, Docker containers running Linux (`node:22-slim`) missed `@next/swc-linux-x64-gnu`.
+   - Next.js 14 attempted to auto-patch the lockfile (`patch-incorrect-lockfile.js`), which failed at runtime with `TypeError: Cannot read properties of undefined (reading 'os')` and `Failed to load SWC binary for linux/x64`.
+2. **Deterministic Resolution:**
+   - In `frontend/Dockerfile`, explicitly installed `@next/swc-linux-x64-gnu@14.2.21` during container image build.
+   - Enhanced container startup `CMD` to verify whether `@next/swc-linux-x64-gnu` is present in mounted volumes, dynamically pulling it if an existing or stale anonymous docker volume lacks the binary:
+     ```dockerfile
+     CMD ["sh", "-c", "[ -d node_modules/@next/swc-linux-x64-gnu ] || [ -d ../node_modules/@next/swc-linux-x64-gnu ] || npm install --no-save @next/swc-linux-x64-gnu@14.2.21; npm run dev"]
+     ```
+   - Guarantees seamless startup across all developer workstations without lockfile patch failures.
 
 ---
 

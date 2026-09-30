@@ -2,6 +2,7 @@ import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { env } from '../config/env.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { logger } from '../utils/logger.js';
+import { callGroqChatCompletion } from '../utils/groq.js';
 
 export interface GeneratedQuestion {
   questionText: string;
@@ -123,6 +124,45 @@ export class InterviewAIService {
     jobDescription?: string | null;
     track: string;
   }): Promise<GeneratedQuestion> {
+    // 1. Primary Provider: Groq
+    if (env.GROQ_API_KEY) {
+      try {
+        const systemInstruction = `You are an expert technical and behavioral interviewer for top technology firms.
+Your goal is to conduct an authentic, challenging, yet supportive practice drill for a university graduate.
+The interview track is: ${params.track}.
+Target Job Role: ${params.targetRoleTitle}.
+Generate the FIRST interview question tailored to the candidate's background and target role.
+If CV context has projects or experiences, anchor the question in one of their concrete project claims or technologies.
+Keep the question clear, engaging, and professional. Return valid JSON matching schema: { "questionText": string, "competency": string, "contextReference": string | null }.`;
+
+        const prompt = `Candidate Background / CV Details:
+${params.cvContext || 'None provided'}
+
+Job Description Context:
+${params.jobDescription || 'Standard entry-level / early-career role expectations.'}
+
+Generate Question 1 for track: ${params.track}.`;
+
+        const content = await callGroqChatCompletion({
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: prompt },
+          ],
+          responseFormatJson: true,
+          temperature: 0.7,
+        });
+
+        const parsed = JSON.parse(content);
+        return {
+          questionText: parsed.questionText,
+          competency: parsed.competency || 'General Competency',
+          contextReference: parsed.contextReference || null,
+        };
+      } catch (err: any) {
+        logger.warn('InterviewAIService', `Groq initial question failed: ${err.message}. Trying Gemini if available...`);
+      }
+    }
+
     if (!env.GEMINI_API_KEY) {
       return this.generateMockInitialQuestion(params.targetRoleTitle, params.track);
     }
@@ -191,6 +231,102 @@ Generate Question 1 for track: ${params.track}.`;
     isFinalQuestion: boolean;
     cvContext?: string;
   }): Promise<TurnEvaluationResult> {
+    // 1. Primary Provider: Groq
+    if (env.GROQ_API_KEY) {
+      try {
+        const systemInstruction = `You are an elite interview coach assessing early-career candidate responses using the STAR methodology (Situation, Task, Action, Result).
+Target Role: ${params.targetRoleTitle} | Track: ${params.track}.
+Allow Adaptive Probing: ${params.allowProbe}.
+
+Rules:
+1. If allowProbe is true AND the candidate's answer is brief, vague, or misses critical Action specifics or quantifiable Results, set decision="PROBE" and craft a targeted follow-up probing question in probeQuestionText.
+2. If allowProbe is false OR the candidate provided adequate detail, set decision="EVALUATION".
+3. For EVALUATION:
+   - Score Situation, Task, Action, Result from 1 to 5.
+   - Score Impact and Clarity from 1 to 5.
+   - List strong power verbs used.
+   - Provide 2 concrete strengths and 2 actionable growth tips.
+   - Provide an inspiring, high-impact model answer illustrating how the candidate's experience could be articulated with maximum impact.
+   - If not final question (${!params.isFinalQuestion}), generate the nextQuestionText for the next interview turn.
+
+Return valid JSON with keys:
+{
+  "decision": "PROBE" | "EVALUATION",
+  "probeQuestionText": string | null,
+  "probeCompetency": string | null,
+  "starSituationScore": number,
+  "starSituationNotes": string,
+  "starTaskScore": number,
+  "starTaskNotes": string,
+  "starActionScore": number,
+  "starActionNotes": string,
+  "starResultScore": number,
+  "starResultNotes": string,
+  "impactScore": number,
+  "clarityScore": number,
+  "powerVerbsUsed": string[],
+  "strengths": string[],
+  "improvements": string[],
+  "modelAnswer": string,
+  "nextQuestionText": string | null,
+  "nextQuestionCompetency": string | null,
+  "nextQuestionContextReference": string | null
+}`;
+
+        const prompt = `Current Question: "${params.questionText}" [Competency: ${params.competency}]
+Candidate Answer: "${params.responseText}"
+Candidate CV Context: ${params.cvContext || 'None'}
+Is Final Question: ${params.isFinalQuestion}`;
+
+        const content = await callGroqChatCompletion({
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: prompt },
+          ],
+          responseFormatJson: true,
+          temperature: 0.6,
+        });
+
+        const parsed = JSON.parse(content);
+        if (parsed.decision === 'PROBE' && params.allowProbe && parsed.probeQuestionText) {
+          return {
+            type: 'PROBE',
+            probeQuestion: {
+              questionText: parsed.probeQuestionText,
+              competency: parsed.probeCompetency || params.competency,
+            },
+          };
+        }
+
+        return {
+          type: 'EVALUATION',
+          feedback: {
+            starSituationScore: Math.min(5, Math.max(1, parsed.starSituationScore || 3)),
+            starSituationNotes: parsed.starSituationNotes || 'Situation clearly identified.',
+            starTaskScore: Math.min(5, Math.max(1, parsed.starTaskScore || 3)),
+            starTaskNotes: parsed.starTaskNotes || 'Task ownership established.',
+            starActionScore: Math.min(5, Math.max(1, parsed.starActionScore || 3)),
+            starActionNotes: parsed.starActionNotes || 'Concrete actions detailed.',
+            starResultScore: Math.min(5, Math.max(1, parsed.starResultScore || 3)),
+            starResultNotes: parsed.starResultNotes || 'Outcomes and reflections noted.',
+            impactScore: Math.min(5, Math.max(1, parsed.impactScore || 3)),
+            clarityScore: Math.min(5, Math.max(1, parsed.clarityScore || 4)),
+            powerVerbsUsed: parsed.powerVerbsUsed || ['Engineered', 'Optimized'],
+            strengths: parsed.strengths || ['Good structure and professional tone.'],
+            improvements: parsed.improvements || ['Include quantifiable numbers in the result.'],
+            modelAnswer: parsed.modelAnswer || 'A structured STAR response with quantifiable metrics.',
+          },
+          nextQuestion: parsed.nextQuestionText ? {
+            questionText: parsed.nextQuestionText,
+            competency: parsed.nextQuestionCompetency || 'Technical Collaboration',
+            contextReference: parsed.nextQuestionContextReference || null,
+          } : undefined,
+        };
+      } catch (err: any) {
+        logger.warn('InterviewAIService', `Groq turn evaluation failed: ${err.message}. Trying Gemini if available...`);
+      }
+    }
+
     if (!env.GEMINI_API_KEY) {
       return this.generateMockTurnResult(params);
     }
@@ -329,6 +465,53 @@ Is Final Question: ${params.isFinalQuestion}`;
       itemTitle?: string;
     }>;
   }): Promise<ScorecardSynthesisResult> {
+    // 1. Primary Provider: Groq
+    if (env.GROQ_API_KEY) {
+      try {
+        const systemInstruction = `You are a senior hiring director synthesizing an overall interview scorecard for a candidate.
+Calculate overallScore (0-100), sub-scores (0-100), and categorize the candidate into a readinessTier:
+- 90-100: "Interview Ready - Exceptional Delivery"
+- 75-89: "Solid Foundation - Minor Refinements Needed"
+- 60-74: "Developing - Focus on Quantifiable Impact"
+- < 60: "Needs Practice - Revisit STAR Structure"
+
+Compare the candidate's interview responses against their CV bullets. Identify any CV bullet points that can be upgraded with specific metrics or tools articulated during the drill.
+Return valid JSON matching schema:
+{
+  "overallScore": number,
+  "readinessTier": string,
+  "starScore": number,
+  "technicalScore": number,
+  "communicationScore": number,
+  "impactScore": number,
+  "keyStrengths": string[],
+  "keyGrowthAreas": string[],
+  "cvRecommendations": [{ "bulletPointId": string|null, "cvItemId": string|null, "originalText": string|null, "recommendation": string, "reason": string }]
+}`;
+
+        const prompt = `Target Role: ${params.targetRoleTitle} | Track: ${params.track}
+Completed Interview Turns:
+${JSON.stringify(params.turns, null, 2)}
+
+Existing CV Bullets:
+${JSON.stringify(params.cvBullets || [], null, 2)}`;
+
+        const content = await callGroqChatCompletion({
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: prompt },
+          ],
+          responseFormatJson: true,
+          temperature: 0.5,
+        });
+
+        const parsed = JSON.parse(content);
+        return parsed;
+      } catch (err: any) {
+        logger.warn('InterviewAIService', `Groq scorecard synthesis failed: ${err.message}. Trying Gemini if available...`);
+      }
+    }
+
     if (!env.GEMINI_API_KEY) {
       return this.generateMockScorecard(params);
     }

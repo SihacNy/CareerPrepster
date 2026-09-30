@@ -14,9 +14,10 @@ import {
 } from "@/components/editor/FieldError";
 
 interface ProjectsSectionProps {
-  onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
+  onRefineBullet: (bulletText: string, onApply: (newText: string) => Promise<void> | void) => void;
   isOpen?: boolean;
   onToggle?: () => void;
+  onRemove?: () => void;
 }
 
 const PROJECT_SUGGESTIONS = [
@@ -125,7 +126,7 @@ function TechStackInput({ technologies, onChange }: TechStackInputProps) {
   );
 }
 
-export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSectionProps) {
+export function ProjectsSection({ onRefineBullet, isOpen, onToggle, onRemove }: ProjectsSectionProps) {
   const { cvData, updateSectionItems, persistence } = useCV();
   const projects = getSectionItems(cvData, "PROJECTS");
   const sectionIdx = cvData.sections.findIndex((s) => s.sectionType === "PROJECTS");
@@ -258,6 +259,20 @@ export function ProjectsSection({ onRefineBullet, isOpen, onToggle }: ProjectsSe
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              title="Delete Projects Section"
+              aria-label="Delete Projects Section"
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

@@ -16,7 +16,7 @@ interface AIEnhanceModalProps {
   onClose: () => void;
   originalText: string;
   targetRole: string;
-  onApply: (refinedText: string) => void;
+  onApply: (refinedText: string) => Promise<void> | void;
 }
 
 export function AIEnhanceModal({
@@ -28,6 +28,7 @@ export function AIEnhanceModal({
 }: AIEnhanceModalProps) {
   const [suggestions, setSuggestions] = useState<AISuggestionItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -57,7 +58,7 @@ export function AIEnhanceModal({
       }
     } catch (err: any) {
       setErrorMessage(
-        err?.message || "Failed to connect to AI assistant. Please verify backend service and GEMINI_API_KEY."
+        err?.message || "Failed to connect to AI assistant. Please verify backend service and API configuration."
       );
     } finally {
       setIsLoading(false);
@@ -72,11 +73,19 @@ export function AIEnhanceModal({
 
   if (!isOpen) return null;
 
-  const handleApply = () => {
+  const handleApply = async () => {
     const selected = suggestions.find((s) => s.id === selectedId);
-    if (selected) {
-      onApply(selected.text);
+    if (!selected || isApplying) return;
+
+    setIsApplying(true);
+    try {
+      await onApply(selected.text);
       onClose();
+    } catch (err: any) {
+      console.error("Failed to apply AI enhancement:", err);
+      setErrorMessage(err?.message || "Failed to save to CV. Please try again.");
+    } finally {
+      setIsApplying(false);
     }
   };
 
@@ -192,10 +201,17 @@ export function AIEnhanceModal({
           <button
             type="button"
             onClick={handleApply}
-            disabled={!selectedId || isLoading}
-            className="px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors"
+            disabled={!selectedId || isLoading || isApplying}
+            className="px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm transition-colors inline-flex items-center gap-1.5 cursor-pointer"
           >
-            Apply to CV
+            {isApplying ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>Saving to CV...</span>
+              </>
+            ) : (
+              <span>Apply to CV</span>
+            )}
           </button>
         </div>
       </div>

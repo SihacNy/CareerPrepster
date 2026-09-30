@@ -157,9 +157,11 @@ function SkillCategoryRow({
 export function SkillsSection({
   isOpen,
   onToggle,
+  onRemove,
 }: {
   isOpen?: boolean;
   onToggle?: () => void;
+  onRemove?: () => void;
 } = {}) {
   const { cvData, updateSkillGroups, persistence } = useCV();
   const skillGroups = Array.isArray(cvData.skillGroups)
@@ -238,6 +240,20 @@ export function SkillsSection({
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              title="Delete Skills Section"
+              aria-label="Delete Skills Section"
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

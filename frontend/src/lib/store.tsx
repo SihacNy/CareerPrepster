@@ -90,8 +90,9 @@ interface CVContextType {
   updateSectionItems: (sectionTypeOrId: SectionType | string, items: CVItem[]) => void;
   updateSkillGroups: (groups: SkillGroup[]) => void;
   addCustomSection: (title: string) => void;
+  addSection: (sectionType: SectionType, customTitle?: string) => void;
   updateSectionTitle: (sectionId: string, title: string) => void;
-  removeSection: (sectionId: string) => void;
+  removeSection: (sectionTypeOrId: string) => void;
   setTemplateId: (id: TemplateId | string) => void;
   setAccentColor: (color: string) => void;
   setTargetRole: (role: string, roleId?: string) => void;
@@ -103,7 +104,7 @@ interface CVContextType {
   setDesktopView: (view: "dual" | "editor" | "preview") => void;
   lastSaved: Date | null;
   isDirty: boolean;
-  saveDraft: () => Promise<boolean>;
+  saveDraft: (options?: { customCV?: CVData; skipValidation?: boolean }) => Promise<boolean>;
   resetDraft: () => void;
   clearAll: () => void;
   loadFromHistory: (snapshot: CVData) => void;
@@ -122,6 +123,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
   // session, so guest (local) persistence applies until the backend confirms it.
   const canUseCloud = Boolean(user && isBackendSession);
   const [cvData, setCVDataState] = useState<CVData>(BLANK_CV);
+  const cvDataRef = useRef<CVData>(BLANK_CV);
   const [targetJobDescription, setTargetJobDescription] = useState<string>("");
   const [mobileView, setMobileView] = useState<"form" | "preview">("form");
   const [desktopView, setDesktopView] = useState<"dual" | "editor" | "preview">("dual");
@@ -133,6 +135,11 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     saveSource: "local",
     validationRunId: 0,
   });
+
+  // Keep cvDataRef strictly in sync with cvData
+  useEffect(() => {
+    cvDataRef.current = cvData;
+  }, [cvData]);
 
   // Tracks which user's data was last hydrated so we can reset to a clean slate
   // (instead of showing stale in-memory data) when the account changes.
@@ -292,7 +299,9 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     setIsDirty(true);
     setCVDataState((prev) => {
       const next = typeof action === "function" ? action(prev) : action;
-      return normalizeCVData(next);
+      const normalized = normalizeCVData(next);
+      cvDataRef.current = normalized;
+      return normalized;
     });
   };
 
@@ -403,12 +412,82 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const removeSection = (sectionId: string) => {
-    setCVData((prev) => ({
-      ...prev,
-      sections: prev.sections.filter((s) => s.id !== sectionId),
-      updatedAt: new Date().toISOString(),
-    }));
+  const removeSection = (sectionTypeOrId: string) => {
+    setCVData((prev) => {
+      const remainingSections = (prev.sections || []).filter(
+        (s) => s.id !== sectionTypeOrId && s.sectionType !== sectionTypeOrId
+      );
+      const isSkills = sectionTypeOrId === "SKILLS" || sectionTypeOrId === "sec-skills";
+      return {
+        ...prev,
+        sections: remainingSections,
+        skillGroups: isSkills ? [] : prev.skillGroups,
+        skills: isSkills ? [] : prev.skills,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
+
+  const addSection = (sectionType: SectionType, customTitle?: string) => {
+    setCVData((prev) => {
+      const existingSections = [...(prev.sections || [])];
+      if (sectionType === "SKILLS") {
+        if (!prev.skillGroups || prev.skillGroups.length === 0) {
+          return {
+            ...prev,
+            skillGroups: [
+              {
+                id: `skill-${Date.now()}`,
+                categoryName: "Technical Skills",
+                skills: [],
+                orderIndex: 0,
+              },
+            ],
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return prev;
+      }
+
+      if (sectionType !== "CUSTOM" && existingSections.some((s) => s.sectionType === sectionType)) {
+        return prev;
+      }
+
+      const defaultItem: CVItem = {
+        id: `item-${Date.now()}`,
+        title: "",
+        subtitle: "",
+        location: "",
+        startDate: "",
+        endDate: "",
+        isCurrent: false,
+        orderIndex: 0,
+        bulletPoints: [{ id: `bp-${Date.now()}`, text: "", framework: "STANDARD" }],
+      };
+
+      const newSection: CVSection = {
+        id: `sec-${sectionType.toLowerCase()}-${Date.now()}`,
+        sectionType,
+        title:
+          customTitle ||
+          (sectionType === "EDUCATION"
+            ? "Education"
+            : sectionType === "EXPERIENCE"
+            ? "Work Experience"
+            : sectionType === "PROJECTS"
+            ? "Technical Projects"
+            : "Additional Section"),
+        orderIndex: existingSections.length,
+        isVisible: true,
+        items: [defaultItem],
+      };
+
+      return {
+        ...prev,
+        sections: [...existingSections, newSection],
+        updatedAt: new Date().toISOString(),
+      };
+    });
   };
 
   const setTemplateId = (id: TemplateId | string) => {
@@ -436,27 +515,31 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
-  const saveDraft = async (): Promise<boolean> => {
+  const saveDraft = async (options?: { customCV?: CVData; skipValidation?: boolean }): Promise<boolean> => {
     try {
-      let normalized = normalizeCVData(cvData);
+      let normalized = normalizeCVData(options?.customCV || cvDataRef.current || cvData);
       const now = new Date();
       setLastSaved(now);
       setIsDirty(false);
 
-      // Validate before touching the backend so invalid payloads never 400.
-      // The draft is still kept in localStorage so no work is lost.
+      const skipValidation = options?.skipValidation ?? false;
       const validationRunId = (persistence.validationRunId ?? 0) + 1;
-      const validation = validateCV(normalized);
-      if (!validation.valid) {
-        localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
-        setPersistence({
-          isSynced: false,
-          lastSync: now,
-          saveSource: "local",
-          validationErrors: validation.errors,
-          validationRunId,
-        });
-        return false;
+
+      if (!skipValidation) {
+        // Validate before touching the backend so invalid payloads never 400.
+        // The draft is still kept in localStorage so no work is lost.
+        const validation = validateCV(normalized);
+        if (!validation.valid) {
+          localStorage.setItem(CV_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
+          setPersistence({
+            isSynced: false,
+            lastSync: now,
+            saveSource: "local",
+            validationErrors: validation.errors,
+            validationRunId,
+          });
+          return false;
+        }
       }
 
       if (canUseCloud) {
@@ -466,6 +549,11 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
             const updated = await cvApi.update(normalized.id, normalized);
             if (updated && (updated.id || updated.sections)) {
               const fresh = normalizeCVData(updated);
+              // Preserve client-only fields not stored in MySQL (accentColor)
+              if (!fresh.accentColor && normalized.accentColor) {
+                fresh.accentColor = normalized.accentColor;
+              }
+              cvDataRef.current = fresh;
               setCVDataState(fresh);
               normalized = fresh;
             }
@@ -473,6 +561,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
             // New draft or promoted local guest draft: create in MySQL
             const created = await cvApi.create(normalized);
             normalized.id = created.id;
+            cvDataRef.current = normalized;
             setCVDataState(normalized);
           }
           setPersistence({ isSynced: true, lastSync: now, saveSource: "cloud", validationRunId });
@@ -639,6 +728,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         updateSectionItems,
         updateSkillGroups,
         addCustomSection,
+        addSection,
         updateSectionTitle,
         removeSection,
         setTemplateId,

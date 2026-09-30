@@ -127,14 +127,19 @@ function JumpSectionDropdown({
 }
 
 export function CVForm() {
-  const { cvData, clearAll, addCustomSection, persistence } = useCV();
+  const { cvData, clearAll, addCustomSection, addSection, removeSection, persistence, saveDraft } = useCV();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const customSections = (cvData.sections || []).filter((s) => s.sectionType === "CUSTOM");
+
+  const hasEducation = cvData.sections?.some((s) => s.sectionType === "EDUCATION");
+  const hasExperience = cvData.sections?.some((s) => s.sectionType === "EXPERIENCE");
+  const hasProjects = cvData.sections?.some((s) => s.sectionType === "PROJECTS");
+  const hasSkills = (cvData.skillGroups && cvData.skillGroups.length > 0) || cvData.sections?.some((s) => s.sectionType === "SKILLS");
 
   // State for AI Refine modal
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [activeRefineText, setActiveRefineText] = useState("");
-  const [activeApplyCallback, setActiveApplyCallback] = useState<((newText: string) => void) | null>(null);
+  const [activeApplyCallback, setActiveApplyCallback] = useState<((newText: string) => Promise<void> | void) | null>(null);
 
   // Accordion state for standard sections
   const [openSections, setOpenSections] = useState({
@@ -210,15 +215,16 @@ export function CVForm() {
     }, 60);
   };
 
-  const handleOpenRefineModal = (text: string, onApply: (newText: string) => void) => {
+  const handleOpenRefineModal = (text: string, onApply: (newText: string) => Promise<void> | void) => {
     setActiveRefineText(text);
     setActiveApplyCallback(() => onApply);
     setAiModalOpen(true);
   };
 
-  const handleApplyRefine = (refinedText: string) => {
+  const handleApplyRefine = async (refinedText: string) => {
     if (activeApplyCallback) {
-      activeApplyCallback(refinedText);
+      await activeApplyCallback(refinedText);
+      await saveDraft({ skipValidation: true });
     }
   };
 
@@ -330,25 +336,37 @@ export function CVForm() {
         isOpen={openSections.personal}
         onToggle={() => toggleSection("personal")}
       />
-      <EducationSection
-        onRefineBullet={handleOpenRefineModal}
-        isOpen={openSections.education}
-        onToggle={() => toggleSection("education")}
-      />
-      <ExperienceSection
-        onRefineBullet={handleOpenRefineModal}
-        isOpen={openSections.experience}
-        onToggle={() => toggleSection("experience")}
-      />
-      <ProjectsSection
-        onRefineBullet={handleOpenRefineModal}
-        isOpen={openSections.projects}
-        onToggle={() => toggleSection("projects")}
-      />
-      <SkillsSection
-        isOpen={openSections.skills}
-        onToggle={() => toggleSection("skills")}
-      />
+      {hasEducation && (
+        <EducationSection
+          onRefineBullet={handleOpenRefineModal}
+          isOpen={openSections.education}
+          onToggle={() => toggleSection("education")}
+          onRemove={() => removeSection("EDUCATION")}
+        />
+      )}
+      {hasExperience && (
+        <ExperienceSection
+          onRefineBullet={handleOpenRefineModal}
+          isOpen={openSections.experience}
+          onToggle={() => toggleSection("experience")}
+          onRemove={() => removeSection("EXPERIENCE")}
+        />
+      )}
+      {hasProjects && (
+        <ProjectsSection
+          onRefineBullet={handleOpenRefineModal}
+          isOpen={openSections.projects}
+          onToggle={() => toggleSection("projects")}
+          onRemove={() => removeSection("PROJECTS")}
+        />
+      )}
+      {hasSkills && (
+        <SkillsSection
+          isOpen={openSections.skills}
+          onToggle={() => toggleSection("skills")}
+          onRemove={() => removeSection("SKILLS")}
+        />
+      )}
 
       {/* User-added Custom Sections */}
       {customSections.map((sec) => (
@@ -361,8 +379,55 @@ export function CVForm() {
         />
       ))}
 
-      {/* Add Custom Section Button */}
-      <div className="mb-6">
+      {/* Add Section Buttons / Options */}
+      <div className="mb-6 space-y-2.5">
+        {(!hasEducation || !hasExperience || !hasProjects || !hasSkills) && (
+          <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-50 border border-slate-200/80 rounded-2xl">
+            <span className="text-xs font-semibold text-slate-500 mr-1">Add Standard Section:</span>
+            {!hasEducation && (
+              <button
+                type="button"
+                onClick={() => addSection("EDUCATION")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-sky-300 hover:border-sky-500 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-sky-600" />
+                <span>+ Education</span>
+              </button>
+            )}
+            {!hasExperience && (
+              <button
+                type="button"
+                onClick={() => addSection("EXPERIENCE")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-sky-300 hover:border-sky-500 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-sky-600" />
+                <span>+ Work Experience</span>
+              </button>
+            )}
+            {!hasProjects && (
+              <button
+                type="button"
+                onClick={() => addSection("PROJECTS")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-sky-300 hover:border-sky-500 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-sky-600" />
+                <span>+ Projects</span>
+              </button>
+            )}
+            {!hasSkills && (
+              <button
+                type="button"
+                onClick={() => addSection("SKILLS")}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-sky-300 hover:border-sky-500 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 text-sky-600" />
+                <span>+ Skills</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Add Custom Section Button */}
         <button
           type="button"
           onClick={() => addCustomSection("Certifications & Activities")}

@@ -188,6 +188,7 @@ export const cvApi = {
       linkedinUrl: cvData.personalInfo?.linkedinUrl || null,
       githubUrl: cvData.personalInfo?.githubUrl || null,
       summary: cvData.personalInfo?.summary || null,
+      photoUrl: cvData.personalInfo?.photoUrl || null,
       sections: cvData.sections || [],
       skillGroups: cvData.skillGroups || [],
     };
@@ -201,7 +202,7 @@ export const cvApi = {
     const payload = {
       title: cvData.title,
       templateId: cvData.templateId,
-      targetRoleId: cvData.targetRoleId !== undefined ? cvData.targetRoleId : null,
+      targetRoleId: cvData.targetRoleId || null,
       targetRole: cvData.targetRole || null,
       fullName: cvData.personalInfo?.fullName,
       email: cvData.personalInfo?.email,
@@ -211,6 +212,7 @@ export const cvApi = {
       linkedinUrl: cvData.personalInfo?.linkedinUrl || null,
       githubUrl: cvData.personalInfo?.githubUrl || null,
       summary: cvData.personalInfo?.summary || null,
+      photoUrl: cvData.personalInfo?.photoUrl || null,
       sections: cvData.sections,
       skillGroups: cvData.skillGroups,
     };

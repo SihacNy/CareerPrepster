@@ -16,19 +16,19 @@ import type {
  */
 export function getSectionItems(cv: CVData, sectionType: SectionType): CVItem[] {
   const sec = cv.sections?.find((s) => s.sectionType === sectionType);
-  if (sec?.items && sec.items.length > 0) {
-    return sec.items;
+  if (sec) {
+    return sec.items || [];
   }
-  if (sectionType === "EDUCATION" && Array.isArray(cv.education) && cv.education.length > 0) {
+  if (sectionType === "EDUCATION" && Array.isArray(cv.education)) {
     return cv.education;
   }
-  if (sectionType === "EXPERIENCE" && Array.isArray(cv.experience) && cv.experience.length > 0) {
+  if (sectionType === "EXPERIENCE" && Array.isArray(cv.experience)) {
     return cv.experience;
   }
-  if (sectionType === "PROJECTS" && Array.isArray(cv.projects) && cv.projects.length > 0) {
+  if (sectionType === "PROJECTS" && Array.isArray(cv.projects)) {
     return cv.projects;
   }
-  return sec?.items || [];
+  return [];
 }
 
 /**
@@ -78,19 +78,18 @@ export function normalizeCVData(input: any): CVData {
   const skillGroups: SkillGroup[] = [];
 
   // If already has sections array, use it
-  if (Array.isArray(input.sections) && input.sections.length > 0) {
+  if (Array.isArray(input.sections)) {
     sections.push(
       ...input.sections.map((sec: any, sIdx: number) => {
-        const rawItems =
-          Array.isArray(sec.items) && sec.items.length > 0
-            ? sec.items
-            : sec.sectionType === "EDUCATION" && Array.isArray(input.education) && input.education.length > 0
-            ? input.education
-            : sec.sectionType === "EXPERIENCE" && Array.isArray(input.experience) && input.experience.length > 0
-            ? input.experience
-            : sec.sectionType === "PROJECTS" && Array.isArray(input.projects) && input.projects.length > 0
-            ? input.projects
-            : sec.items || [];
+        const rawItems = Array.isArray(sec.items)
+          ? sec.items
+          : sec.sectionType === "EDUCATION" && Array.isArray(input.education)
+          ? input.education
+          : sec.sectionType === "EXPERIENCE" && Array.isArray(input.experience)
+          ? input.experience
+          : sec.sectionType === "PROJECTS" && Array.isArray(input.projects)
+          ? input.projects
+          : [];
 
         return {
           id: sec.id || `sec-${sIdx}`,
@@ -223,15 +222,15 @@ export function normalizeCVData(input: any): CVData {
     targetRole,
     targetRoleId,
     personalInfo: {
-      fullName: input.personalInfo?.fullName || "",
-      email: input.personalInfo?.email || "",
-      phone: input.personalInfo?.phone || "",
-      location: input.personalInfo?.location || "",
-      linkedinUrl: input.personalInfo?.linkedinUrl || "",
-      githubUrl: input.personalInfo?.githubUrl || "",
-      summary: input.personalInfo?.summary || "",
-      websiteUrl: input.personalInfo?.websiteUrl || "",
-      portfolioUrl: input.personalInfo?.portfolioUrl || "",
+      fullName: input.personalInfo?.fullName || input.fullName || "",
+      email: input.personalInfo?.email || input.email || "",
+      phone: input.personalInfo?.phone || input.phone || "",
+      location: input.personalInfo?.location || input.location || "",
+      linkedinUrl: input.personalInfo?.linkedinUrl || input.linkedinUrl || "",
+      githubUrl: input.personalInfo?.githubUrl || input.githubUrl || "",
+      summary: input.personalInfo?.summary || input.summary || "",
+      websiteUrl: input.personalInfo?.websiteUrl || input.websiteUrl || "",
+      portfolioUrl: input.personalInfo?.portfolioUrl || input.portfolioUrl || "",
       photoUrl: input.personalInfo?.photoUrl || input.photoUrl || "",
     },
     sections,

@@ -111,7 +111,17 @@ export class CvService {
           }))
         : defaultSkillGroups;
 
-      let targetRoleId = input.targetRoleId || null;
+      let targetRoleId: string | null = null;
+      if (input.targetRoleId && typeof input.targetRoleId === 'string' && input.targetRoleId.trim()) {
+        const matchedRoleById = await tx.jobRole.findUnique({
+          where: { id: input.targetRoleId.trim() },
+          select: { id: true },
+        });
+        if (matchedRoleById) {
+          targetRoleId = matchedRoleById.id;
+        }
+      }
+
       if (!targetRoleId && input.targetRole && typeof input.targetRole === 'string' && input.targetRole.trim()) {
         const trimmed = input.targetRole.trim();
         const matchedRole = await tx.jobRole.findFirst({
@@ -155,6 +165,7 @@ export class CvService {
           linkedinUrl: input.linkedinUrl || null,
           githubUrl: input.githubUrl || null,
           summary: input.summary || null,
+          photoUrl: input.photoUrl || null,
           sections: {
             create: sectionCreateData,
           },
@@ -262,32 +273,47 @@ export class CvService {
     }
 
     return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      let targetRoleId = input.targetRoleId;
-      if (!targetRoleId && input.targetRole && typeof input.targetRole === 'string' && input.targetRole.trim()) {
-        const trimmed = input.targetRole.trim();
-        const matchedRole = await tx.jobRole.findFirst({
-          where: { title: { equals: trimmed } },
-          select: { id: true },
-        });
-        if (matchedRole) {
-          targetRoleId = matchedRole.id;
-        } else {
-          try {
-            const createdRole = await tx.jobRole.create({
-              data: {
-                title: trimmed,
-                industry: 'General',
-                skills: [],
-              },
-              select: { id: true },
-            });
-            targetRoleId = createdRole.id;
-          } catch {
-            const existingRole = await tx.jobRole.findFirst({
-              where: { title: { equals: trimmed } },
-              select: { id: true },
-            });
-            if (existingRole) targetRoleId = existingRole.id;
+      const shouldUpdateRole = input.targetRoleId !== undefined || input.targetRole !== undefined;
+      let targetRoleId: string | null | undefined = undefined;
+
+      if (shouldUpdateRole) {
+        targetRoleId = null;
+        if (input.targetRoleId && typeof input.targetRoleId === 'string' && input.targetRoleId.trim()) {
+          const matchedRoleById = await tx.jobRole.findUnique({
+            where: { id: input.targetRoleId.trim() },
+            select: { id: true },
+          });
+          if (matchedRoleById) {
+            targetRoleId = matchedRoleById.id;
+          }
+        }
+
+        if (!targetRoleId && input.targetRole && typeof input.targetRole === 'string' && input.targetRole.trim()) {
+          const trimmed = input.targetRole.trim();
+          const matchedRole = await tx.jobRole.findFirst({
+            where: { title: { equals: trimmed } },
+            select: { id: true },
+          });
+          if (matchedRole) {
+            targetRoleId = matchedRole.id;
+          } else {
+            try {
+              const createdRole = await tx.jobRole.create({
+                data: {
+                  title: trimmed,
+                  industry: 'General',
+                  skills: [],
+                },
+                select: { id: true },
+              });
+              targetRoleId = createdRole.id;
+            } catch {
+              const existingRole = await tx.jobRole.findFirst({
+                where: { title: { equals: trimmed } },
+                select: { id: true },
+              });
+              if (existingRole) targetRoleId = existingRole.id;
+            }
           }
         }
       }
@@ -298,7 +324,7 @@ export class CvService {
         data: {
           title: input.title,
           templateId: input.templateId,
-          targetRoleId: targetRoleId !== undefined ? targetRoleId : undefined,
+          ...(shouldUpdateRole ? { targetRoleId } : {}),
           fullName: input.fullName,
           email: input.email,
           phone: input.phone,
@@ -307,6 +333,7 @@ export class CvService {
           linkedinUrl: input.linkedinUrl,
           githubUrl: input.githubUrl,
           summary: input.summary,
+          photoUrl: input.photoUrl,
         },
       });
 

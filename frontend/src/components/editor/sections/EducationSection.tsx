@@ -14,9 +14,10 @@ import {
 } from "@/components/editor/FieldError";
 
 interface EducationSectionProps {
-  onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
+  onRefineBullet: (bulletText: string, onApply: (newText: string) => Promise<void> | void) => void;
   isOpen?: boolean;
   onToggle?: () => void;
+  onRemove?: () => void;
 }
 
 const EDUCATION_SUGGESTIONS = [
@@ -27,7 +28,7 @@ const EDUCATION_SUGGESTIONS = [
   "Organized collegiate hackathon with 200+ participants across 12 universities.",
 ];
 
-export function EducationSection({ onRefineBullet, isOpen, onToggle }: EducationSectionProps) {
+export function EducationSection({ onRefineBullet, isOpen, onToggle, onRemove }: EducationSectionProps) {
   const { cvData, updateSectionItems, persistence } = useCV();
   const education = getSectionItems(cvData, "EDUCATION");
   const sectionIdx = cvData.sections.findIndex((s) => s.sectionType === "EDUCATION");
@@ -149,6 +150,20 @@ export function EducationSection({ onRefineBullet, isOpen, onToggle }: Education
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              title="Delete Education Section"
+              aria-label="Delete Education Section"
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

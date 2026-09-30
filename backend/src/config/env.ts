@@ -11,7 +11,9 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(8, 'JWT_SECRET must be at least 8 characters long'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   GEMINI_API_KEY: z.string().optional().default(''),
-  GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
+  GEMINI_MODEL: z.string().default('gemini-1.5-flash'),
+  GROQ_API_KEY: z.string().optional().default(''),
+  GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
 });
 

@@ -14,9 +14,10 @@ import {
 } from "@/components/editor/FieldError";
 
 interface ExperienceSectionProps {
-  onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
+  onRefineBullet: (bulletText: string, onApply: (newText: string) => Promise<void> | void) => void;
   isOpen?: boolean;
   onToggle?: () => void;
+  onRemove?: () => void;
 }
 
 const EXPERIENCE_SUGGESTIONS = [
@@ -28,7 +29,7 @@ const EXPERIENCE_SUGGESTIONS = [
   "Collaborated in an Agile scrum team of 6 engineers, participating in bi-weekly sprints, code reviews, and retrospectives.",
 ];
 
-export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: ExperienceSectionProps) {
+export function ExperienceSection({ onRefineBullet, isOpen, onToggle, onRemove }: ExperienceSectionProps) {
   const { cvData, updateSectionItems, persistence } = useCV();
   const experience = getSectionItems(cvData, "EXPERIENCE");
   const sectionIdx = cvData.sections.findIndex((s) => s.sectionType === "EXPERIENCE");
@@ -153,6 +154,20 @@ export function ExperienceSection({ onRefineBullet, isOpen, onToggle }: Experien
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
+          {onRemove && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              title="Delete Experience Section"
+              aria-label="Delete Experience Section"
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

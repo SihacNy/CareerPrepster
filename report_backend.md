@@ -24,6 +24,8 @@
 13. [ATS Persistence & History Feature Roadmap](#13-ats-persistence--history-feature-roadmap-phase-13--user-story-10)
 14. [Google OAuth Multi-Token Ingestion & Session State Architecture](#14-google-oauth-multi-token-ingestion--session-state-architecture)
 15. [CV Relational Synchronization & Prisma P2025 Prevention](#15-cv-relational-synchronization--prisma-p2025-prevention)
+16. [Prisma P2003 Foreign Key Constraint Violated (`targetRoleId`)](#16-error-audit-prisma-p2003-foreign-key-constraint-violated-targetroleid)
+17. [Multi-Provider AI Architecture: Groq Llama/GPT-OSS Integration](#17-multi-provider-ai-architecture-groq-llamagpt-oss-integration)
 
 ---
 
@@ -649,6 +651,72 @@ The synchronization pipeline in `cv.service.ts` was refactored with pre-queried 
    - `SkillGroup` (`existingSgIds`)
 4. **Client State Adoption:**
    In `frontend/src/lib/store.tsx`, `saveDraft` now immediately ingests the canonical database response returned by `cvApi.update()`, replacing all client-generated ephemeral IDs in React state and `localStorage` with permanent MySQL UUIDs.
+
+---
+
+## 16. Error Audit: Prisma P2003 Foreign Key Constraint Violated (`targetRoleId`)
+
+### 16.1 Incident Signature
+```log
+careerprepster-backend   |   ┌─── ERROR DIAGNOSIS ───────────────────────────────────────────
+careerprepster-backend   |   │ Name:    PrismaClientKnownRequestError
+careerprepster-backend   |   │ Message:
+careerprepster-backend   | Invalid `tx.cV.update()` invocation in
+careerprepster-backend   | /app/backend/src/services/cv.service.ts:297:19
+careerprepster-backend   |
+careerprepster-backend   | Foreign key constraint violated: `targetRoleId`
+careerprepster-backend   |   │ Code:    P2003
+careerprepster-backend   | 18:42:58.377 🚨 [CRIT ] [HTTP:RES] 💥 FATAL / CRITICAL: PUT /api/cvs/:id → 500
+```
+
+### 16.2 Root Cause Analysis
+1. **Unchecked Client Foreign Key Ingestion:**
+   In `updateCv` (and `createCv`), the service directly assigned `input.targetRoleId` to the Prisma update payload:
+   ```typescript
+   targetRoleId: targetRoleId !== undefined ? targetRoleId : undefined
+   ```
+2. **Constraint Failure Mechanism:**
+   The `cvs` table enforces a foreign key constraint on `targetRoleId` referencing `job_roles(id)`:
+   - If the client sent an empty string `""`, an unseeded UUID, a legacy ID from a wiped development database, or a role ID that no longer exists in MySQL, MySQL rejected the foreign key write with error code 1452 (`Cannot add or update a child row: a foreign key constraint fails`).
+   - Prisma translated this into `P2003: Foreign key constraint violated: targetRoleId`, crashing the transaction with a 500 error.
+
+### 16.3 Architectural Resolution
+In `backend/src/services/cv.service.ts`:
+1. **Database Existence Pre-Validation:**
+   Before updating or creating a CV, the service verifies whether `targetRoleId` actually exists in `job_roles`:
+   ```typescript
+   if (input.targetRoleId && typeof input.targetRoleId === 'string' && input.targetRoleId.trim()) {
+     const matchedRoleById = await tx.jobRole.findUnique({
+       where: { id: input.targetRoleId.trim() },
+       select: { id: true },
+     });
+     if (matchedRoleById) targetRoleId = matchedRoleById.id;
+   }
+   ```
+2. **Title-Based Fuzzy Fallback / On-Demand Creation:**
+   If the ID is stale or missing, the service attempts to resolve `input.targetRole` by title or dynamically create it in `job_roles`.
+3. **Safe Null Coercion:**
+   If no valid role can be resolved, `targetRoleId` safely falls back to `null` (since the foreign key is optional/nullable in the Prisma schema), completely preventing MySQL foreign key crashes.
+
+---
+
+## 17. Multi-Provider AI Architecture: Groq Llama/GPT-OSS Integration
+
+### 17.1 Architecture & Motivation
+Due to Google Gemini regional access controls, API key service restrictions (`API_KEY_SERVICE_BLOCKED`), and rate-limit latency, the backend AI subsystem was refactored into a high-performance **Multi-Provider Architecture**:
+1. **Primary Provider — Groq API**:
+   - Uses ultra-low-latency LPU inference via the OpenAI-compatible `/v1/chat/completions` endpoint with native JSON object formatting (`response_format: { type: "json_object" }`).
+   - Configured with `openai/gpt-oss-120b` (or `llama-3.3-70b-versatile`), delivering structured STAR/XYZ rewrites and interview evaluations in ~200–500ms.
+2. **Secondary Provider — Google Gemini (`gemini-1.5-flash`)**:
+   - Serves as the first automatic fallback if `GROQ_API_KEY` is omitted or unconfigured.
+3. **Tertiary Fallback — Dynamic Heuristic Engine**:
+   - Zero-dependency local evaluation engine analyzing STAR markers, action verbs, quantifiable metrics, and word length so local offline development never breaks.
+
+### 17.2 Implementation Scope
+- **`backend/src/utils/groq.ts`**: Reusable dispatch utility wrapping global `fetch` with bearer authentication and structured error reporting.
+- **`backend/src/services/ai.service.ts`**: Multi-provider execution for `POST /api/ai/enhance-bullet`.
+- **`backend/src/services/interview-ai.service.ts`**: Multi-provider execution for `generateInitialQuestion`, `evaluateTurnOrProbe`, and `synthesizeScorecard`.
+- **`docker-compose.yml` & `backend/src/config/env.ts`**: Environment schemas updated with `GROQ_API_KEY` and `GROQ_MODEL`.
 
 ---
 

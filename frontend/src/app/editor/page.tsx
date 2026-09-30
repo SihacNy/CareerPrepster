@@ -11,6 +11,7 @@ import { MobileViewToggle } from "@/components/editor/MobileViewToggle";
 import { ContinueActionBar } from "@/components/editor/ContinueActionBar";
 import { useCV, isRealCVDraft } from "@/lib/store";
 import { cvApi } from "@/lib/api";
+import { normalizeCVData } from "@/types/cv";
 import { Columns2, PenLine, Eye, Loader2, X, ArrowLeft } from "lucide-react";
 
 function EditorContent() {
@@ -52,33 +53,8 @@ function EditorContent() {
       .then((remoteCV) => {
         if (isMounted && remoteCV) {
           lastLoadedIdRef.current = id;
-          let roleTitle = "";
-          if (typeof remoteCV.targetRole === "string") {
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(remoteCV.targetRole);
-            if (!isUuid) roleTitle = remoteCV.targetRole;
-          } else if (typeof remoteCV.targetRole === "object" && remoteCV.targetRole !== null) {
-            roleTitle = (remoteCV.targetRole as any).title || "";
-          }
-
-          loadCV({
-            id: remoteCV.id,
-            title: remoteCV.title,
-            templateId: remoteCV.templateId,
-            targetRole: roleTitle,
-            targetRoleId: remoteCV.targetRoleId || (typeof remoteCV.targetRole === "object" ? (remoteCV.targetRole as any)?.id : undefined),
-            personalInfo: {
-              fullName: remoteCV.fullName,
-              email: remoteCV.email,
-              phone: remoteCV.phone || "",
-              location: remoteCV.location || "",
-              portfolioUrl: remoteCV.websiteUrl || "",
-              linkedinUrl: remoteCV.linkedinUrl || "",
-              githubUrl: remoteCV.githubUrl || "",
-              summary: remoteCV.summary || "",
-            },
-            sections: remoteCV.sections || [],
-            skillGroups: remoteCV.skillGroups || [],
-          });
+          const normalized = normalizeCVData(remoteCV);
+          loadCV(normalized);
         }
       })
       .catch((err) => {

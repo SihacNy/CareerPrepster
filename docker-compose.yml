@@ -37,8 +37,9 @@ services:
       CLIENT_URL: http://localhost:3000
       JWT_SECRET: super-secret-jwt-key-for-development-mode-only
       JWT_EXPIRES_IN: 7d
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-AQ.Ab8RN6Iy6mRLxxlTkbT5gabr-sg3jw8n_X4WWcCNeGmfVJIcLQ}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-AQ.Ab8RN6K8WUAhSauOW-9Bn9dltUDJ-535kHMZ5kmcF-zYvItXVA}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       CHOKIDAR_USEPOLLING: "true"
       CHOKIDAR_INTERVAL: 500
@@ -68,6 +69,7 @@ services:
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
+      NEXT_IGNORE_INCORRECT_LOCKFILE: "1"
     depends_on:
       - backend
     volumes:

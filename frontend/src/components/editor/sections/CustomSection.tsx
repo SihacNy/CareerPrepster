@@ -15,7 +15,7 @@ import {
 
 interface CustomSectionProps {
   section: CVSection;
-  onRefineBullet: (bulletText: string, onApply: (newText: string) => void) => void;
+  onRefineBullet: (bulletText: string, onApply: (newText: string) => Promise<void> | void) => void;
   isOpen?: boolean;
   onToggle?: () => void;
 }
@@ -191,13 +191,11 @@ export function CustomSection({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              if (confirm(`Remove the "${section.title}" section?`)) {
-                removeSection(section.id);
-              }
+              removeSection(section.id);
             }}
             title="Delete Section"
             aria-label="Delete Section"
-            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
           >
             <Trash2 className="w-4 h-4" />
           </button>
