@@ -180,6 +180,7 @@ Generate Question 1 for track: ${params.track}.`;
    * Evaluates candidate turn response and determines if adaptive follow-up probing is needed
    */
   static async evaluateTurnOrProbe(params: {
+    questionIndex?: number;
     questionText: string;
     competency: string;
     contextReference?: string | null;
@@ -422,15 +423,125 @@ ${JSON.stringify(params.cvBullets || [], null, 2)}`;
   }
 
   private static generateMockTurnResult(params: any): TurnEvaluationResult {
-    const isVague = params.responseText.length < 50 || !params.responseText.includes(' ');
+    const wordCount = params.responseText.trim().split(/\s+/).filter(Boolean).length;
+    const isVague = params.responseText.length < 60 || wordCount < 12;
+
     if (isVague && params.allowProbe) {
+      let probeText = 'What specific tools or methodologies did you use to execute that step, and how did you verify the final outcome?';
+      let probeComp = 'Action Specificity & Outcome Validation';
+
+      if (params.track === 'TECHNICAL') {
+        probeText = 'Could you specify the exact technical trade-offs, architecture patterns, or profiling tools you used to validate that solution?';
+        probeComp = 'Technical Depth & Validation';
+      } else if (params.competency?.toLowerCase().includes('conflict') || params.competency?.toLowerCase().includes('communication')) {
+        probeText = 'How did you directly address the differing perspectives, and what communication techniques helped align the team on the final decision?';
+        probeComp = 'Interpersonal Alignment & Consensus Building';
+      }
+
       return {
         type: 'PROBE',
         probeQuestion: {
-          questionText: 'What specific tools or methodologies did you use to execute that step, and how did you verify the final outcome?',
-          competency: 'Action Specificity & Outcome Validation',
+          questionText: probeText,
+          competency: probeComp,
         },
       };
+    }
+
+    const nextQIndex = (params.questionIndex || 1) + 1;
+    let nextQText = 'Describe a situation where you received constructive criticism from a teammate or mentor. How did you incorporate that feedback?';
+    let nextQComp = 'Continuous Learning & Receptivity';
+
+    if (params.track === 'TECHNICAL') {
+      const technicalBank = [
+        {
+          text: `Describe the most challenging bug, race condition, or performance bottleneck you've had to debug in a system. How did you isolate and resolve the root cause?`,
+          comp: 'Root Cause Analysis & Debugging',
+        },
+        {
+          text: `How do you evaluate engineering trade-offs when choosing between third-party open-source libraries versus building a bespoke solution in-house?`,
+          comp: 'Architectural Trade-Offs',
+        },
+        {
+          text: `Walk me through your approach to database indexing and query optimization when dealing with high-concurrency read and write operations.`,
+          comp: 'Data Modeling & Performance',
+        },
+        {
+          text: `How do you design for resilience and graceful degradation when upstream external APIs or microservices experience outages?`,
+          comp: 'Fault Tolerance & Reliability',
+        },
+        {
+          text: `Explain your testing strategy (unit, integration, regression) to ensure zero downtime and high release velocity in a continuous delivery environment.`,
+          comp: 'Testing & DevOps Best Practices',
+        },
+        {
+          text: `How do you secure your web endpoints against common security vulnerabilities like injection, broken authentication, and SSRF?`,
+          comp: 'Application Security & Hardening',
+        },
+        {
+          text: `If you noticed a sudden latency spike in production during peak traffic, what diagnostic steps and telemetry would you analyze first?`,
+          comp: 'Incident Response & Observability',
+        },
+      ];
+      const pick = technicalBank[(nextQIndex - 2) % technicalBank.length] || technicalBank[0];
+      nextQText = pick.text;
+      nextQComp = pick.comp;
+    } else if (params.track === 'MIXED') {
+      const mixedBank = [
+        {
+          text: `Describe a situation where you had a significant disagreement with an engineer or stakeholder regarding architectural design. How did you align the team?`,
+          comp: 'Technical Communication & Conflict Resolution',
+        },
+        {
+          text: `Tell me about a technical project where you faced ambiguous specifications or missing documentation. How did you prioritize and execute?`,
+          comp: 'Dealing with Ambiguity & Technical Initiative',
+        },
+        {
+          text: `Walk me through a time when a production release had an unexpected bug. How did you communicate with affected users or teammates while triaging?`,
+          comp: 'Crisis Management & Accountability',
+        },
+        {
+          text: `Describe an instance where you had to quickly master an unfamiliar framework or language to deliver a mission-critical feature on schedule.`,
+          comp: 'Learning Agility & Execution',
+        },
+        {
+          text: `How have you contributed to mentoring junior peers or establishing cleaner engineering standards and code review practices on your team?`,
+          comp: 'Engineering Leadership & Mentorship',
+        },
+      ];
+      const pick = mixedBank[(nextQIndex - 2) % mixedBank.length] || mixedBank[0];
+      nextQText = pick.text;
+      nextQComp = pick.comp;
+    } else {
+      // BEHAVIORAL
+      const behavioralBank = [
+        {
+          text: `Describe a situation where you had a significant disagreement with a team member regarding a feature implementation or task priority. How did you reach consensus?`,
+          comp: 'Conflict Resolution & Teamwork',
+        },
+        {
+          text: `Tell me about a project where you were faced with ambiguous requirements or scope creep. How did you navigate the uncertainty to deliver quality work?`,
+          comp: 'Dealing with Ambiguity',
+        },
+        {
+          text: `Can you share an experience where a project or sprint did not go according to plan? What went wrong, and how did you pivot or salvage the outcome?`,
+          comp: 'Resilience & Problem Solving',
+        },
+        {
+          text: `Describe a time when you went above and beyond your standard duties to support a teammate or ensure a client deliverable succeeded.`,
+          comp: 'Ownership & Initiative',
+        },
+        {
+          text: `Tell me about a time you had to deliver difficult feedback or communicate an unavoidable project delay to a stakeholder or manager.`,
+          comp: 'Stakeholder Management',
+        },
+        {
+          text: `Give an example of a goal you set for your personal or professional growth over the past year. What steps did you take, and what was the outcome?`,
+          comp: 'Continuous Learning & Self-Awareness',
+        },
+      ];
+      const pick = behavioralBank[(nextQIndex - 2) % behavioralBank.length] || behavioralBank[0];
+      nextQText = pick.text;
+      nextQComp = pick.comp;
     }
 
     return {
@@ -446,7 +557,7 @@ ${JSON.stringify(params.cvBullets || [], null, 2)}`;
         starResultNotes: 'Outcome communicated clearly.',
         impactScore: 4,
         clarityScore: 4,
-        powerVerbsUsed: ['Engineered', 'Coordinated', 'Resolved'],
+        powerVerbsUsed: ['Engineered', 'Coordinated', 'Resolved', 'Spearheaded'],
         strengths: [
           'Structured answer cleanly following Situation and Task ownership.',
           'Demonstrated problem-solving initiative under pressure.',
@@ -457,8 +568,8 @@ ${JSON.stringify(params.cvBullets || [], null, 2)}`;
         modelAnswer: `When developing the core modules for our project, our team hit an integration hurdle that delayed testing. As team lead, I analyzed the failing API contracts, instituted standardized TypeScript interfaces, and automated integration tests. This reduced error rates by 40% and allowed us to ship the release 2 days ahead of schedule.`,
       },
       nextQuestion: !params.isFinalQuestion ? {
-        questionText: 'Describe a situation where you received constructive criticism from a teammate or mentor. How did you incorporate that feedback?',
-        competency: 'Continuous Learning & Receptivity',
+        questionText: nextQText,
+        competency: nextQComp,
         contextReference: null,
       } : undefined,
     };

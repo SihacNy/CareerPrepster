@@ -4,13 +4,12 @@ import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Sparkles,
   ArrowLeft,
-  Clock,
   Loader2,
   AlertCircle,
+  GitPullRequest,
   CheckCircle2,
-  ShieldAlert,
+  Sparkles,
 } from "lucide-react";
 import { Header } from "@/components/navigation/Header";
 import { QuestionCard } from "@/components/interview/QuestionCard";
@@ -19,8 +18,8 @@ import { TurnFeedbackCard } from "@/components/interview/TurnFeedbackCard";
 import {
   InterviewSessionData,
   InterviewQuestionData,
-  TurnFeedbackData,
   InputModality,
+  TurnFeedbackData,
 } from "@/types/interview";
 import { api } from "@/lib/api";
 
@@ -30,9 +29,19 @@ export default function ActiveInterviewRoomPage() {
   const sessionId = params.id as string;
 
   const [session, setSession] = useState<InterviewSessionData | null>(null);
-  const [activeQuestion, setActiveQuestion] = useState<InterviewQuestionData | null>(null);
-  const [parentQuestion, setParentQuestion] = useState<InterviewQuestionData | null>(null);
-  const [currentFeedback, setCurrentFeedback] = useState<TurnFeedbackData | null>(null);
+  const [activeQuestion, setActiveQuestion] =
+    useState<InterviewQuestionData | null>(null);
+  const [parentQuestion, setParentQuestion] =
+    useState<InterviewQuestionData | null>(null);
+  const [lastEvaluatedQuestionText, setLastEvaluatedQuestionText] =
+    useState<string | null>(null);
+
+  // Instant Feedback mode state
+  const [turnFeedback, setTurnFeedback] = useState<TurnFeedbackData | null>(null);
+  const [nextQuestionPending, setNextQuestionPending] =
+    useState<InterviewQuestionData | null>(null);
+  const [isSessionFinished, setIsSessionFinished] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +50,7 @@ export default function ActiveInterviewRoomPage() {
   useEffect(() => {
     async function fetchSession() {
       setIsLoading(true);
+      setError(null);
       try {
         const data = await api.interviews.getSession(sessionId);
         setSession(data);
@@ -51,23 +61,26 @@ export default function ActiveInterviewRoomPage() {
           return;
         }
 
-        // Find current active unanswered question
         const questions = data.questions || [];
-        const currentUnanswered = questions.find((q) => !q.responses || q.responses.length === 0);
+
+        // Find current active unanswered question (ordered by questionIndex asc, createdAt asc)
+        const currentUnanswered = questions.find(
+          (q) => !q.responses || q.responses.length === 0
+        );
 
         if (currentUnanswered) {
           setActiveQuestion(currentUnanswered);
           if (currentUnanswered.isProbe && currentUnanswered.parentQuestionId) {
-            const parent = questions.find((q) => q.id === currentUnanswered.parentQuestionId);
+            const parent = questions.find(
+              (q) => q.id === currentUnanswered.parentQuestionId
+            );
             setParentQuestion(parent || null);
+          } else {
+            setParentQuestion(null);
           }
         } else if (questions.length > 0) {
-          // If all answered but not marked completed, take latest
-          const latest = questions[questions.length - 1];
-          setActiveQuestion(latest);
-          if (latest.responses?.[0]?.feedback) {
-            setCurrentFeedback(latest.responses[0].feedback);
-          }
+          // All existing questions answered — redirect to scorecard
+          router.push(`/interview/${sessionId}/scorecard`);
         }
       } catch (err: any) {
         setError(err.message || "Failed to load interview session.");
@@ -91,74 +104,185 @@ export default function ActiveInterviewRoomPage() {
 
     setIsSubmitting(true);
     setError(null);
+
+    const currentQ = activeQuestion;
+    setLastEvaluatedQuestionText(currentQ.questionText);
+
     try {
       const response = await api.interviews.submitAnswer(sessionId, {
-        questionId: activeQuestion.id,
+        questionId: currentQ.id,
         responseText,
         inputModality: modality,
         durationSeconds,
       });
 
+      // 1. Adaptive follow-up probe triggered
       if (response.type === "PROBE") {
-        // Adaptive follow-up probe triggered!
-        setParentQuestion(activeQuestion);
-        setActiveQuestion(response.probeQuestion);
-      } else if (response.type === "TURN_EVALUATION") {
-        // Turn feedback ready
-        setCurrentFeedback(response.feedback);
-        // Pre-store next question
-        if (response.nextQuestion) {
-          // Keep active question until user clicks next
+        const probeQ = response.probeQuestion;
+        setParentQuestion(currentQ);
+        setActiveQuestion(probeQ);
+
+        // Update local session state to include the probe and record previous response
+        setSession((prev) => {
+          if (!prev) return prev;
+          const questionsList = [...(prev.questions || [])];
+          const parentIdx = questionsList.findIndex((q) => q.id === currentQ.id);
+
+          if (parentIdx >= 0) {
+            questionsList[parentIdx] = {
+              ...questionsList[parentIdx],
+              responses: [
+                ...(questionsList[parentIdx].responses || []),
+                {
+                  id: "temp-resp-" + Date.now(),
+                  questionId: currentQ.id,
+                  responseText,
+                  inputModality: modality,
+                  durationSeconds,
+                  wordCount: responseText.trim().split(/\s+/).filter(Boolean).length,
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+            };
+          }
+
+          if (!questionsList.some((q) => q.id === probeQ.id)) {
+            questionsList.push(probeQ);
+          }
+
+          return { ...prev, questions: questionsList };
+        });
+
+        setIsSubmitting(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+
+      // 2. Session completed
+      if (response.type === "SESSION_COMPLETED") {
+        if (session.mode === "INSTANT_FEEDBACK" && response.feedback) {
+          // In Instant Feedback mode, let candidate review final question feedback first
+          setTurnFeedback(response.feedback);
+          setIsSessionFinished(true);
+          setIsSubmitting(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
         }
-      } else if (response.type === "SESSION_COMPLETED") {
-        // Session concluded
-        if (session.mode === "INSTANT_FEEDBACK" && (response as any).feedback) {
-          setCurrentFeedback((response as any).feedback);
+
+        router.push(`/interview/${sessionId}/scorecard`);
+        return;
+      }
+
+      // 3. Standard Turn Evaluation
+      if (session.mode === "INSTANT_FEEDBACK") {
+        // Show TurnFeedbackCard
+        setTurnFeedback(response.feedback);
+        setNextQuestionPending(response.nextQuestion || null);
+
+        // Update local session questions
+        setSession((prev) => {
+          if (!prev) return prev;
+          const questionsList = [...(prev.questions || [])];
+          const currIdx = questionsList.findIndex((q) => q.id === currentQ.id);
+
+          if (currIdx >= 0) {
+            questionsList[currIdx] = {
+              ...questionsList[currIdx],
+              responses: [
+                ...(questionsList[currIdx].responses || []),
+                {
+                  id: "temp-resp-" + Date.now(),
+                  questionId: currentQ.id,
+                  responseText,
+                  inputModality: modality,
+                  durationSeconds,
+                  wordCount: responseText.trim().split(/\s+/).filter(Boolean).length,
+                  createdAt: new Date().toISOString(),
+                  feedback: response.feedback,
+                },
+              ],
+            };
+          }
+
+          if (
+            response.nextQuestion &&
+            !questionsList.some((q) => q.id === response.nextQuestion!.id)
+          ) {
+            questionsList.push(response.nextQuestion);
+          }
+
+          return { ...prev, questions: questionsList };
+        });
+
+        setIsSubmitting(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        // Exam Mode: advance seamlessly to next question
+        if (response.nextQuestion) {
+          setActiveQuestion(response.nextQuestion);
+          setParentQuestion(null);
+
+          setSession((prev) => {
+            if (!prev) return prev;
+            const questionsList = [...(prev.questions || [])];
+            const currIdx = questionsList.findIndex((q) => q.id === currentQ.id);
+
+            if (currIdx >= 0) {
+              questionsList[currIdx] = {
+                ...questionsList[currIdx],
+                responses: [
+                  ...(questionsList[currIdx].responses || []),
+                  {
+                    id: "temp-resp-" + Date.now(),
+                    questionId: currentQ.id,
+                    responseText,
+                    inputModality: modality,
+                    durationSeconds,
+                    wordCount: responseText.trim().split(/\s+/).filter(Boolean).length,
+                    createdAt: new Date().toISOString(),
+                  },
+                ],
+              };
+            }
+
+            if (!questionsList.some((q) => q.id === response.nextQuestion!.id)) {
+              questionsList.push(response.nextQuestion!);
+            }
+
+            return { ...prev, questions: questionsList };
+          });
+
+          setIsSubmitting(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
           router.push(`/interview/${sessionId}/scorecard`);
         }
       }
     } catch (err: any) {
-      setError(err.message || "Failed to evaluate answer. Please try submitting again.");
-    } finally {
+      setError(err.message || "Failed to evaluate answer. Please try again.");
       setIsSubmitting(false);
     }
   };
 
-  // Transition to next question or scorecard after viewing turn feedback
-  const handleNextQuestionTransition = async () => {
-    setCurrentFeedback(null);
-    setIsLoading(true);
-    try {
-      const refreshed = await api.interviews.getSession(sessionId);
-      setSession(refreshed);
+  // Instant Feedback "Continue to Next Question" handler
+  const handleProceedToNextQuestion = () => {
+    if (isSessionFinished) {
+      router.push(`/interview/${sessionId}/scorecard`);
+      return;
+    }
 
-      if (refreshed.status === "COMPLETED") {
-        router.push(`/interview/${sessionId}/scorecard`);
-        return;
-      }
-
-      const questions = refreshed.questions || [];
-      const currentUnanswered = questions.find((q) => !q.responses || q.responses.length === 0);
-
-      if (currentUnanswered) {
-        setActiveQuestion(currentUnanswered);
-        if (currentUnanswered.isProbe && currentUnanswered.parentQuestionId) {
-          const parent = questions.find((q) => q.id === currentUnanswered.parentQuestionId);
-          setParentQuestion(parent || null);
-        } else {
-          setParentQuestion(null);
-        }
-      } else {
-        router.push(`/interview/${sessionId}/scorecard`);
-      }
-    } catch (err: any) {
-      setError("Failed to advance to next question.");
-    } finally {
-      setIsLoading(false);
+    if (nextQuestionPending) {
+      setActiveQuestion(nextQuestionPending);
+      setParentQuestion(null);
+      setTurnFeedback(null);
+      setNextQuestionPending(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      router.push(`/interview/${sessionId}/scorecard`);
     }
   };
 
+  // --- Loading & Error states ---
   if (isLoading && !session) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -192,9 +316,35 @@ export default function ActiveInterviewRoomPage() {
     );
   }
 
-  const currentIndex = activeQuestion?.questionIndex || session?.currentQuestionIndex || 1;
+  // --- Progress calculations ---
   const totalQuestions = session?.totalQuestions || 5;
-  const progressPercent = Math.min(100, Math.round((currentIndex / totalQuestions) * 100));
+  const questionsList = session?.questions || [];
+
+  // Primary questions (excluding probes)
+  const primaryQuestions = questionsList.filter((q) => !q.isProbe);
+
+  // A primary question is completed if it has a response AND any child probe also has a response
+  const completedPrimaryCount = primaryQuestions.filter((pq) => {
+    const hasResponse = pq.responses && pq.responses.length > 0;
+    if (!hasResponse) return false;
+    const childProbe = questionsList.find(
+      (q) => q.isProbe && q.parentQuestionId === pq.id
+    );
+    if (childProbe) {
+      return Boolean(childProbe.responses && childProbe.responses.length > 0);
+    }
+    return true;
+  }).length;
+
+  // Active question index in primary track (1-indexed)
+  const activePrimaryIndex = activeQuestion
+    ? activeQuestion.questionIndex
+    : Math.min(totalQuestions, completedPrimaryCount + 1);
+
+  const progressPercent = Math.min(
+    100,
+    Math.round((completedPrimaryCount / totalQuestions) * 100)
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -216,62 +366,142 @@ export default function ActiveInterviewRoomPage() {
                 {session?.targetRoleTitle}
               </span>
               <div className="flex items-center space-x-2 text-[11px] text-slate-400">
-                <span className="capitalize">{session?.track.toLowerCase()} Track</span>
+                <span className="capitalize">
+                  {session?.track.toLowerCase()} Track
+                </span>
                 <span>•</span>
-                <span>{session?.mode === "INSTANT_FEEDBACK" ? "Instant Feedback" : "Exam Mode"}</span>
+                <span
+                  className={
+                    session?.mode === "INSTANT_FEEDBACK"
+                      ? "text-sky-600 font-semibold"
+                      : "text-slate-500 font-medium"
+                  }
+                >
+                  {session?.mode === "INSTANT_FEEDBACK"
+                    ? "Instant Feedback Mode"
+                    : "Exam Mode"}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Progress Bar & Counter */}
+          {/* Progress dots & counter */}
           <div className="flex items-center space-x-3 w-full sm:w-auto">
-            <div className="w-32 bg-slate-100 h-2 rounded-full overflow-hidden">
-              <div
-                className="bg-sky-500 h-full rounded-full transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
-              />
+            {/* Dot indicators */}
+            <div className="flex items-center space-x-1.5">
+              {Array.from({ length: totalQuestions }).map((_, i) => {
+                const questionNum = i + 1;
+                const isCompleted = questionNum < activePrimaryIndex;
+                const isActive = questionNum === activePrimaryIndex;
+                const isProbeActive = isActive && activeQuestion?.isProbe;
+
+                return (
+                  <span
+                    key={i}
+                    title={`Question ${questionNum}`}
+                    className={`block rounded-full transition-all duration-300 ${
+                      isCompleted
+                        ? "w-2.5 h-2.5 bg-emerald-500"
+                        : isProbeActive
+                        ? "w-3 h-3 bg-amber-500 ring-2 ring-amber-300 animate-pulse"
+                        : isActive
+                        ? "w-3 h-3 bg-sky-500 ring-2 ring-sky-200"
+                        : "w-2 h-2 bg-slate-200"
+                    }`}
+                  />
+                );
+              })}
             </div>
+
             <span className="text-xs font-semibold text-slate-600">
-              Q{currentIndex} of {totalQuestions}
+              {activeQuestion?.isProbe ? (
+                <span className="text-amber-700 font-medium">
+                  Question {activePrimaryIndex} of {totalQuestions} (Follow-Up Probe)
+                </span>
+              ) : (
+                <span>
+                  {completedPrimaryCount}/{totalQuestions} answered
+                </span>
+              )}
             </span>
           </div>
+        </div>
+
+        {/* Smooth progress bar */}
+        <div className="h-0.5 bg-slate-100">
+          <div
+            className="bg-sky-500 h-full transition-all duration-500 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
         </div>
       </div>
 
       {/* Main Room Content */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
         {error && (
-          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center space-x-2.5">
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center space-x-2.5 shadow-xs">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
             <span>{error}</span>
           </div>
         )}
 
-        {/* 1. Question Card */}
-        {activeQuestion && (
-          <QuestionCard
-            question={activeQuestion}
-            currentIndex={currentIndex}
-            totalQuestions={totalQuestions}
-            parentQuestionText={parentQuestion?.questionText}
-          />
-        )}
+        {/* State 1: Instant Feedback Card View */}
+        {turnFeedback ? (
+          <div className="space-y-6">
+            {lastEvaluatedQuestionText && (
+              <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs space-y-1 shadow-2xs">
+                <span className="font-semibold text-slate-700 block">Question Evaluated:</span>
+                <p className="text-slate-600 italic leading-relaxed">
+                  &quot;{lastEvaluatedQuestionText}&quot;
+                </p>
+              </div>
+            )}
 
-        {/* 2. Feedback Card (When in Instant Feedback state) */}
-        {currentFeedback ? (
-          <TurnFeedbackCard
-            feedback={currentFeedback}
-            isComplete={currentIndex >= totalQuestions}
-            onNextQuestion={handleNextQuestionTransition}
-            nextQuestionNumber={currentIndex + 1}
-          />
+            <TurnFeedbackCard
+              feedback={turnFeedback}
+              isComplete={isSessionFinished}
+              onNextQuestion={handleProceedToNextQuestion}
+              nextQuestionNumber={nextQuestionPending?.questionIndex || activePrimaryIndex + 1}
+            />
+          </div>
         ) : (
-          /* 3. Answer Input Area (When awaiting candidate response) */
-          <AnswerInputArea
-            onSubmit={handleSubmitAnswer}
-            isSubmitting={isSubmitting}
-            disabled={!activeQuestion}
-          />
+          /* State 2: Active Question & Input View */
+          <>
+            {/* Adaptive Probe Highlight Banner */}
+            {activeQuestion?.isProbe && (
+              <div className="p-4 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-900 text-xs flex items-start space-x-3 shadow-xs animate-in fade-in duration-300">
+                <GitPullRequest className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-bold text-amber-800">
+                    Interviewer Follow-Up Probe
+                  </span>
+                  <p className="text-amber-700 leading-relaxed">
+                    The interviewer is probing for more specifics on your previous response. Elaborate with the concrete tools, actions, and measurable outcomes you achieved.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Question Card */}
+            {activeQuestion && (
+              <QuestionCard
+                question={activeQuestion}
+                currentIndex={activePrimaryIndex}
+                totalQuestions={totalQuestions}
+                parentQuestionText={parentQuestion?.questionText}
+              />
+            )}
+
+            {/* Answer Input Area — keyed by question ID to ensure clean reset on every question/probe */}
+            {activeQuestion && (
+              <AnswerInputArea
+                key={activeQuestion.id}
+                onSubmit={handleSubmitAnswer}
+                isSubmitting={isSubmitting}
+                disabled={isSubmitting}
+              />
+            )}
+          </>
         )}
       </main>
     </div>

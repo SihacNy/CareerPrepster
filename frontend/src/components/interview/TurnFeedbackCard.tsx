@@ -36,13 +36,17 @@ export function TurnFeedbackCard({
     { label: "Result", score: feedback.starResultScore, notes: feedback.starResultNotes },
   ];
 
+  const strengths = Array.isArray(feedback.strengths) ? feedback.strengths : [];
+  const improvements = Array.isArray(feedback.improvements) ? feedback.improvements : [];
+  const powerVerbsUsed = Array.isArray(feedback.powerVerbsUsed) ? feedback.powerVerbsUsed : [];
+
   const renderRatingBar = (score: number) => {
     return (
       <div className="flex space-x-1 items-center">
         {[1, 2, 3, 4, 5].map((val) => (
           <div
             key={val}
-            className={`h-2 w-4 rounded-xs transition-all ${
+            className={`h-2 w-4 rounded-sm transition-all ${
               val <= score
                 ? score >= 4
                   ? "bg-emerald-500"
@@ -108,13 +112,13 @@ export function TurnFeedbackCard({
       </div>
 
       {/* Power Action Verbs */}
-      {feedback.powerVerbsUsed?.length > 0 && (
+      {powerVerbsUsed.length > 0 && (
         <div className="flex items-center flex-wrap gap-2 text-xs">
           <span className="font-semibold text-slate-700 flex items-center space-x-1">
             <Zap className="w-3.5 h-3.5 text-amber-500" />
             <span>Power Verbs Used:</span>
           </span>
-          {feedback.powerVerbsUsed.map((verb) => (
+          {powerVerbsUsed.map((verb) => (
             <span
               key={verb}
               className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200"
@@ -134,7 +138,7 @@ export function TurnFeedbackCard({
             <span>Key Strengths</span>
           </div>
           <ul className="space-y-1.5 text-xs text-emerald-800">
-            {feedback.strengths.map((str, i) => (
+            {strengths.map((str, i) => (
               <li key={i} className="flex items-start space-x-1.5">
                 <span className="text-emerald-500 font-bold">•</span>
                 <span>{str}</span>
@@ -150,7 +154,7 @@ export function TurnFeedbackCard({
             <span>Actionable Refinements</span>
           </div>
           <ul className="space-y-1.5 text-xs text-amber-800">
-            {feedback.improvements.map((imp, i) => (
+            {improvements.map((imp, i) => (
               <li key={i} className="flex items-start space-x-1.5">
                 <span className="text-amber-500 font-bold">•</span>
                 <span>{imp}</span>
@@ -182,7 +186,7 @@ export function TurnFeedbackCard({
 
         {showModelAnswer && (
           <div className="px-4 pb-4 pt-1 border-t border-sky-100 text-xs text-slate-700 leading-relaxed font-sans">
-            <p className="italic bg-white p-3.5 rounded-lg border border-sky-100 shadow-2xs">
+            <p className="italic bg-white p-3.5 rounded-lg border border-sky-100 shadow-xs">
               &quot;{feedback.modelAnswer}&quot;
             </p>
           </div>

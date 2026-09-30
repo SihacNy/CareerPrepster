@@ -243,6 +243,7 @@ export class InterviewService {
 
     // Evaluate response with AI service
     const evaluationResult = await InterviewAIService.evaluateTurnOrProbe({
+      questionIndex: question.questionIndex,
       questionText: question.questionText,
       competency: question.competency,
       contextReference: question.contextReference,
@@ -309,6 +310,7 @@ export class InterviewService {
       return {
         type: 'SESSION_COMPLETED' as const,
         questionId: question.id,
+        feedback,
         sessionProgress: {
           currentQuestionIndex: targetTotalQuestions,
           totalQuestions: targetTotalQuestions,

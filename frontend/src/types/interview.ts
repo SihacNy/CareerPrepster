@@ -137,6 +137,7 @@ export type SubmitAnswerResponse =
   | {
       type: 'SESSION_COMPLETED';
       questionId: string;
+      feedback?: TurnFeedbackData;
       sessionProgress: {
         currentQuestionIndex: number;
         totalQuestions: number;
