@@ -64,41 +64,7 @@ export function FAQSection() {
 
   return (
     <section id="faq" className="py-16 sm:py-24 bg-sky-950 text-white border-t border-sky-800 relative overflow-hidden">
-      {/* Background SVG Grid & Dot Matrix Pattern */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden [mask-image:radial-gradient(ellipse_at_center,white_30%,transparent_75%)]">
-        <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            {/* Grid Pattern */}
-            <pattern
-              id="faq-grid"
-              width="48"
-              height="48"
-              patternUnits="userSpaceOnUse"
-            >
-              <path
-                d="M 48 0 L 0 0 0 48"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1"
-                className="text-sky-500/15"
-              />
-              <circle
-                cx="0"
-                cy="0"
-                r="1.5"
-                fill="currentColor"
-                className="text-sky-300/35"
-              />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#faq-grid)" />
-        </svg>
-      </div>
 
-      {/* Ambient Gradient Glows */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-sky-500/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-500/25 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[650px] h-[400px] bg-sky-400/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
