@@ -561,6 +561,9 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
             // New draft or promoted local guest draft: create in MySQL
             const created = await cvApi.create(normalized);
             normalized.id = created.id;
+            if (created.accentColor) {
+              normalized.accentColor = created.accentColor;
+            }
             cvDataRef.current = normalized;
             setCVDataState(normalized);
           }

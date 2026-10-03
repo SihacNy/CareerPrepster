@@ -9,6 +9,7 @@ import { ScoreGauge } from "./ScoreGauge";
 import { PillarBreakdown } from "./PillarBreakdown";
 import { JobDescriptionInput } from "./JobDescriptionInput";
 import { ActionableFindingsList } from "./ActionableFindingsList";
+import { CVRecommendationsCard, BulletRecommendationItem } from "./CVRecommendationsCard";
 import { StageActions } from "./StageActions";
 import { FileCheck, Sparkles, AlertCircle, Loader2, RefreshCw, LayoutTemplate, ArrowRight } from "lucide-react";
 
@@ -32,18 +33,21 @@ const INITIAL_REPORT: ATSReport = {
 export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) {
   const { cvData, targetJobDescription, setTargetJobDescription } = useCV();
   const [report, setReport] = useState<ATSReport>(INITIAL_REPORT);
+  const [bulletRecommendations, setBulletRecommendations] = useState<BulletRecommendationItem[]>([]);
   const [isAuditing, setIsAuditing] = useState(true);
   const [auditError, setAuditError] = useState<string | null>(null);
 
-  const runAudit = async () => {
+  const runAudit = async (customJd?: string) => {
     setIsAuditing(true);
     setAuditError(null);
+
+    const jdToScore = customJd !== undefined ? customJd : targetJobDescription;
 
     try {
       const liveResult = await atsApi.score({
         cvId: cvData.id && !cvData.id.startsWith("draft-") && !cvData.id.startsWith("cv-") && !cvData.id.startsWith("imported-") ? cvData.id : undefined,
         cvData,
-        targetJobDescription,
+        targetJobDescription: jdToScore,
       });
 
       if (liveResult && typeof liveResult.overallScore === "number") {
@@ -68,6 +72,34 @@ export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) 
             sectionTarget: f.sectionRef || f.sectionTarget,
           })),
         });
+
+        const serverRecs = (liveResult as any).bulletRecommendations || [];
+        if (serverRecs.length > 0) {
+          setBulletRecommendations(serverRecs);
+        } else {
+          // If server didn't return recommendations, extract any weak bullets from cvData
+          const localRecs: BulletRecommendationItem[] = [];
+          const metricRegex = /(\d+[\.,]?\d*[%kKmMxXbB+]?|\$\d+|\d+\+|\b\d+\b)/;
+          cvData.sections?.forEach((sec) => {
+            sec.items?.forEach((item) => {
+              item.bulletPoints?.forEach((bp) => {
+                if (localRecs.length < 3 && bp.text && bp.text.trim()) {
+                  const trimmed = bp.text.trim();
+                  if (!metricRegex.test(trimmed)) {
+                    localRecs.push({
+                      bulletPointId: bp.id,
+                      cvItemId: item.id,
+                      originalText: trimmed,
+                      recommendation: `${trimmed.replace(/[\.\s]+$/, "")}, improving operational velocity and delivering measurable results across key deliverables.`,
+                      reason: "Current bullet lacks quantifiable impact metrics. Quantifying your accomplishments helps highlight scope and elevates ATS rating.",
+                    });
+                  }
+                }
+              });
+            });
+          });
+          setBulletRecommendations(localRecs);
+        }
       }
     } catch (err: any) {
       setAuditError(
@@ -76,6 +108,11 @@ export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) 
     } finally {
       setIsAuditing(false);
     }
+  };
+
+  const handleTriggerMatch = async (jd: string) => {
+    setTargetJobDescription(jd);
+    await runAudit(jd);
   };
 
   useEffect(() => {
@@ -125,7 +162,7 @@ export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) 
           </div>
           <button
             type="button"
-            onClick={runAudit}
+            onClick={() => runAudit()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition-colors shrink-0 shadow-2xs"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -152,11 +189,19 @@ export function ATSScoringStage({ isFromUpload = false }: ATSScoringStageProps) 
       <JobDescriptionInput
         value={targetJobDescription}
         onChange={setTargetJobDescription}
+        onMatch={handleTriggerMatch}
+        isMatching={isAuditing}
         keywordAnalysis={report.keywordAnalysis}
       />
 
       {/* Actionable Findings List */}
       <ActionableFindingsList findings={report.findings} />
+
+      {/* Actionable CV Bullet Recommendations */}
+      <CVRecommendationsCard
+        recommendations={bulletRecommendations}
+        cvId={cvData.id}
+      />
 
       {/* Bottom Action Bar */}
       <StageActions isFromUpload={isFromUpload} />

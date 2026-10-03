@@ -85,8 +85,8 @@ export function SessionHistoryTable({
   const getScoreBadge = (score?: number | null, status?: string) => {
     if (status === "IN_PROGRESS") {
       return (
-        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-          <Clock className="w-3 h-3" />
+        <span className="inline-flex items-center space-x-1.5 text-xs font-semibold text-amber-600">
+          <Clock className="w-3.5 h-3.5" />
           <span>In Progress</span>
         </span>
       );
@@ -95,14 +95,14 @@ export function SessionHistoryTable({
       return <span className="text-xs text-slate-400">—</span>;
     }
     const colorClass =
-      score >= 85
-        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-        : score >= 70
-        ? "bg-sky-50 text-sky-700 border-sky-200"
-        : "bg-amber-50 text-amber-700 border-amber-200";
+      score >= 75
+        ? "text-emerald-600"
+        : score >= 60
+        ? "text-amber-600"
+        : "text-rose-600";
 
     return (
-      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${colorClass}`}>
+      <span className={`text-xs font-bold ${colorClass}`}>
         {score} / 100
       </span>
     );
@@ -150,9 +150,9 @@ export function SessionHistoryTable({
                   ) : (
                     <Link
                       href={`/interview/${s.id}`}
-                      className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100 font-semibold transition-colors"
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-sky-200 hover:border-sky-600 bg-white hover:bg-sky-600 text-sky-700 hover:text-white font-semibold transition-colors shadow-xs group"
                     >
-                      <PlayCircle className="w-3.5 h-3.5" />
+                      <PlayCircle className="w-3.5 h-3.5 text-sky-600 group-hover:text-white transition-colors" />
                       <span>Resume</span>
                     </Link>
                   )}

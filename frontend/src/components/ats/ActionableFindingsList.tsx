@@ -147,10 +147,10 @@ export function ActionableFindingsList({ findings }: ActionableFindingsListProps
                   <div className="sm:self-center flex-shrink-0">
                     <Link
                       href="/editor"
-                      className="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-lg text-sky-700 bg-white hover:bg-sky-50 border border-sky-200 hover:border-sky-300 transition-colors shadow-2xs"
+                      className="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-lg text-sky-700 bg-white hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600 transition-colors shadow-2xs group"
                     >
                       <span>Fix in Editor</span>
-                      <ArrowUpRight className="w-3.5 h-3.5 ml-1.5" />
+                      <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                     </Link>
                   </div>
                 )}

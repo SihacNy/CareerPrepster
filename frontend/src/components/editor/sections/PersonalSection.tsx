@@ -1,19 +1,23 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { User, Mail, Phone, MapPin, Linkedin, Github, ChevronDown, Trash2, Upload } from "lucide-react";
+import { User, Mail, Phone, MapPin, Linkedin, Github, ChevronDown, Trash2, Upload, Sparkles } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { buildValidationMap } from "@/lib/cvValidation";
 import { FieldError, fieldErrorInputClass } from "@/components/editor/FieldError";
 import { getTemplateById } from "@/types/templates";
 
+interface PersonalSectionProps {
+  isOpen?: boolean;
+  onToggle?: () => void;
+  onRefineSummary?: (summaryText: string, onApply: (newText: string) => Promise<void> | void) => void;
+}
+
 export function PersonalSection({
   isOpen,
   onToggle,
-}: {
-  isOpen?: boolean;
-  onToggle?: () => void;
-} = {}) {
+  onRefineSummary,
+}: PersonalSectionProps = {}) {
   const { cvData, updatePersonalInfo, persistence } = useCV();
   const { personalInfo } = cvData;
   const [internalOpen, setInternalOpen] = useState(true);
@@ -307,9 +311,31 @@ export function PersonalSection({
 
           {/* Summary */}
           <div className="mt-4">
-            <label className="block text-xs sm:text-[13px] font-semibold text-slate-700 mb-2">
-              Professional Bio / Objective (Optional)
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs sm:text-[13px] font-semibold text-slate-700">
+                Professional Bio / Objective (Optional)
+              </label>
+
+              {onRefineSummary && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const textToRefine =
+                      personalInfo.summary?.trim() ||
+                      `Aspiring ${cvData.targetRole || "Software Engineer"} passionate about delivering impactful solutions and leveraging core technical skills.`;
+                    onRefineSummary(textToRefine, (newText) => {
+                      updatePersonalInfo("summary", newText);
+                    });
+                  }}
+                  className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold text-sky-700 bg-white hover:bg-sky-600 hover:text-white border border-sky-200 hover:border-sky-600 transition-colors shadow-2xs group cursor-pointer"
+                  title="Refine bio / objective with AI"
+                >
+                  <Sparkles className="w-3.5 h-3.5 mr-1 text-sky-600 group-hover:text-white transition-colors" />
+                  <span>Refine with AI</span>
+                </button>
+              )}
+            </div>
+
             <textarea
               rows={2}
               value={personalInfo.summary}

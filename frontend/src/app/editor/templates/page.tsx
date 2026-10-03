@@ -93,9 +93,9 @@ function TemplateGalleryContent() {
       const updateScale = () => {
         const width = el.clientWidth;
         if (width > 0) {
-          // Standard template target width is 800px.
+          // Standard template target width is 794px (A4 format).
           // Scale to fit card container with exact boundary fit
-          setScale(width / 800);
+          setScale(width / 794);
         }
       };
 
@@ -111,7 +111,7 @@ function TemplateGalleryContent() {
         className="w-full h-full relative overflow-hidden bg-white select-none pointer-events-none flex items-start justify-center"
       >
         <div
-          className="w-[800px] min-w-[800px] max-w-[800px] origin-top bg-white transition-transform duration-200"
+          className="w-[794px] min-w-[794px] max-w-[794px] origin-top bg-white transition-transform duration-200"
           style={{
             transform: `scale(${scale})`,
           }}

@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/navigation/Header";
 import { ScorecardSummary } from "@/components/interview/ScorecardSummary";
-import { CVRecommendationsCard } from "@/components/interview/CVRecommendationsCard";
 import { QuestionReviewAccordion } from "@/components/interview/QuestionReviewAccordion";
 import { InterviewScorecardData, InterviewSessionData } from "@/types/interview";
 import { api } from "@/lib/api";
@@ -99,27 +98,27 @@ export default function InterviewScorecardPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/interview"
-            className="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+            className="inline-flex items-center space-x-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-5 h-5" />
             <span>Return to Interview Hub</span>
           </Link>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3.5">
             <Link
               href="/interview"
-              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-xs font-semibold text-slate-700 transition-all shadow-xs"
+              className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-sm font-semibold text-slate-700 transition-all shadow-xs"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="w-4 h-4" />
               <span>Practice Another Drill</span>
             </Link>
 
             {session.cvId && (
               <a
                 href={`/editor?cvId=${session.cvId}`}
-                className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold transition-all shadow-xs"
+                className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-all shadow-xs"
               >
-                <FileText className="w-3.5 h-3.5" />
+                <FileText className="w-4 h-4" />
                 <span>Apply Feedback in CV Editor</span>
               </a>
             )}
@@ -136,13 +135,7 @@ export default function InterviewScorecardPage() {
           track={session.track}
         />
 
-        {/* 2. Cross-Referenced CV Bullet Recommendations */}
-        <CVRecommendationsCard
-          recommendations={scorecard.cvRecommendations || []}
-          cvId={session.cvId}
-        />
-
-        {/* 3. Question-by-Question Review Accordion */}
+        {/* 2. Question-by-Question Review Accordion */}
         <QuestionReviewAccordion questions={session.questions || []} />
       </main>
     </div>

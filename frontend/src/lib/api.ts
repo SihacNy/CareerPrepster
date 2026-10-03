@@ -156,6 +156,7 @@ export interface CVListItem {
   id: string;
   title: string;
   templateId: string;
+  accentColor?: string;
   fullName: string;
   targetRoleId?: string | null;
   targetRole?: string | { id: string; title: string } | null;
@@ -189,6 +190,7 @@ export const cvApi = {
       githubUrl: cvData.personalInfo?.githubUrl || null,
       summary: cvData.personalInfo?.summary || null,
       photoUrl: cvData.personalInfo?.photoUrl || null,
+      accentColor: cvData.accentColor || "#0284c7",
       sections: cvData.sections || [],
       skillGroups: cvData.skillGroups || [],
     };
@@ -213,6 +215,7 @@ export const cvApi = {
       githubUrl: cvData.personalInfo?.githubUrl || null,
       summary: cvData.personalInfo?.summary || null,
       photoUrl: cvData.personalInfo?.photoUrl || null,
+      accentColor: cvData.accentColor,
       sections: cvData.sections,
       skillGroups: cvData.skillGroups,
     };

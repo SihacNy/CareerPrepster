@@ -41,6 +41,7 @@ export class CvService {
         },
         createdAt: true,
         updatedAt: true,
+        accentColor: true,
       },
     });
 
@@ -51,6 +52,7 @@ export class CvService {
       fullName: cv.fullName,
       targetRoleId: cv.targetRoleId,
       targetRole: cv.targetRole?.title || null,
+      accentColor: cv.accentColor || '#0284c7',
       createdAt: cv.createdAt,
       updatedAt: cv.updatedAt,
     }));
@@ -166,6 +168,7 @@ export class CvService {
           githubUrl: input.githubUrl || null,
           summary: input.summary || null,
           photoUrl: input.photoUrl || null,
+          accentColor: input.accentColor || '#0284c7',
           sections: {
             create: sectionCreateData,
           },
@@ -249,6 +252,7 @@ export class CvService {
     return {
       ...cv,
       targetRole: cv.targetRole?.title || null,
+      accentColor: cv.accentColor || '#0284c7',
     };
   }
 
@@ -334,6 +338,7 @@ export class CvService {
           githubUrl: input.githubUrl,
           summary: input.summary,
           photoUrl: input.photoUrl,
+          ...(input.accentColor !== undefined ? { accentColor: input.accentColor } : {}),
         },
       });
 

@@ -21,7 +21,7 @@ export function ModernCompact({ data }: TemplateProps) {
     : (data.skills || []);
 
   return (
-    <div className="w-full bg-white text-slate-900 p-8 sm:p-10 font-sans leading-tight text-[12.5px] shadow-sm max-w-[800px] mx-auto min-h-[1050px]">
+    <div className="w-full bg-white text-slate-900 p-8 sm:p-10 font-sans leading-tight text-[12.5px] shadow-sm max-w-[794px] mx-auto min-h-[1123px]">
       {/* Header - Left Aligned Tech Standard */}
       <header className="pb-3 border-b border-slate-300">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">

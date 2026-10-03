@@ -35,7 +35,7 @@ export function ModernPhoto({ data }: TemplateProps) {
     : "CV";
 
   return (
-    <div className="w-full bg-white text-slate-900 font-sans leading-normal text-[12px] shadow-sm max-w-[800px] mx-auto min-h-[1050px] flex flex-row overflow-hidden">
+    <div className="w-full bg-white text-slate-900 font-sans leading-normal text-[12px] shadow-sm max-w-[794px] mx-auto min-h-[1123px] flex flex-row overflow-hidden">
       {/* ========================================================================= */}
       {/* LEFT SIDEBAR (Dark Accent: Photo, Contact, Education, Expertise)          */}
       {/* ========================================================================= */}

@@ -51,6 +51,222 @@ const STOP_WORDS = new Set([
   'would', 'you', 'your', 'yours', 'yourself', 'yourselves', 'will', 'can', 'must',
 ]);
 
+const CANONICAL_SKILLS: Record<string, string> = {
+  // Programming & Scripting Languages
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  python: 'Python',
+  java: 'Java',
+  c: 'C',
+  'c++': 'C++',
+  cpp: 'C++',
+  'c#': 'C#',
+  csharp: 'C#',
+  go: 'Go',
+  golang: 'Go',
+  rust: 'Rust',
+  ruby: 'Ruby',
+  php: 'PHP',
+  swift: 'Swift',
+  kotlin: 'Kotlin',
+  sql: 'SQL',
+  nosql: 'NoSQL',
+  html: 'HTML5',
+  html5: 'HTML5',
+  css: 'CSS3',
+  css3: 'CSS3',
+  sass: 'Sass',
+  scss: 'SCSS',
+  bash: 'Bash Scripting',
+  shell: 'Shell Scripting',
+  dart: 'Dart',
+  r: 'R',
+  scala: 'Scala',
+
+  // Frontend Frameworks & Libraries
+  react: 'React',
+  'react.js': 'React',
+  reactjs: 'React',
+  'react native': 'React Native',
+  flutter: 'Flutter',
+  'next.js': 'Next.js',
+  nextjs: 'Next.js',
+  vue: 'Vue.js',
+  'vue.js': 'Vue.js',
+  vuejs: 'Vue.js',
+  angular: 'Angular',
+  svelte: 'Svelte',
+  'tailwind css': 'Tailwind CSS',
+  tailwind: 'Tailwind CSS',
+  bootstrap: 'Bootstrap',
+  'material ui': 'Material UI',
+  mui: 'Material UI',
+  redux: 'Redux',
+  zustand: 'Zustand',
+  webpack: 'Webpack',
+  vite: 'Vite',
+
+  // Backend, APIs & Frameworks
+  'node.js': 'Node.js',
+  nodejs: 'Node.js',
+  node: 'Node.js',
+  express: 'Express',
+  'express.js': 'Express',
+  nestjs: 'NestJS',
+  django: 'Django',
+  flask: 'Flask',
+  fastapi: 'FastAPI',
+  'spring boot': 'Spring Boot',
+  spring: 'Spring Boot',
+  laravel: 'Laravel',
+  '.net': '.NET',
+  dotnet: '.NET',
+  'asp.net': 'ASP.NET',
+  graphql: 'GraphQL',
+  'rest apis': 'REST APIs',
+  'rest api': 'REST APIs',
+  rest: 'REST APIs',
+  restful: 'REST APIs',
+  api: 'REST APIs',
+  apis: 'REST APIs',
+  devops: 'DevOps',
+  grpc: 'gRPC',
+  websockets: 'WebSockets',
+  microservices: 'Microservices',
+
+  // Databases, Caching & ORMs
+  postgresql: 'PostgreSQL',
+  postgres: 'PostgreSQL',
+  mysql: 'MySQL',
+  mongodb: 'MongoDB',
+  mongo: 'MongoDB',
+  redis: 'Redis',
+  sqlite: 'SQLite',
+  prisma: 'Prisma',
+  typeorm: 'TypeORM',
+  mongoose: 'Mongoose',
+  dynamodb: 'DynamoDB',
+  firebase: 'Firebase',
+  supabase: 'Supabase',
+  elasticsearch: 'Elasticsearch',
+  oracle: 'Oracle',
+  mariadb: 'MariaDB',
+  cassandra: 'Cassandra',
+  neo4j: 'Neo4j',
+  bigquery: 'BigQuery',
+  snowflake: 'Snowflake',
+
+  // Cloud, DevOps & Infrastructure
+  docker: 'Docker',
+  kubernetes: 'Kubernetes',
+  k8s: 'Kubernetes',
+  aws: 'AWS',
+  gcp: 'GCP',
+  'google cloud': 'GCP',
+  azure: 'Azure',
+  terraform: 'Terraform',
+  ansible: 'Ansible',
+  'ci/cd': 'CI/CD',
+  cicd: 'CI/CD',
+  'github actions': 'GitHub Actions',
+  jenkins: 'Jenkins',
+  gitlab: 'GitLab',
+  git: 'Git',
+  github: 'GitHub',
+  linux: 'Linux',
+  nginx: 'Nginx',
+  apache: 'Apache',
+  prometheus: 'Prometheus',
+  grafana: 'Grafana',
+
+  // Testing & Quality Assurance
+  jest: 'Jest',
+  cypress: 'Cypress',
+  playwright: 'Playwright',
+  selenium: 'Selenium',
+  postman: 'Postman',
+  supertest: 'Supertest',
+  'unit testing': 'Unit Testing',
+  'e2e testing': 'E2E Testing',
+  tdd: 'TDD',
+
+  // Data Science, ML & Analytics
+  pandas: 'Pandas',
+  numpy: 'NumPy',
+  'scikit-learn': 'Scikit-Learn',
+  tensorflow: 'TensorFlow',
+  pytorch: 'PyTorch',
+  keras: 'Keras',
+  'hugging face': 'Hugging Face',
+  opencv: 'OpenCV',
+  spark: 'Apache Spark',
+  'apache spark': 'Apache Spark',
+  airflow: 'Airflow',
+  kafka: 'Kafka',
+  'power bi': 'Power BI',
+  powerbi: 'Power BI',
+  tableau: 'Tableau',
+  excel: 'Excel',
+  'machine learning': 'Machine Learning',
+  'deep learning': 'Deep Learning',
+  nlp: 'Natural Language Processing',
+
+  // Design, Security & Methodologies
+  figma: 'Figma',
+  jira: 'Jira',
+  confluence: 'Confluence',
+  agile: 'Agile/Scrum',
+  scrum: 'Agile/Scrum',
+  kanban: 'Kanban',
+  siem: 'SIEM',
+  wireshark: 'Wireshark',
+  owasp: 'OWASP Top 10',
+  'penetration testing': 'Penetration Testing',
+  'active directory': 'Active Directory',
+  'system design': 'System Design',
+  'user research': 'User Research',
+  wireframing: 'Wireframing',
+  prototyping: 'Prototyping',
+  'design systems': 'Design Systems',
+};
+
+const JOB_JARGON_BLACKLIST = new Set([
+  // General English words & Job Posting boilerplate
+  'database', 'databases', 'management', 'manage', 'manager', 'managers', 'managing', 'managed',
+  'design', 'designs', 'designer', 'designers', 'designing', 'designed',
+  'logic', 'server', 'servers', 'looking', 'senior', 'junior', 'lead', 'staff', 'principal',
+  'strong', 'proficient', 'proficiency', 'experience', 'experienced', 'seeking', 'responsibilities',
+  'responsibility', 'qualifications', 'qualification', 'requirements', 'requirement', 'skill', 'skills',
+  'ability', 'abilities', 'capable', 'competencies', 'competency', 'knowledge', 'understanding',
+  'years', 'year', 'work', 'working', 'worker', 'team', 'teams', 'teamwork', 'player', 'players',
+  'member', 'members', 'candidate', 'candidates', 'applicant', 'applicants', 'role', 'roles',
+  'position', 'positions', 'job', 'jobs', 'developer', 'developers', 'engineer', 'engineers',
+  'engineering', 'building', 'build', 'builds', 'develop', 'developing', 'development', 'deliver',
+  'delivering', 'delivery', 'maintain', 'maintaining', 'maintenance', 'maintained', 'solutions',
+  'solution', 'products', 'product', 'features', 'feature', 'projects', 'project', 'practices',
+  'practice', 'standards', 'standard', 'environment', 'production', 'support', 'supporting',
+  'written', 'verbal', 'communication', 'problem', 'solving', 'fast', 'paced', 'fast-paced',
+  'cross', 'functional', 'cross-functional', 'business', 'stakeholders', 'stakeholder', 'users',
+  'user', 'clients', 'client', 'customer', 'customers', 'internal', 'external', 'opportunity',
+  'opportunities', 'apply', 'applying', 'location', 'salary', 'benefits', 'compensation', 'equal',
+  'employer', 'must', 'have', 'including', 'includes', 'include', 'plus', 'hands', 'hand', 'hands-on',
+  'ideal', 'degree', 'computer', 'science', 'related', 'field', 'fields', 'overview', 'summary',
+  'status', 'flexible', 'remote', 'hybrid', 'office', 'level', 'track', 'success', 'demonstrated',
+  'proven', 'effective', 'collaborate', 'collaborating', 'collaboration', 'collaborative', 'ensure',
+  'ensuring', 'participate', 'participating', 'help', 'helping', 'guide', 'guidelines', 'best',
+  'excellent', 'good', 'great', 'high', 'quality', 'clean', 'modern', 'scalable', 'secure',
+  'reliable', 'day', 'daily', 'tasks', 'task', 'needs', 'drive', 'driving', 'focus', 'focused',
+  'passion', 'passionate', 'growth', 'learning', 'self', 'starter', 'stack', 'tech', 'technical',
+  'technology', 'technologies', 'tools', 'tool', 'tooling', 'platform', 'platforms', 'system',
+  'systems', 'architecture', 'architectures', 'architect', 'code', 'coding', 'application',
+  'applications', 'app', 'apps', 'web', 'software', 'service', 'services', 'end', 'front',
+  'back', 'full', 'interface', 'interfaces', 'user-friendly', 'seamless', 'efficient',
+  'optimize', 'optimizing', 'optimization', 'performance', 'speed', 'scale', 'scaling',
+  'bachelor', 'bachelors', 'master', 'masters', 'phd', 'education', 'background', 'solid',
+  'detail', 'details', 'attention', 'analytical', 'thinking', 'critical', 'interpersonal',
+  'presentation', 'written', 'oral', 'client-facing', 'customer-facing', 'deadline', 'deadlines',
+]);
+
 export class ATSService {
   static async scoreCv(userId: string | undefined, input: ScoreCvInput) {
     let fullName = '';
@@ -480,29 +696,73 @@ export class ATSService {
     let matchPercentage: number | null = null;
 
     if (input.targetJobDescription && input.targetJobDescription.trim().length > 20) {
-      const jdTokens = input.targetJobDescription
-        .toLowerCase()
-        .replace(/[^a-zA-Z0-9\s]/g, ' ')
+      // Augment canonical dictionary dynamically with any custom skills seeded/saved in JobRoles
+      try {
+        const dbRoles = await prisma.jobRole.findMany({ select: { skills: true } });
+        for (const role of dbRoles) {
+          if (Array.isArray(role.skills)) {
+            for (const s of role.skills) {
+              if (typeof s === 'string' && s.trim()) {
+                const trimmed = s.trim();
+                const lower = trimmed.toLowerCase();
+                if (!CANONICAL_SKILLS[lower]) {
+                  CANONICAL_SKILLS[lower] = trimmed;
+                }
+              }
+            }
+          }
+        }
+      } catch {
+        // Continue with static dictionary
+      }
+
+      const rawJd = input.targetJobDescription;
+      const rawJdLower = rawJd.toLowerCase();
+      const detectedSkills = new Map<string, string>(); // lowerKey -> displayName
+
+      // 1. Check known multi-word & special skills first
+      for (const [key, displayName] of Object.entries(CANONICAL_SKILLS)) {
+        if (key.includes(' ') || key.includes('.') || key.includes('/') || key.includes('+') || key.includes('#')) {
+          const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(^|[\\s,;()\\/])${escaped}($|[\\s,;()\\/])`, 'i');
+          if (regex.test(rawJdLower)) {
+            detectedSkills.set(displayName.toLowerCase(), displayName);
+          }
+        }
+      }
+
+      // 2. Tokenize individual words - ONLY accept genuine skills in CANONICAL_SKILLS
+      const words = rawJdLower
+        .replace(/[^a-zA-Z0-9+#.\s]/g, ' ')
         .split(/\s+/)
-        .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+        .map((w) => w.trim())
+        .filter((w) => w.length > 1);
 
-      const uniqueJdKeywords = Array.from(new Set(jdTokens));
+      for (const word of words) {
+        if (CANONICAL_SKILLS[word]) {
+          const canonicalName = CANONICAL_SKILLS[word];
+          detectedSkills.set(canonicalName.toLowerCase(), canonicalName);
+        }
+      }
+
       const cvTextLower = allText.toLowerCase();
-
       const matchedKeywords: { keyword: string; count: number }[] = [];
       const missingKeywords: string[] = [];
 
-      uniqueJdKeywords.forEach((kw) => {
-        if (cvTextLower.includes(kw)) {
-          matchedKeywords.push({ keyword: kw, count: (cvTextLower.match(new RegExp(kw, 'g')) || []).length });
+      for (const [lowerKey, displayName] of detectedSkills.entries()) {
+        if (cvTextLower.includes(lowerKey)) {
+          const escaped = lowerKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const count = (cvTextLower.match(new RegExp(escaped, 'g')) || []).length;
+          matchedKeywords.push({ keyword: displayName, count: Math.max(1, count) });
         } else {
-          missingKeywords.push(kw);
+          missingKeywords.push(displayName);
         }
-      });
+      }
 
+      const totalDetected = detectedSkills.size;
       matchPercentage =
-        uniqueJdKeywords.length > 0
-          ? Math.round((matchedKeywords.length / uniqueJdKeywords.length) * 100)
+        totalDetected > 0
+          ? Math.round((matchedKeywords.length / totalDetected) * 100)
           : 0;
 
       keywordAnalysis = {
@@ -545,6 +805,90 @@ export class ATSService {
       matchPercentage: matchPercentage ? `${matchPercentage}%` : 'N/A',
     });
 
+    let bulletRecommendations: Array<{
+      bulletPointId?: string;
+      cvItemId?: string;
+      originalText: string;
+      recommendation: string;
+      reason: string;
+    }> = [];
+
+    // 1. Fetch cross-referenced interview recommendations if available for this cv
+    if (input.cvId) {
+      try {
+        const sessionWithScorecard = await prisma.interviewSession.findFirst({
+          where: { cvId: input.cvId, status: 'COMPLETED' },
+          include: { scorecard: true },
+          orderBy: { completedAt: 'desc' },
+        });
+        if (sessionWithScorecard?.scorecard?.cvRecommendations) {
+          const recs = sessionWithScorecard.scorecard.cvRecommendations as any[];
+          if (Array.isArray(recs) && recs.length > 0) {
+            bulletRecommendations.push(
+              ...recs.map((r: any) => ({
+                bulletPointId: r.bulletPointId || undefined,
+                cvItemId: r.cvItemId || undefined,
+                originalText: r.originalText || '',
+                recommendation: r.recommendation || '',
+                reason: r.reason || '',
+              }))
+            );
+          }
+        }
+      } catch (err: any) {
+        logger.warn('ATSService', `Could not fetch session cvRecommendations: ${err.message}`);
+      }
+    }
+
+    // 2. If no interview recommendations or fewer than 3, identify weak/unquantified bullets from sections
+    if (bulletRecommendations.length < 3) {
+      sections.forEach((s) => {
+        (s.items || []).forEach((item: any) => {
+          (item.bulletPoints || []).forEach((b: any) => {
+            const text = typeof b === 'string' ? b : b.text;
+            if (!text || text.trim().length === 0) return;
+            const trimmed = text.trim();
+            if (bulletRecommendations.some((r) => r.originalText === trimmed)) return;
+
+            const firstWord = trimmed.split(/\s+/)[0].replace(/[^a-zA-Z]/g, '').toLowerCase();
+            const hasPowerVerb = POWER_VERBS.has(firstWord);
+            const hasMetric = metricRegex.test(trimmed);
+
+            if (bulletRecommendations.length < 3) {
+              const itemTitle = item.title || item.role || s.title || 'project initiative';
+              if (!hasMetric && !hasPowerVerb) {
+                bulletRecommendations.push({
+                  bulletPointId: b.id || undefined,
+                  cvItemId: item.id || undefined,
+                  originalText: trimmed,
+                  recommendation: `Engineered and deployed core features for ${itemTitle}, streamlining workflows and boosting efficiency by 25%.`,
+                  reason: 'Original bullet lacks both an action verb and quantifiable metrics. Beginning with "Engineered" and adding concrete percentages elevates ATS impact scoring.',
+                });
+              } else if (!hasMetric) {
+                bulletRecommendations.push({
+                  bulletPointId: b.id || undefined,
+                  cvItemId: item.id || undefined,
+                  originalText: trimmed,
+                  recommendation: `${trimmed.replace(/[\.\s]+$/, '')}, accelerating execution and supporting 500+ active users with 99.9% uptime.`,
+                  reason: 'Original bullet describes tasks without measurable outcomes. Enriching with concrete scale metrics demonstrates tangible business impact.',
+                });
+              } else if (!hasPowerVerb) {
+                const cleaned = trimmed.replace(/^(responsible for|assisted with|worked on|helped with|contributed to)\s*/i, '');
+                const capitalized = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+                bulletRecommendations.push({
+                  bulletPointId: b.id || undefined,
+                  cvItemId: item.id || undefined,
+                  originalText: trimmed,
+                  recommendation: `Spearheaded ${capitalized.charAt(0).toLowerCase() + capitalized.slice(1)}`,
+                  reason: 'Replaces passive opening phrasing with a strong, decisive power verb to exhibit leadership and initiative.',
+                });
+              }
+            }
+          });
+        });
+      });
+    }
+
     return {
       reportId,
       overallScore,
@@ -564,6 +908,7 @@ export class ATSService {
         message: f.message,
         recommendation: f.remediation || f.message,
       })),
+      bulletRecommendations,
     };
   }
 }

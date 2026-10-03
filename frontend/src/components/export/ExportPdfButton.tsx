@@ -9,6 +9,7 @@ import { ClassicPdfDocument } from "@/lib/pdf/ClassicPdfDocument";
 import { ModernPdfDocument } from "@/lib/pdf/ModernPdfDocument";
 import { ExecutiveAccentPdfDocument } from "@/lib/pdf/ExecutiveAccentPdfDocument";
 import { ModernPhotoPdfDocument } from "@/lib/pdf/ModernPhotoPdfDocument";
+import { registerPdfFonts } from "@/lib/pdf/registerFonts";
 
 interface ExportPdfButtonProps {
   variant?: "primary" | "secondary";
@@ -49,7 +50,7 @@ async function preparePdfCompatibleImage(url?: string | null): Promise<string | 
           const sx = (rawWidth - squareSize) / 2;
           const sy = (rawHeight - squareSize) / 2;
 
-          // Clip to a perfect circle on the canvas so corners are transparent
+          // Clip to a circle on the canvas so corners are transparent PNG alpha
           ctx.beginPath();
           ctx.arc(targetDim / 2, targetDim / 2, targetDim / 2, 0, Math.PI * 2);
           ctx.closePath();
@@ -58,7 +59,7 @@ async function preparePdfCompatibleImage(url?: string | null): Promise<string | 
           // Draw the center-cropped square into the circular clip
           ctx.drawImage(img, sx, sy, squareSize, squareSize, 0, 0, targetDim, targetDim);
 
-          // Standard PNG with alpha channel preserves the circular shape perfectly in @react-pdf/renderer
+          // Standard PNG with alpha channel preserves circular transparency in @react-pdf/renderer
           const pngUrl = canvas.toDataURL("image/png");
           resolve(pngUrl);
         } catch (canvasErr) {
@@ -103,6 +104,7 @@ export function ExportPdfButton({
   const handleDownload = async () => {
     try {
       setIsGenerating(true);
+      registerPdfFonts();
 
       // 1. Sanitize photo URL into guaranteed-compatible JPEG data URL for @react-pdf/renderer
       let safePhotoUrl: string | null = null;

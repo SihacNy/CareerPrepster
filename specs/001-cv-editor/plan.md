@@ -353,23 +353,55 @@ To support diverse student career trajectories and international application req
   - **Backend Layer (Phase 12A)**: MySQL persistence via Prisma (`photoUrl String? @db.MediumText` for base64 up to 10MB, `accentColor String? @default("#0284c7") @db.VarChar(30)`), Zod validation schemas in `@careerprepster/shared`, atomic transaction handling in `CvService`, and smoke tests.
   - **Frontend Layer (Phase 12B)**: Local draft store updates, HTML live preview templates, PDF export generators, photo upload with strict <= 10MB validation, and template gallery swatches.
 
+### 9. React-PDF Export & DOM Preview Typographic Parity Architecture
+
+To ensure 1:1 visual fidelity between the Export Stage web preview (`/editor/export`) and the downloaded ATS vector PDF deliverable:
+
+- **Typography & Glyph Engine Parity**:
+  - **Issue Identified**: The web DOM preview renders using **Plus Jakarta Sans** (Google Fonts via Next.js `layout.tsx`), which features a high x-height, open geometric letterforms, and generous horizontal advance widths. The `@react-pdf/renderer` exports previously defaulted to built-in PostScript **Helvetica**, which has a significantly lower x-height and tighter tracking. Consequently, identical nominal font sizes appeared ~15–20% smaller and noticeably thinner in the exported PDF.
+  - **Resolution Strategy**: Register **Plus Jakarta Sans** directly into `@react-pdf/renderer` using `Font.register()` with local TTF assets (`Regular` 400, `Medium` 500, `SemiBold` 600, `Bold` 700) hosted in `frontend/public/fonts/`.
+  - **Fallback**: Retain standard PostScript `Helvetica` / `Helvetica-Bold` as a safe fallback if TTF font buffer loading fails.
+
+- **Mathematical Coordinate Alignment**:
+  - Web DOM previews use standard 96 DPI CSS pixels ($794\text{px} \times 1123\text{px}$ for A4).
+  - React-PDF uses standard 72 DPI PostScript points ($595.28\text{pt} \times 841.89\text{pt}$ for A4).
+  - Exact conversion ratio: $1\text{ CSS px} = 0.75\text{ pt}$.
+  - All margins, paddings, avatar dimensions, and typography sizes across `ModernPhotoPdfDocument`, `ExecutiveAccentPdfDocument`, `ModernPdfDocument`, and `ClassicPdfDocument` are mathematically calibrated to this 0.75 scale.
+
+- **Section & Layout Element Synchronization**:
+  - **Experience & Projects**: Render clean paragraph lines without bullet dots in `ModernPhoto` to match the web template styling. Filter out accidental empty bullets (`.` or `-`).
+  - **Project URLs**: Render repository/demo links directly underneath project titles in both DOM and PDF.
+  - **Contact & Education**: Synchronize GitHub, LinkedIn, and education bullets across all PDF documents.
+  - **Profile Photos**: Pre-process uploaded headshots on a temporary 500x500 canvas with circular clipping to generate baseline PNG data URLs, preventing image decoding crashes in `@react-pdf/renderer`.
+
 ---
 
-## Implementation Notes
+## Current Implementation Status (September 2026)
 
-### Resume Import: Phased Backend Migration
+The project has achieved significant full-stack implementation across all three tiers:
 
-The resume import parsing pipeline (`POST /api/cvs/import`) is being implemented in two phases:
+1. **Backend Service (`backend/`)**:
+   - **Express + ESM NodeNext architecture** fully implemented on port 5000.
+   - **Prisma ORM & MySQL**: 8-table relational model (`cvs`, `cv_sections`, `cv_items`, `bullet_points`, `skill_groups`, `job_roles`, `role_bullet_templates`, `ats_reports`) seeded with 15+ job roles and 50+ starter bullets.
+   - **Authentication**: Google OAuth token exchange generating `HttpOnly, Secure, SameSite=Lax` JWT cookies with passwordless architecture.
+   - **AI Refinement**: Dual LLM integration utilizing Google Gemini 1.5 Flash API with automatic fallback to Groq API (`openai/gpt-oss-120b`).
+   - **Resume Import**: In-memory multipart parsing via `multer` + `pdf-parse` (PDF) and `mammoth` (DOCX) + AI structuring.
 
-**Phase 1 (Current)**: Text extraction via `pdf-parse` (PDF) and `mammoth` (DOCX) is implemented as a **Next.js API Route** at `frontend/src/app/api/cvs/import/route.ts`. This is a temporary location since the Express backend does not exist yet. The regex-based structurer in `frontend/src/lib/cvParser.ts` maps the extracted text to `CVData`.
+2. **Frontend Web Application (`frontend/`)**:
+   - **Next.js 14 App Router** running on port 3000 with Tailwind CSS.
+   - **Author CV (`/editor`)**: Dual-pane workspace with live DOM preview, role autocomplete drawer, in-line STAR/XYZ wording assistant, and unified template switcher.
+   - **Job Matcher (`/editor/job-match`)**: Dedicated target job description keyword extraction and match scoring.
+   - **ATS Review (`/editor/ats`)**: 4-pillar composite scoring gauge (Parsability, Impact, Skills Depth, Readability) with actionable remediation suggestions.
+   - **Final Review & Export (`/editor/export`)**: Full A4 draft inspection and client-side vector PDF generation via `@react-pdf/renderer`.
+   - **Template System**: 4 archetypes (`classic`, `modern`, `executive-accent`, `modern-photo`) implemented across both HTML DOM preview and React-PDF generators.
 
-**Phase 2 (Express Migration)**: When the Express backend is added, the parsing logic should be migrated to `backend/src/routes/import.routes.ts` + `backend/src/services/parser.service.ts` as outlined in the project structure above. The Gemini structured schema parsing replaces the regex structurer at that time. The client call in `cvParser.ts` only needs its URL updated (or use `next.config.js` rewrites to proxy `/api/*` → Express).
-
-**Phase 3 (Gemini)**: Replace the regex-based `parseResumeTextToCVData()` with Gemini structured output parsing using a strict Zod `responseSchema` for semantic section identification. This happens on the Express backend.
+3. **Active Work Item: Typography Parity**:
+   - Embedding `Plus Jakarta Sans` TTF assets into `@react-pdf/renderer` via `Font.register` to achieve exact 1:1 typographic fidelity between the web preview and downloaded PDF.
 
 ---
 
 ## Complexity Tracking
 
 > Zero constitution violations detected. Architecture strictly adheres to Principles 1 through 5.
+
 

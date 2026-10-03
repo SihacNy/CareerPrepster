@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, ZoomIn, ZoomOut, Printer } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { CVTemplateRenderer } from "@/components/preview/CVTemplateRenderer";
@@ -15,6 +15,9 @@ interface DraftViewModalProps {
 export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
   const { cvData } = useCV();
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+
+  const resumeRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState<number>(1123);
 
   // Close on Escape key
   useEffect(() => {
@@ -32,6 +35,12 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
       document.body.style.overflow = "auto";
     };
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (resumeRef.current) {
+      setContentHeight(Math.max(1123, resumeRef.current.offsetHeight));
+    }
+  }, [cvData, isOpen]);
 
   if (!isOpen) return null;
 
@@ -113,7 +122,7 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
 
       {/* Modal Scroll Viewport */}
       <div
-        className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center items-start"
+        className="flex-1 overflow-y-auto overflow-x-auto p-4 sm:p-8 flex justify-center items-start"
         onClick={(e) => {
           // Close if clicking outside the paper sheet
           if (e.target === e.currentTarget) {
@@ -123,13 +132,31 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
       >
         <div
           style={{
-            transform: `scale(${zoomLevel / 100})`,
-            transformOrigin: "top center",
-            transition: "transform 0.15s ease-out",
+            width: `${794 * (zoomLevel / 100)}px`,
+            height: `${contentHeight * (zoomLevel / 100)}px`,
+            position: "relative",
+            flexShrink: 0,
+            transition: "width 0.15s ease-out, height 0.15s ease-out",
           }}
-          className="w-full max-w-3xl bg-white shadow-2xl rounded-sm border border-slate-300 my-4"
+          className="my-4"
         >
-          <CVTemplateRenderer data={cvData} />
+          <div
+            ref={resumeRef}
+            style={{
+              width: "794px",
+              minWidth: "794px",
+              maxWidth: "794px",
+              minHeight: "1123px",
+              transform: `scale(${zoomLevel / 100})`,
+              transformOrigin: "top left",
+              position: "absolute",
+              top: 0,
+              left: 0,
+            }}
+            className="bg-white shadow-2xl rounded-sm border border-slate-300"
+          >
+            <CVTemplateRenderer data={cvData} />
+          </div>
         </div>
       </div>
     </div>

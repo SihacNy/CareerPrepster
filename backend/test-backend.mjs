@@ -135,13 +135,14 @@ async function testCvCrud() {
         email: 'jane@example.com',
         phone: '+855 12 345 678',
         location: 'Phnom Penh',
+        accentColor: '#0f766e',
       }),
     });
 
     const data = await res.json();
     if (res.status === 201 && data.success) {
       testCvId = data.data.id;
-      pass('POST /api/cvs', `(Created CV tree with ${data.data.sections?.length || 0} default sections)`);
+      pass('POST /api/cvs', `(Created CV tree with ${data.data.sections?.length || 0} default sections, accentColor=${data.data.accentColor})`);
     } else {
       fail('POST /api/cvs', JSON.stringify(data));
     }
@@ -157,7 +158,11 @@ async function testCvCrud() {
       });
       const data = await res.json();
       if (res.status === 200 && data.success) {
-        pass(`GET /api/cvs/${testCvId}`, `(Fetched tree with sections & skillGroups)`);
+        if (data.data.accentColor === '#0f766e') {
+          pass(`GET /api/cvs/${testCvId}`, `(Fetched tree with accentColor=${data.data.accentColor} preserved in DB)`);
+        } else {
+          fail(`GET /api/cvs/${testCvId}`, `Expected accentColor #0f766e, got ${data.data.accentColor}`);
+        }
       } else {
         fail(`GET /api/cvs/${testCvId}`, JSON.stringify(data));
       }

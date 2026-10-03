@@ -3,40 +3,40 @@
 import React from "react";
 import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 import { CVData, getSectionItems, getBulletTexts } from "@/types/cv";
-import { stripMarkdown } from "@/lib/formatText";
+import { stripMarkdown, sanitizePdfText } from "@/lib/formatText";
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: "Helvetica",
+    fontFamily: "Plus Jakarta Sans",
     fontSize: 8.5,
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
   },
   sidebar: {
-    width: "35%",
-    padding: 22,
+    width: "34%",
+    padding: 20,
     color: "#FFFFFF",
   },
   main: {
-    width: "65%",
-    padding: 24,
+    width: "66%",
+    padding: 22,
     color: "#0F172A",
   },
   avatarContainer: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
     alignSelf: "center",
-    marginBottom: 16,
+    marginBottom: 15,
     borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.4)",
+    borderColor: "rgba(255, 255, 255, 0.35)",
     overflow: "hidden",
     backgroundColor: "transparent",
   },
   avatarImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 39,
+    borderRadius: 43,
   },
   avatarInitials: {
     width: "100%",
@@ -47,170 +47,229 @@ const styles = StyleSheet.create({
   initialsText: {
     color: "#FFFFFF",
     fontSize: 22,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
   },
   sidebarSection: {
-    marginBottom: 14,
+    marginBottom: 16,
   },
   sidebarTitle: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 10,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    fontSize: 9.75,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     borderBottomWidth: 0.75,
     borderBottomColor: "rgba(255, 255, 255, 0.35)",
     paddingBottom: 2.5,
-    marginBottom: 6,
+    marginBottom: 7,
     color: "#FFFFFF",
   },
   contactField: {
-    marginBottom: 5,
+    marginBottom: 6.5,
   },
   contactLabel: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
     fontSize: 7.5,
     textTransform: "uppercase",
     color: "#FFFFFF",
     letterSpacing: 0.4,
   },
   contactValue: {
-    fontSize: 7.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 8.25,
     color: "#E2E8F0",
-    marginTop: 1,
+    marginTop: 1.5,
   },
   eduItem: {
-    marginBottom: 6,
+    marginBottom: 9,
   },
   eduDate: {
-    fontSize: 7.5,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 600,
+    fontSize: 7.875,
     color: "#CBD5E1",
   },
   eduDegree: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 8.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    fontSize: 8.625,
     color: "#FFFFFF",
-    marginTop: 1,
+    marginTop: 1.5,
+    lineHeight: 1.25,
   },
   eduInstitution: {
-    fontSize: 7.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 7.875,
     color: "#E2E8F0",
     marginTop: 0.5,
   },
   eduGpa: {
-    fontSize: 7,
-    color: "#94A3B8",
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 7.5,
+    fontStyle: "italic",
+    color: "#CBD5E1",
     marginTop: 0.5,
   },
+  eduBulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 2,
+    marginLeft: 2,
+  },
+  eduBulletDot: {
+    width: 7,
+    fontSize: 7.5,
+    color: "#CBD5E1",
+  },
+  eduBulletText: {
+    flex: 1,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 7.875,
+    color: "#E2E8F0",
+    lineHeight: 1.35,
+  },
   skillCategoryTitle: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
     fontSize: 7.5,
     textTransform: "uppercase",
     color: "#CBD5E1",
-    marginBottom: 2,
+    marginTop: 3,
+    marginBottom: 3,
     letterSpacing: 0.3,
   },
   skillBulletRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 2,
+    marginBottom: 3.5,
   },
   skillBulletDot: {
-    width: 7,
-    fontSize: 7,
+    width: 8,
+    fontSize: 8.25,
     color: "#FFFFFF",
   },
   skillBulletText: {
     flex: 1,
-    fontSize: 7.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 500,
+    fontSize: 8.25,
     color: "#F1F5F9",
+    lineHeight: 1.35,
   },
   candidateName: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 800,
     fontSize: 20,
     textTransform: "uppercase",
     color: "#1E293B",
     letterSpacing: 0.5,
   },
   candidateRole: {
-    fontSize: 8.5,
-    fontFamily: "Helvetica",
-    letterSpacing: 2,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 600,
+    fontSize: 9.5,
+    letterSpacing: 2.2,
     textTransform: "uppercase",
     color: "#475569",
-    marginTop: 2,
+    marginTop: 3,
   },
   summaryText: {
-    fontSize: 7.8,
-    lineHeight: 1.35,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 8.25,
+    lineHeight: 1.5,
     color: "#475569",
     marginTop: 6,
     textAlign: "justify",
   },
   mainSectionTitle: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 9.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    fontSize: 9.75,
     textTransform: "uppercase",
     letterSpacing: 0.6,
     color: "#1E293B",
-    borderBottomWidth: 1.2,
+    borderBottomWidth: 1.5,
     borderBottomColor: "#334155",
-    paddingBottom: 2,
-    marginTop: 10,
-    marginBottom: 8,
+    paddingBottom: 2.5,
+    marginTop: 14,
+    marginBottom: 10,
   },
   timelineContainer: {
     position: "relative",
-    paddingLeft: 12,
-    borderLeftWidth: 1.2,
+    paddingLeft: 16,
+    borderLeftWidth: 1.5,
     borderLeftColor: "#CBD5E1",
-    marginLeft: 3,
+    marginLeft: 4,
   },
   timelineEntry: {
     position: "relative",
-    marginBottom: 8,
+    marginBottom: 14,
   },
   timelineNode: {
     position: "absolute",
-    left: -16.2,
-    top: 2,
-    width: 6.5,
-    height: 6.5,
-    borderRadius: 3.25,
-    borderWidth: 1.2,
+    left: -21,
+    top: 1.5,
+    width: 8.5,
+    height: 8.5,
+    borderRadius: 4.25,
+    borderWidth: 1.5,
     backgroundColor: "#FFFFFF",
   },
   entryDate: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 7.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    fontSize: 8.25,
     color: "#1E293B",
   },
   entryCompany: {
-    fontSize: 7.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 600,
+    fontSize: 8.25,
     color: "#475569",
-    marginTop: 0.5,
+    marginTop: 1.5,
   },
   entryTitle: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 8.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    fontSize: 9,
     color: "#0F172A",
-    marginTop: 1,
-  },
-  entryBulletRow: {
-    flexDirection: "row",
     marginTop: 1.5,
-    alignItems: "flex-start",
   },
-  entryBulletDot: {
-    width: 7,
-    fontSize: 7,
-    color: "#64748B",
-  },
-  entryBulletText: {
-    flex: 1,
-    fontSize: 7.5,
+  entryAchievementText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 8.25,
     color: "#475569",
-    lineHeight: 1.3,
+    lineHeight: 1.42,
+    marginBottom: 3,
+    textAlign: "justify",
+  },
+  projectTitleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    flexWrap: "wrap",
+    marginTop: 1.5,
+  },
+  projectTechText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 7.875,
+    color: "#64748B",
+    marginLeft: 5,
+  },
+  projectUrlText: {
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 7.5,
+    color: "#64748B",
+    marginTop: 1.5,
+    marginBottom: 3,
   },
 });
 
@@ -295,6 +354,14 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
                 </Text>
               </View>
             ) : null}
+            {personalInfo.githubUrl ? (
+              <View style={styles.contactField}>
+                <Text style={styles.contactLabel}>GitHub</Text>
+                <Text style={styles.contactValue}>
+                  {personalInfo.githubUrl.replace(/^https?:\/\/(www\.)?/, "")}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Section: Education */}
@@ -305,6 +372,9 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
                 const dateStr = [edu.startDate, edu.isCurrent ? "Present" : edu.endDate]
                   .filter(Boolean)
                   .join(" – ");
+                const bullets = getBulletTexts(edu.bulletPoints).filter(
+                  (b) => b && b.trim() && b.trim() !== "."
+                );
                 return (
                   <View key={edu.id} style={styles.eduItem}>
                     {dateStr ? <Text style={styles.eduDate}>{dateStr}</Text> : null}
@@ -314,6 +384,16 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
                       {edu.location ? `, ${edu.location}` : ""}
                     </Text>
                     {edu.gpa ? <Text style={styles.eduGpa}>GPA: {edu.gpa}</Text> : null}
+                    {bullets.length > 0 ? (
+                      <View style={{ marginTop: 2 }}>
+                        {bullets.map((b, i) => (
+                          <View key={i} style={styles.eduBulletRow}>
+                            <Text style={styles.eduBulletDot}>•</Text>
+                            <Text style={styles.eduBulletText}>{stripMarkdown(b)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
                 );
               })}
@@ -331,7 +411,7 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
                     ? (group.skills as string).split(",").map((s) => s.trim()).filter(Boolean)
                     : [];
                 return (
-                  <View key={group.id} style={{ marginBottom: 4 }}>
+                  <View key={group.id} style={{ marginBottom: 5 }}>
                     {group.categoryName ? (
                       <Text style={styles.skillCategoryTitle}>{group.categoryName}</Text>
                     ) : null}
@@ -361,7 +441,7 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
               <Text style={styles.candidateRole}>{data.targetRole}</Text>
             ) : null}
             {personalInfo.summary ? (
-              <Text style={styles.summaryText}>{personalInfo.summary}</Text>
+              <Text style={styles.summaryText}>{sanitizePdfText(personalInfo.summary)}</Text>
             ) : null}
           </View>
 
@@ -371,7 +451,9 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
               <Text style={styles.mainSectionTitle}>Experience</Text>
               <View style={styles.timelineContainer}>
                 {experience.map((exp) => {
-                  const bullets = getBulletTexts(exp.bulletPoints);
+                  const bullets = getBulletTexts(exp.bulletPoints).filter(
+                    (b) => b && b.trim() && b.trim() !== "." && b.trim() !== "-"
+                  );
                   const dateStr = [exp.startDate, exp.isCurrent ? "Present" : exp.endDate]
                     .filter(Boolean)
                     .join(" – ");
@@ -390,10 +472,9 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
                       {bullets.length > 0 && (
                         <View style={{ marginTop: 2 }}>
                           {bullets.map((bp, i) => (
-                            <View key={i} style={styles.entryBulletRow}>
-                              <Text style={styles.entryBulletDot}>•</Text>
-                              <Text style={styles.entryBulletText}>{stripMarkdown(bp)}</Text>
-                            </View>
+                            <Text key={i} style={styles.entryAchievementText}>
+                              {stripMarkdown(bp)}
+                            </Text>
                           ))}
                         </View>
                       )}
@@ -410,7 +491,9 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
               <Text style={styles.mainSectionTitle}>Featured Projects</Text>
               <View style={styles.timelineContainer}>
                 {projects.map((proj) => {
-                  const bullets = getBulletTexts(proj.bulletPoints);
+                  const bullets = getBulletTexts(proj.bulletPoints).filter(
+                    (b) => b && b.trim() && b.trim() !== "." && b.trim() !== "-"
+                  );
                   const dateStr = [proj.startDate, proj.endDate].filter(Boolean).join(" – ");
                   const techList =
                     proj.techStack && proj.techStack.length > 0
@@ -423,17 +506,27 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
                     <View key={proj.id} style={styles.timelineEntry}>
                       <View style={[styles.timelineNode, { borderColor: accentColor }]} />
                       {dateStr ? <Text style={styles.entryDate}>{dateStr}</Text> : null}
-                      <Text style={styles.entryTitle}>
-                        {proj.title || (proj as any).name}
-                        {techList.length > 0 ? ` (${techList.join(", ")})` : ""}
-                      </Text>
+                      <View style={styles.projectTitleRow}>
+                        <Text style={styles.entryTitle}>
+                          {proj.title || (proj as any).name}
+                        </Text>
+                        {techList.length > 0 ? (
+                          <Text style={[styles.projectTechText, { marginLeft: 5 }]}>
+                            {`(${techList.join(", ")})`}
+                          </Text>
+                        ) : null}
+                      </View>
+                      {(proj.url || (proj as any).linkUrl) ? (
+                        <Text style={styles.projectUrlText}>
+                          {proj.url || (proj as any).linkUrl}
+                        </Text>
+                      ) : null}
                       {bullets.length > 0 && (
                         <View style={{ marginTop: 2 }}>
                           {bullets.map((bp, i) => (
-                            <View key={i} style={styles.entryBulletRow}>
-                              <Text style={styles.entryBulletDot}>•</Text>
-                              <Text style={styles.entryBulletText}>{stripMarkdown(bp)}</Text>
-                            </View>
+                            <Text key={i} style={styles.entryAchievementText}>
+                              {stripMarkdown(bp)}
+                            </Text>
                           ))}
                         </View>
                       )}
@@ -450,7 +543,9 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
               <Text style={styles.mainSectionTitle}>{sec.title}</Text>
               <View style={styles.timelineContainer}>
                 {sec.items.map((item) => {
-                  const bullets = getBulletTexts(item.bulletPoints);
+                  const bullets = getBulletTexts(item.bulletPoints).filter(
+                    (b) => b && b.trim() && b.trim() !== "." && b.trim() !== "-"
+                  );
                   return (
                     <View key={item.id} style={styles.timelineEntry}>
                       <View style={[styles.timelineNode, { borderColor: accentColor }]} />
@@ -461,10 +556,9 @@ export function ModernPhotoPdfDocument({ data }: { data: CVData }) {
                       {bullets.length > 0 && (
                         <View style={{ marginTop: 2 }}>
                           {bullets.map((bp, i) => (
-                            <View key={i} style={styles.entryBulletRow}>
-                              <Text style={styles.entryBulletDot}>•</Text>
-                              <Text style={styles.entryBulletText}>{stripMarkdown(bp)}</Text>
-                            </View>
+                            <Text key={i} style={styles.entryAchievementText}>
+                              {stripMarkdown(bp)}
+                            </Text>
                           ))}
                         </View>
                       )}

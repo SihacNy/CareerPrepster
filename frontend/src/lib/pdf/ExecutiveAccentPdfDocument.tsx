@@ -3,15 +3,18 @@
 import React from "react";
 import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 import { CVData, getSectionItems, getBulletTexts } from "@/types/cv";
-import { stripMarkdown } from "@/lib/formatText";
+import { stripMarkdown, sanitizePdfText } from "@/lib/formatText";
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
-    fontFamily: "Helvetica",
-    fontSize: 8.5,
+    paddingTop: 38,
+    paddingBottom: 38,
+    paddingHorizontal: 40,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 8.75,
     color: "#0F172A",
     backgroundColor: "#FFFFFF",
+    lineHeight: 1.35,
   },
   headerRow: {
     flexDirection: "row",
@@ -19,133 +22,182 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   avatarContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    marginRight: 16,
-    borderWidth: 2.5,
-    overflow: "hidden",
-    backgroundColor: "transparent",
+    width: 84,
+    height: 84,
+    marginRight: 20,
+    position: "relative",
   },
   avatarImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 32,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+  },
+  avatarBorderOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 3.5,
   },
   avatarInitials: {
-    width: "100%",
-    height: "100%",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 3.5,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F8FAFC",
   },
   initialsText: {
-    fontSize: 18,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 20,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
   },
   headerContent: {
     flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
+  },
+  nameWrapper: {
+    marginBottom: 2,
   },
   fullName: {
     fontSize: 20,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 800,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    lineHeight: 1.15,
+  },
+  roleWrapper: {
+    marginBottom: 3,
   },
   targetRole: {
-    fontSize: 8.5,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 9.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 600,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
     color: "#334155",
-    marginTop: 1,
+    lineHeight: 1.25,
   },
   dividerRule: {
     width: "100%",
-    height: 1,
-    marginTop: 4,
+    height: 1.5,
     marginBottom: 4,
   },
   contactRow: {
-    fontSize: 7.5,
-    fontFamily: "Helvetica",
+    fontSize: 8.25,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
     color: "#475569",
+    lineHeight: 1.3,
   },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 9,
+    marginBottom: 10,
   },
   sectionTitleText: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 9,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    fontSize: 9.5,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginRight: 6,
+    letterSpacing: 0.6,
+    marginRight: 15,
   },
   sectionTitleRule: {
     flex: 1,
-    height: 1,
+    height: 1.5,
   },
   summaryText: {
-    fontSize: 8,
+    fontSize: 8.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
     color: "#475569",
-    lineHeight: 1.35,
+    lineHeight: 1.4,
     textAlign: "justify",
   },
   entryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
-    marginBottom: 1.5,
+    marginBottom: 3.5,
   },
   entryTitle: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 8.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    fontSize: 9.25,
     color: "#1E293B",
   },
+  entryLocation: {
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 8.25,
+    color: "#64748B",
+  },
+  entrySeparator: {
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    color: "#94A3B8",
+  },
   entrySubtitle: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 8,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 600,
+    fontSize: 8.625,
     color: "#475569",
   },
   entryDate: {
-    fontFamily: "Helvetica",
-    fontSize: 8,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 600,
+    fontStyle: "italic",
+    fontSize: 8.25,
   },
   bulletList: {
     marginLeft: 10,
-    marginTop: 1,
-    marginBottom: 4,
+    marginTop: 2,
+    marginBottom: 3.5,
   },
   bulletItem: {
     flexDirection: "row",
-    marginBottom: 1.5,
+    alignItems: "flex-start",
+    marginBottom: 2.5,
   },
   bulletDot: {
-    width: 7,
-    fontSize: 7,
+    width: 13,
+    fontSize: 8.5,
     color: "#475569",
   },
   bulletText: {
     flex: 1,
-    fontSize: 7.8,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 8.5,
     color: "#475569",
-    lineHeight: 1.3,
+    lineHeight: 1.4,
   },
   skillRow: {
     flexDirection: "row",
-    marginBottom: 2,
-    fontSize: 7.8,
+    marginBottom: 2.5,
+    fontSize: 8.5,
   },
   skillCategory: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
     width: 120,
     color: "#1E293B",
+    fontSize: 8.5,
   },
   skillText: {
     flex: 1,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
     color: "#475569",
+    fontSize: 8.5,
+    lineHeight: 1.35,
   },
 });
 
@@ -166,12 +218,12 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
 
   const initials = personalInfo.fullName
     ? personalInfo.fullName
-        .split(" ")
-        .map((n) => n[0])
-        .filter(Boolean)
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
+      .split(" ")
+      .map((n) => n[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase()
     : "CV";
 
   const contactString = [
@@ -183,30 +235,37 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
     personalInfo.githubUrl ? personalInfo.githubUrl.replace(/^https?:\/\/(www\.)?/, "") : "",
   ]
     .filter(Boolean)
-    .join("   |   ");
+    .join("  |  ");
 
   return (
     <Document title={`${personalInfo.fullName || "Resume"} - Executive CV`}>
       <Page size="A4" style={styles.page}>
         {/* Header with Photo and Info */}
         <View style={styles.headerRow}>
-          <View style={[styles.avatarContainer, { borderColor: accentColor }]}>
+          <View style={styles.avatarContainer}>
             {photoUrl && typeof photoUrl === "string" && photoUrl.trim().length > 0 ? (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={photoUrl} style={styles.avatarImage} />
+              <View style={{ width: 84, height: 84, position: "relative" }}>
+                {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                <Image src={photoUrl} style={styles.avatarImage} />
+                <View style={[styles.avatarBorderOverlay, { borderColor: accentColor }]} />
+              </View>
             ) : (
-              <View style={styles.avatarInitials}>
+              <View style={[styles.avatarInitials, { borderColor: accentColor }]}>
                 <Text style={[styles.initialsText, { color: accentColor }]}>{initials}</Text>
               </View>
             )}
           </View>
 
           <View style={styles.headerContent}>
-            <Text style={[styles.fullName, { color: accentColor }]}>
-              {personalInfo.fullName || "Richard Sanchez"}
-            </Text>
+            <View style={styles.nameWrapper}>
+              <Text style={[styles.fullName, { color: accentColor }]}>
+                {personalInfo.fullName || "Richard Sanchez"}
+              </Text>
+            </View>
             {data.targetRole ? (
-              <Text style={styles.targetRole}>{data.targetRole}</Text>
+              <View style={styles.roleWrapper}>
+                <Text style={styles.targetRole}>{data.targetRole}</Text>
+              </View>
             ) : null}
             {/* Consistent Accent Color Divider Line */}
             <View style={[styles.dividerRule, { backgroundColor: accentColor }]} />
@@ -223,7 +282,7 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
               </Text>
               <View style={[styles.sectionTitleRule, { backgroundColor: accentColor }]} />
             </View>
-            <Text style={styles.summaryText}>{personalInfo.summary}</Text>
+            <Text style={styles.summaryText}>{sanitizePdfText(personalInfo.summary)}</Text>
           </View>
         ) : null}
 
@@ -241,15 +300,22 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
                 .join(" – ")
                 .toUpperCase();
               return (
-                <View key={edu.id} style={{ marginBottom: 3 }}>
+                <View key={edu.id} style={{ marginBottom: 5.5 }}>
                   <View style={styles.entryRow}>
                     <Text style={styles.entryTitle}>
                       {edu.title || (edu as any).degree || edu.subtitle || (edu as any).institution}
-                      {(edu.title || (edu as any).degree) && (edu.subtitle || (edu as any).institution)
-                        ? `  |  ${edu.subtitle || (edu as any).institution}`
-                        : ""}
-                      {edu.location ? ` (${edu.location})` : ""}
-                      {edu.gpa ? `  •  GPA: ${edu.gpa}` : ""}
+                      {(edu.title || (edu as any).degree) && (edu.subtitle || (edu as any).institution) ? (
+                        <>
+                          <Text style={styles.entrySeparator}>{"   |   "}</Text>
+                          <Text>{edu.subtitle || (edu as any).institution}</Text>
+                        </>
+                      ) : null}
+                      {edu.location ? (
+                        <Text style={styles.entryLocation}>{`   (${edu.location})`}</Text>
+                      ) : null}
+                      {edu.gpa ? (
+                        <Text style={styles.entryLocation}>{`   •   GPA: ${edu.gpa}`}</Text>
+                      ) : null}
                     </Text>
                     {dateStr ? (
                       <Text style={[styles.entryDate, { color: accentColor }]}>
@@ -289,14 +355,19 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
                 .join(" – ")
                 .toUpperCase();
               return (
-                <View key={exp.id} style={{ marginBottom: 3 }}>
+                <View key={exp.id} style={{ marginBottom: 5.5 }}>
                   <View style={styles.entryRow}>
                     <Text style={styles.entryTitle}>
                       {exp.title || (exp as any).role}
-                      {(exp.subtitle || (exp as any).company)
-                        ? `  |  ${exp.subtitle || (exp as any).company}`
-                        : ""}
-                      {exp.location ? ` (${exp.location})` : ""}
+                      {(exp.subtitle || (exp as any).company) ? (
+                        <>
+                          <Text style={styles.entrySeparator}>{"   |   "}</Text>
+                          <Text>{exp.subtitle || (exp as any).company}</Text>
+                        </>
+                      ) : null}
+                      {exp.location ? (
+                        <Text style={styles.entryLocation}>{`   (${exp.location})`}</Text>
+                      ) : null}
                     </Text>
                     {dateStr ? (
                       <Text style={[styles.entryDate, { color: accentColor }]}>
@@ -339,14 +410,19 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
                 proj.techStack && proj.techStack.length > 0
                   ? proj.techStack
                   : proj.subtitle
-                  ? proj.subtitle.split(",").map((s) => s.trim()).filter(Boolean)
-                  : [];
+                    ? proj.subtitle.split(",").map((s) => s.trim()).filter(Boolean)
+                    : [];
               return (
-                <View key={proj.id} style={{ marginBottom: 3 }}>
+                <View key={proj.id} style={{ marginBottom: 5.5 }}>
                   <View style={styles.entryRow}>
                     <Text style={styles.entryTitle}>
                       {proj.title || (proj as any).name}
-                      {techList.length > 0 ? `  |  ${techList.join(", ")}` : ""}
+                      {techList.length > 0 ? (
+                        <>
+                          <Text style={styles.entrySeparator}>{"   |   "}</Text>
+                          <Text style={styles.entryLocation}>{techList.join(", ")}</Text>
+                        </>
+                      ) : null}
                     </Text>
                     {dateStr ? (
                       <Text style={[styles.entryDate, { color: accentColor }]}>
@@ -383,8 +459,8 @@ export function ExecutiveAccentPdfDocument({ data }: { data: CVData }) {
               const skillsStr = Array.isArray(group.skills)
                 ? group.skills.filter(Boolean).map(String).join(", ")
                 : typeof group.skills === "string"
-                ? group.skills
-                : "";
+                  ? group.skills
+                  : "";
               return (
                 <View key={group.id} style={styles.skillRow}>
                   <Text style={styles.skillCategory}>{group.categoryName}:</Text>

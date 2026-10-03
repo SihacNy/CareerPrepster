@@ -3,53 +3,62 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { CVData, getSectionItems, getBulletTexts } from "@/types/cv";
-import { stripMarkdown } from "@/lib/formatText";
+import { stripMarkdown, sanitizePdfText } from "@/lib/formatText";
 
 const styles = StyleSheet.create({
   page: {
-    padding: 36,
-    fontFamily: "Helvetica",
-    fontSize: 9.5,
+    padding: 30,
+    fontFamily: "Plus Jakarta Sans",
+    fontSize: 9,
     color: "#0F172A",
+    lineHeight: 1.35,
   },
   header: {
     textAlign: "center",
-    marginBottom: 12,
+    marginBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#CBD5E1",
     paddingBottom: 8,
   },
   fullName: {
     fontSize: 18,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 800,
     textTransform: "uppercase",
-    marginBottom: 4,
+    marginBottom: 3,
+    color: "#0F172A",
   },
   contactRow: {
-    fontSize: 8.5,
-    fontFamily: "Helvetica",
-    color: "#475569",
+    fontSize: 9,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    color: "#334155",
     textAlign: "center",
-    marginTop: 3,
+    marginTop: 2,
   },
   summary: {
-    fontSize: 8.5,
+    fontSize: 9,
+    fontFamily: "Plus Jakarta Sans",
+    fontStyle: "italic",
     color: "#475569",
     marginTop: 4,
     textAlign: "center",
+    lineHeight: 1.35,
   },
   section: {
-    marginTop: 10,
+    marginTop: 11,
   },
   sectionTitle: {
-    fontSize: 10,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 9.75,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     borderBottomWidth: 1,
-    borderBottomColor: "#64748B",
+    borderBottomColor: "#94A3B8",
     paddingBottom: 2,
     marginBottom: 5,
+    color: "#0F172A",
   },
   entryHeader: {
     flexDirection: "row",
@@ -57,19 +66,36 @@ const styles = StyleSheet.create({
     alignItems: "baseline",
   },
   entryTitle: {
-    fontFamily: "Helvetica-Bold",
-    fontSize: 9.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    fontSize: 9.75,
+    color: "#0F172A",
   },
   entryLocation: {
-    fontSize: 8.5,
-    color: "#64748B",
+    fontSize: 9,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    color: "#475569",
   },
   entrySubHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     fontSize: 9,
-    color: "#334155",
+    color: "#1E293B",
+    marginTop: 1,
     marginBottom: 2,
+  },
+  entryDegree: {
+    fontFamily: "Plus Jakarta Sans",
+    fontStyle: "italic",
+    fontSize: 9,
+    color: "#1E293B",
+  },
+  entryDate: {
+    fontSize: 8.25,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    color: "#475569",
   },
   bulletList: {
     marginLeft: 10,
@@ -77,30 +103,40 @@ const styles = StyleSheet.create({
   },
   bulletItem: {
     flexDirection: "row",
-    marginBottom: 2,
+    marginBottom: 2.5,
   },
   bulletDot: {
-    width: 10,
-    fontSize: 8.5,
+    width: 13,
+    fontSize: 9,
+    color: "#475569",
   },
   bulletText: {
     flex: 1,
-    fontSize: 8.5,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
+    fontSize: 9,
     color: "#334155",
+    lineHeight: 1.4,
   },
   skillRow: {
     flexDirection: "row",
-    marginBottom: 2.5,
-    fontSize: 8.5,
+    marginBottom: 3,
+    fontSize: 9,
   },
   skillCategory: {
-    fontFamily: "Helvetica-Bold",
-    width: 130,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 700,
+    width: 135,
     color: "#0F172A",
+    fontSize: 9,
   },
   skillText: {
     flex: 1,
+    fontFamily: "Plus Jakarta Sans",
+    fontWeight: 400,
     color: "#334155",
+    fontSize: 9,
+    lineHeight: 1.35,
   },
 });
 
@@ -134,7 +170,7 @@ export function ClassicPdfDocument({ data }: { data: CVData }) {
               .join("   •   ")}
           </Text>
           {personalInfo.summary ? (
-            <Text style={styles.summary}>{personalInfo.summary}</Text>
+            <Text style={styles.summary}>{sanitizePdfText(personalInfo.summary)}</Text>
           ) : null}
         </View>
 
@@ -153,11 +189,11 @@ export function ClassicPdfDocument({ data }: { data: CVData }) {
                     <Text style={styles.entryLocation}>{edu.location}</Text>
                   </View>
                   <View style={styles.entrySubHeader}>
-                    <Text>
+                    <Text style={styles.entryDegree}>
                       {edu.title || (edu as any).degree}
                       {edu.gpa ? ` — GPA: ${edu.gpa}` : ""}
                     </Text>
-                    <Text>
+                    <Text style={styles.entryDate}>
                       {edu.startDate} – {edu.isCurrent ? "Present" : edu.endDate}
                     </Text>
                   </View>
@@ -192,8 +228,8 @@ export function ClassicPdfDocument({ data }: { data: CVData }) {
                     <Text style={styles.entryLocation}>{exp.location}</Text>
                   </View>
                   <View style={styles.entrySubHeader}>
-                    <Text>{exp.title || (exp as any).role}</Text>
-                    <Text>
+                    <Text style={styles.entryDegree}>{exp.title || (exp as any).role}</Text>
+                    <Text style={styles.entryDate}>
                       {exp.startDate} – {exp.isCurrent ? "Present" : exp.endDate}
                     </Text>
                   </View>

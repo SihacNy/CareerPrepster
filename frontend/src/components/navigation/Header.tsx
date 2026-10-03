@@ -21,10 +21,6 @@ export function Header({ }: HeaderProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
   const isTemplatesActive = pathname?.startsWith("/editor/templates");
-  const isFeaturePage =
-    (pathname?.startsWith("/editor") && !isTemplatesActive) ||
-    pathname?.startsWith("/interview");
-  const isFeaturesActive = isFeaturesOpen || isFeaturePage;
 
   useEffect(() => {
     setMounted(true);
@@ -80,7 +76,7 @@ export function Header({ }: HeaderProps) {
                 type="button"
                 onClick={() => setIsFeaturesOpen((prev) => !prev)}
                 className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
-                  isFeaturesActive
+                  isFeaturesOpen
                     ? "bg-sky-500/10 text-sky-600"
                     : "text-slate-600 hover:text-sky-600 hover:bg-sky-500/10"
                 }`}

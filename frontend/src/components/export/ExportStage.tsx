@@ -44,7 +44,7 @@ export function ExportStage() {
 
       {/* Draft Preview Container */}
       <div className="w-full flex justify-center">
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-[794px]">
           {/* Document Sheet - Click to view full preview */}
           <div
             onClick={() => setIsModalOpen(true)}

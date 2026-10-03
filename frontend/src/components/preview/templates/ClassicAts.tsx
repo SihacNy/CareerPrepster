@@ -21,7 +21,7 @@ export function ClassicAts({ data }: TemplateProps) {
     : (data.skills || []);
 
   return (
-    <div className="w-full bg-white text-slate-900 p-8 sm:p-10 font-sans leading-normal text-[13px] shadow-sm max-w-[800px] mx-auto min-h-[1050px]">
+    <div className="w-full bg-white text-slate-900 p-8 sm:p-10 font-sans leading-normal text-[13px] shadow-sm max-w-[794px] mx-auto min-h-[1123px]">
       {/* Header */}
       <header className="text-center pb-4 border-b border-slate-300">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 uppercase">

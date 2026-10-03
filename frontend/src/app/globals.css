@@ -8,6 +8,20 @@
   --background-end-rgb: 248, 250, 252;
 }
 
+/* Default paper size setup for A4 */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  body {
+    background-color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background-color: #F8FAFC;

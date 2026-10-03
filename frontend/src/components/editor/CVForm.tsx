@@ -333,6 +333,7 @@ export function CVForm() {
 
       {/* Form Sections */}
       <PersonalSection
+        onRefineSummary={handleOpenRefineModal}
         isOpen={openSections.personal}
         onToggle={() => toggleSection("personal")}
       />
@@ -391,7 +392,7 @@ export function CVForm() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-sky-300 hover:border-sky-500 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 text-sky-600" />
-                <span>+ Education</span>
+                <span>Education</span>
               </button>
             )}
             {!hasExperience && (
@@ -401,7 +402,7 @@ export function CVForm() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-sky-300 hover:border-sky-500 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 text-sky-600" />
-                <span>+ Work Experience</span>
+                <span>Work Experience</span>
               </button>
             )}
             {!hasProjects && (
@@ -411,7 +412,7 @@ export function CVForm() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-sky-300 hover:border-sky-500 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 text-sky-600" />
-                <span>+ Projects</span>
+                <span>Projects</span>
               </button>
             )}
             {!hasSkills && (
@@ -421,7 +422,7 @@ export function CVForm() {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-sky-300 hover:border-sky-500 rounded-xl bg-white hover:bg-sky-50 text-sky-700 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 text-sky-600" />
-                <span>+ Skills</span>
+                <span>Skills</span>
               </button>
             )}
           </div>

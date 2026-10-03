@@ -1,31 +1,66 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Target, CheckCircle2, AlertCircle, Sparkles, Copy, Check, Plus } from "lucide-react";
+import { Target, CheckCircle2, AlertCircle, Sparkles, Copy, Check, Plus, Loader2 } from "lucide-react";
 import { ATSReport } from "@/types/cv";
 import { useCV } from "@/lib/store";
 
 interface JobDescriptionInputProps {
   value: string;
   onChange: (val: string) => void;
+  onMatch?: (val: string) => void;
+  isMatching?: boolean;
   keywordAnalysis?: ATSReport["keywordAnalysis"];
 }
 
 export function JobDescriptionInput({
   value,
   onChange,
+  onMatch,
+  isMatching = false,
   keywordAnalysis,
 }: JobDescriptionInputProps) {
   const { setCVData } = useCV();
   const [copiedBullet, setCopiedBullet] = useState(false);
   const [addedStatus, setAddedStatus] = useState<string | null>(null);
 
+  const formatSkillDisplay = (skill: string) => {
+    if (!skill) return "";
+    // If already has mixed casing (e.g. MongoDB, MySQL, PostgreSQL, Next.js), preserve it
+    if (skill !== skill.toLowerCase()) return skill;
+    const specialMap: Record<string, string> = {
+      sql: "SQL",
+      nosql: "NoSQL",
+      mongodb: "MongoDB",
+      mysql: "MySQL",
+      postgresql: "PostgreSQL",
+      postgres: "PostgreSQL",
+      html: "HTML5",
+      css: "CSS3",
+      aws: "AWS",
+      gcp: "GCP",
+      api: "API",
+      apis: "APIs",
+      php: "PHP",
+      ui: "UI",
+      ux: "UX",
+      siem: "SIEM",
+    };
+    if (specialMap[skill.toLowerCase()]) {
+      return specialMap[skill.toLowerCase()];
+    }
+    return skill
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
   // Dynamic AI STAR/XYZ bullet generated using the missing keywords
   const aiSuggestedBullet = useMemo(() => {
     if (!keywordAnalysis?.missingKeywords || keywordAnalysis.missingKeywords.length === 0) {
       return null;
     }
-    const missing = keywordAnalysis.missingKeywords;
+    const missing = keywordAnalysis.missingKeywords.map(formatSkillDisplay);
     const topSkills = missing.slice(0, 3).join(", ");
     return `Engineered robust backend microservices leveraging ${topSkills}, reducing server response latency by 32% and supporting 12,000+ daily student user transactions.`;
   }, [keywordAnalysis?.missingKeywords]);
@@ -39,7 +74,7 @@ export function JobDescriptionInput({
 
   const handleAutoAddSkills = () => {
     if (!keywordAnalysis?.missingKeywords?.length) return;
-    const skillsToAdd = keywordAnalysis.missingKeywords;
+    const skillsToAdd = keywordAnalysis.missingKeywords.map(formatSkillDisplay);
 
     setCVData((prev) => {
       const existingCategories = [...(prev.skillGroups || prev.skills || [])];
@@ -88,11 +123,17 @@ export function JobDescriptionInput({
 
   const handleMatch = () => {
     onChange(draftText);
+    if (onMatch) {
+      onMatch(draftText);
+    }
   };
 
   const handleClear = () => {
     setDraftText("");
     onChange("");
+    if (onMatch) {
+      onMatch("");
+    }
   };
 
   return (
@@ -133,9 +174,17 @@ export function JobDescriptionInput({
         <button
           type="button"
           onClick={handleMatch}
-          className="inline-flex items-center px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg text-white bg-sky-600 hover:bg-sky-700 transition-colors shadow-2xs cursor-pointer"
+          disabled={isMatching}
+          className="inline-flex items-center px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg text-white bg-sky-600 hover:bg-sky-700 disabled:bg-sky-400 disabled:cursor-not-allowed transition-colors shadow-2xs cursor-pointer"
         >
-          <span>Match Keywords</span>
+          {isMatching ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+              <span>Matching...</span>
+            </>
+          ) : (
+            <span>Match Keywords</span>
+          )}
         </button>
       </div>
 
@@ -164,7 +213,7 @@ export function JobDescriptionInput({
                     key={i}
                     className="px-2.5 py-1 rounded text-xs font-medium bg-emerald-50 text-emerald-800 border border-emerald-200"
                   >
-                    {kw.keyword}
+                    {formatSkillDisplay(kw.keyword)}
                   </span>
                 ))}
               </div>
@@ -184,7 +233,7 @@ export function JobDescriptionInput({
                     key={i}
                     className="px-2.5 py-1 rounded text-xs font-medium bg-rose-50 text-rose-800 border border-rose-200"
                   >
-                    +{kw}
+                    +{formatSkillDisplay(kw)}
                   </span>
                 ))}
               </div>

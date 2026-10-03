@@ -8,6 +8,13 @@ interface PillarBreakdownProps {
 }
 
 export function PillarBreakdown({ breakdown }: PillarBreakdownProps) {
+  const [animated, setAnimated] = React.useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setAnimated(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const pillars = [
     {
       id: "parsability",
@@ -41,17 +48,17 @@ export function PillarBreakdown({ breakdown }: PillarBreakdownProps) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-      {pillars.map((p) => {
+      {pillars.map((p, idx) => {
         const percentage = Math.round((p.score / p.maxScore) * 100);
 
         let progressColor = "bg-emerald-500";
         if (percentage < 60) progressColor = "bg-rose-500";
-        else if (percentage < 80) progressColor = "bg-amber-500";
+        else if (percentage < 75) progressColor = "bg-amber-500";
 
         return (
           <div
             key={p.id}
-            className="p-5 sm:p-5.5 rounded-xl bg-white border border-slate-200 shadow-card flex flex-col justify-between"
+            className="p-5 sm:p-5.5 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between"
           >
             <div>
               <div className="flex items-start justify-between mb-2">
@@ -81,10 +88,14 @@ export function PillarBreakdown({ breakdown }: PillarBreakdownProps) {
 
             {/* Progress Bar */}
             <div className="mt-4 pt-3 border-t border-slate-100">
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${progressColor} transition-all duration-500`}
-                  style={{ width: `${percentage}%` }}
+                  className={`h-full ${progressColor} rounded-full`}
+                  style={{
+                    width: animated ? `${percentage}%` : "0%",
+                    transition: "width 1s cubic-bezier(0.16, 1, 0.3, 1)",
+                    transitionDelay: `${idx * 100 + 150}ms`,
+                  }}
                 />
               </div>
             </div>

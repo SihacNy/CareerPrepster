@@ -48,6 +48,7 @@ model CV {
   githubUrl    String?       @db.VarChar(255)
   summary      String?       @db.Text
   photoUrl     String?       @db.MediumText
+  accentColor  String?       @default("#0284c7") @db.VarChar(30)
 
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

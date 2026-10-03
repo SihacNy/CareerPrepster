@@ -49,14 +49,32 @@ export function FormattedText({ text }: { text: string }) {
 }
 
 /**
+ * Normalizes unicode characters (narrow no-break spaces, non-breaking hyphens, etc.)
+ * that cause glyph truncation glitches in PDF renderers (e.g. \u202F truncating to '/' 0x2F).
+ */
+export function sanitizePdfText(text: string): string {
+  if (!text) return "";
+  return text
+    // Replace narrow no-break space (U+202F), non-breaking space (U+00A0), en-quad, em-space, etc. with standard space
+    .replace(/[\u202F\u00A0\u2000-\u200A\u2028\u2029]/g, " ")
+    // Remove zero-width spaces
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    // Replace non-breaking hyphen (U+2011) and figure dash (U+2012) with standard hyphen
+    .replace(/[\u2010\u2011\u2012]/g, "-");
+}
+
+/**
  * Strips formatting tokens for plain text environments like PDF or ATS scanners
  */
 export function stripMarkdown(text: string): string {
   if (!text) return "";
-  return text
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/~~([^~]+)~~/g, "$1")
-    .replace(/<u>([^<]+)<\/u>/g, "$1");
+  return sanitizePdfText(
+    text
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/~~([^~]+)~~/g, "$1")
+      .replace(/<u>([^<]+)<\/u>/g, "$1")
+  );
 }
+
 

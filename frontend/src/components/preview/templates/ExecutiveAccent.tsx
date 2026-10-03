@@ -44,7 +44,7 @@ export function ExecutiveAccent({ data }: TemplateProps) {
   ].filter(Boolean) as string[];
 
   return (
-    <div className="w-full bg-white text-slate-900 p-8 sm:p-10 font-sans leading-normal text-[12px] shadow-sm max-w-[800px] mx-auto min-h-[1050px]">
+    <div className="w-full bg-white text-slate-900 p-8 sm:p-10 font-sans leading-normal text-[12px] shadow-sm max-w-[794px] mx-auto min-h-[1123px]">
       {/* ========================================================================= */}
       {/* HEADER: Circular Photo with Accent Border + Name & Pipe Contact Info     */}
       {/* ========================================================================= */}

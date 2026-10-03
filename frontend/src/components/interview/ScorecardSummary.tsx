@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { Award, CheckCircle2, TrendingUp, Sparkles, ShieldCheck } from "lucide-react";
+import { CheckCircle2, TrendingUp } from "lucide-react";
 import { InterviewScorecardData } from "@/types/interview";
+import { ThreeSectionScoreGauge } from "@/components/common/ThreeSectionScoreGauge";
 
 interface ScorecardSummaryProps {
   scorecard: InterviewScorecardData;
@@ -22,16 +23,17 @@ export function ScorecardSummary({
     { label: "Quantifiable Results & Metrics", score: scorecard.impactScore },
   ];
 
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return "text-emerald-600 bg-emerald-50 border-emerald-200";
-    if (score >= 70) return "text-sky-600 bg-sky-50 border-sky-200";
-    return "text-amber-600 bg-amber-50 border-amber-200";
-  };
+  const [animated, setAnimated] = React.useState(false);
 
-  const getBarColor = (score: number) => {
-    if (score >= 85) return "bg-emerald-500";
-    if (score >= 70) return "bg-sky-500";
-    return "bg-amber-500";
+  React.useEffect(() => {
+    const timer = setTimeout(() => setAnimated(true), 80);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const getBarColor = (val: number) => {
+    if (val >= 75) return "bg-emerald-500";
+    if (val >= 60) return "bg-amber-500";
+    return "bg-rose-500";
   };
 
   return (
@@ -39,10 +41,6 @@ export function ScorecardSummary({
       {/* Top Banner: Composite Score & Tier */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 pb-8 border-b border-slate-100">
         <div className="space-y-2">
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200">
-            <Sparkles className="w-4 h-4 text-sky-600" />
-            <span>Interview Readiness Assessment</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
             Overall Interview Performance
           </h1>
@@ -51,16 +49,9 @@ export function ScorecardSummary({
           </p>
         </div>
 
-        {/* Big Overall Score Badge */}
+        {/* 3-Section Circular Score Gauge */}
         <div className="flex items-center space-x-5">
-          <div
-            className={`w-28 h-28 rounded-2xl border-2 flex flex-col items-center justify-center shadow-xs ${getScoreColor(
-              scorecard.overallScore
-            )}`}
-          >
-            <span className="text-4xl font-black tracking-tight">{scorecard.overallScore}</span>
-            <span className="text-xs font-bold uppercase tracking-wider opacity-80 mt-0.5">out of 100</span>
-          </div>
+          <ThreeSectionScoreGauge score={scorecard.overallScore} size="md" />
 
           <div className="space-y-1.5">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
@@ -74,42 +65,46 @@ export function ScorecardSummary({
       </div>
 
       {/* 4 Dimensional Competency Breakdown */}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
           Dimensional Competency Scores
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {competencyBars.map((bar) => (
-            <div
-              key={bar.label}
-              className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5"
-            >
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-semibold text-slate-700">{bar.label}</span>
-                <span className="font-bold text-slate-900">{bar.score} / 100</span>
+        <div className="p-6 sm:p-7 rounded-2xl bg-slate-50/70 border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+            {competencyBars.map((bar, idx) => (
+              <div
+                key={bar.label}
+                className="space-y-2"
+              >
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold text-slate-700">{bar.label}</span>
+                  <span className="font-bold text-slate-900">{bar.score} / 100</span>
+                </div>
+                <div className="w-full bg-slate-200/80 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${getBarColor(bar.score)}`}
+                    style={{
+                      width: animated ? `${bar.score}%` : "0%",
+                      transition: "width 1s cubic-bezier(0.16, 1, 0.3, 1)",
+                      transitionDelay: `${idx * 120 + 150}ms`,
+                    }}
+                  />
+                </div>
               </div>
-              <div className="w-full bg-slate-200/80 h-3 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${getBarColor(
-                    bar.score
-                  )}`}
-                  style={{ width: `${bar.score}%` }}
-                />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Strengths & Growth Areas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-1">
         {/* Strengths */}
-        <div className="p-6 rounded-2xl bg-emerald-50/70 border border-emerald-200/70 space-y-3.5">
-          <div className="flex items-center space-x-2.5 font-bold text-base text-emerald-900">
+        <div className="p-6 sm:p-7 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3.5">
+          <div className="flex items-center space-x-2.5 font-bold text-base text-slate-900">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <span>Demonstrated Strengths</span>
           </div>
-          <ul className="space-y-2.5 text-sm text-emerald-900/90 leading-relaxed">
+          <ul className="space-y-2.5 text-sm text-slate-700 leading-relaxed">
             {scorecard.keyStrengths.map((str, i) => (
               <li key={i} className="flex items-start space-x-2.5">
                 <span className="text-emerald-500 font-bold">•</span>
@@ -120,12 +115,12 @@ export function ScorecardSummary({
         </div>
 
         {/* Growth Areas */}
-        <div className="p-6 rounded-2xl bg-amber-50/70 border border-amber-200/70 space-y-3.5">
-          <div className="flex items-center space-x-2.5 font-bold text-base text-amber-900">
+        <div className="p-6 sm:p-7 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3.5">
+          <div className="flex items-center space-x-2.5 font-bold text-base text-slate-900">
             <TrendingUp className="w-5 h-5 text-amber-600 shrink-0" />
             <span>High-Priority Practice Areas</span>
           </div>
-          <ul className="space-y-2.5 text-sm text-amber-900/90 leading-relaxed">
+          <ul className="space-y-2.5 text-sm text-slate-700 leading-relaxed">
             {scorecard.keyGrowthAreas.map((area, i) => (
               <li key={i} className="flex items-start space-x-2.5">
                 <span className="text-amber-500 font-bold">•</span>
