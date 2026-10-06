@@ -216,7 +216,7 @@ export function normalizeCVData(input: any): CVData {
 
   return {
     id: input.id || `cv-${Date.now()}`,
-    title: input.title || "My Resume",
+    title: input.title || "Untitled Resume",
     templateId: input.templateId || "classic",
     accentColor: input.accentColor || "#0284c7",
     targetRole,

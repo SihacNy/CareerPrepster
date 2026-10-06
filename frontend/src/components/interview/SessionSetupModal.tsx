@@ -26,8 +26,21 @@ import { AuthModal } from "@/components/auth/AuthModal";
 interface CVOption {
   id: string;
   title: string;
+  targetRole?: string | { id: string; title: string } | null;
   targetRoleId?: string | null;
   updatedAt: string;
+}
+
+function extractTargetRole(cv?: CVOption | null): string {
+  if (!cv) return "";
+  if (typeof cv.targetRole === "string" && cv.targetRole.trim()) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cv.targetRole)) {
+      return cv.targetRole.trim();
+    }
+  } else if (typeof cv.targetRole === "object" && cv.targetRole !== null && cv.targetRole.title) {
+    return cv.targetRole.title.trim();
+  }
+  return "";
 }
 
 interface SessionSetupModalProps {
@@ -64,14 +77,24 @@ export function SessionSetupModal({
       setIsLoadingCvs(true);
       try {
         const result = await api.cvs.list();
-        setCvs(result as CVOption[]);
-        if (result && result.length > 0 && !selectedCvId) {
-          const defaultCv = result[0];
-          setSelectedCvId(defaultCv.id);
-          // Pre-fill target role title from CV title as a default placeholder
-          if (defaultCv.title) {
-            setTargetRoleTitle(defaultCv.title);
+        const list = (result || []) as CVOption[];
+        setCvs(list);
+        if (list.length > 0) {
+          const activeId = initialCVId !== undefined && initialCVId !== null ? initialCVId : selectedCvId;
+          const targetCv = activeId ? list.find((c) => c.id === activeId) || list[0] : list[0];
+          if (targetCv) {
+            setSelectedCvId(targetCv.id);
+            // Pre-fill target role ONLY from CV's targetRole (never the CV filename/title)
+            // If the CV does not have a target role, leave it empty
+            const role = extractTargetRole(targetCv);
+            setTargetRoleTitle(role);
+          } else {
+            setSelectedCvId(null);
+            setTargetRoleTitle("");
           }
+        } else {
+          setSelectedCvId(null);
+          setTargetRoleTitle("");
         }
       } catch (err) {
         // Not logged in or no CVs; user can still type target role directly
@@ -80,16 +103,20 @@ export function SessionSetupModal({
       }
     }
     loadCvs();
-  }, [isOpen]);
+  }, [isOpen, initialCVId]);
 
   // Sync role title when selected CV changes
   const handleSelectCv = (cvId: string | null) => {
     setSelectedCvId(cvId);
     if (cvId) {
       const found = cvs.find((c) => c.id === cvId);
-      if (found?.title && !targetRoleTitle) {
-        setTargetRoleTitle(found.title);
-      }
+      // Pre-fill target role from CV's targetRole if present.
+      // If the CV doesn't have a target role, set it empty so it doesn't keep the role from another CV.
+      const role = extractTargetRole(found);
+      setTargetRoleTitle(role);
+    } else {
+      // Switching to "No CV" also clears the target role to empty
+      setTargetRoleTitle("");
     }
   };
 

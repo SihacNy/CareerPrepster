@@ -193,7 +193,7 @@ export class CvService {
       const cv = await tx.cV.create({
         data: {
           userId,
-          title: input.title || 'Untitled CV',
+          title: input.title || 'Untitled Resume',
           templateId: input.templateId || 'classic-ats',
           targetRoleId,
           fullName: input.fullName,
@@ -304,6 +304,11 @@ export class CvService {
     });
 
     if (!existing) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cvId);
+      if (!isUuid || cvId.startsWith('imported-') || cvId.startsWith('cv-') || cvId.startsWith('draft-')) {
+        logger.info('CvService', `CV [ID: ${cvId}] is a local/imported draft. Promoting to persistent CV in MySQL.`);
+        return CvService.createCv(userId, input as any);
+      }
       logger.warn('CvService', `CV update failed: CV not found [ID: ${cvId}]`);
       throw new AppError('CV not found', 404, 'CV_NOT_FOUND');
     }

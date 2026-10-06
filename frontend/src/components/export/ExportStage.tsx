@@ -43,13 +43,13 @@ export function ExportStage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div>
           <div className="flex items-center space-x-2 text-[11px] sm:text-xs font-medium text-slate-500 mb-1">
-            <Link href="/editor/ats" className="hover:text-sky-600 flex items-center transition-colors">
-              <ArrowLeft className="w-3 h-3 mr-1 text-slate-400" />
+            <Link href="/editor/ats" className="group hover:text-sky-600 flex items-center transition-colors">
+              <ArrowLeft className="w-3 h-3 mr-1 text-slate-400 group-hover:text-sky-600 transition-colors" />
               <span>Back to ATS Review</span>
             </Link>
             <span className="text-slate-300 select-none">/</span>
-            <Link href="/editor" className="hover:text-sky-600 flex items-center transition-colors">
-              <PenLine className="w-3 h-3 mr-1 text-slate-400" />
+            <Link href="/editor" className="group hover:text-sky-600 flex items-center transition-colors">
+              <PenLine className="w-3 h-3 mr-1 text-slate-400 group-hover:text-sky-600 transition-colors" />
               <span>Edit CV Form</span>
             </Link>
           </div>

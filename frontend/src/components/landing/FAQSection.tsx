@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, HelpCircle } from "lucide-react";
 
 interface FAQItem {
@@ -141,12 +142,12 @@ export function FAQSection() {
             </p>
           </div>
 
-          <a
-            href="/editor"
+          <Link
+            href="/editor/templates"
             className="inline-flex items-center px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl text-sky-900 bg-white hover:bg-sky-50 transition-colors shadow-sm flex-shrink-0"
           >
             Launch Free CV Studio
-          </a>
+          </Link>
         </div>
       </div>
     </section>

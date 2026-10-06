@@ -74,7 +74,7 @@ export default function LandingPage() {
               </button>
 
               <Link
-                href="/editor"
+                href="/editor/templates"
                 className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-3 rounded-lg text-sm font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 transition-colors"
               >
                 Open CV Studio Editor
@@ -186,7 +186,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Card 1: CV Editor */}
               <Link
-                href="/editor"
+                href="/editor/templates"
                 className="group relative p-8 sm:p-10 rounded-2xl bg-white border border-slate-200/90 shadow-card hover:shadow-xl hover:shadow-sky-500/10 hover:border-sky-300 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between overflow-hidden"
               >
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 via-sky-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

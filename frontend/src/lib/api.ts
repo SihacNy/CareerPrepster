@@ -184,7 +184,7 @@ export const cvApi = {
 
   create: (cvData: Partial<CVData>) => {
     const payload = {
-      title: cvData.title || "Untitled CV",
+      title: cvData.title || "Untitled Resume",
       templateId: cvData.templateId || "classic-ats",
       targetRoleId: cvData.targetRoleId || null,
       targetRole: cvData.targetRole || null,

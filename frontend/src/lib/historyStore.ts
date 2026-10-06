@@ -126,6 +126,8 @@ export async function deleteFromHistory(id: string): Promise<CVHistoryItem[]> {
   return getCloudHistory();
 }
 
+import { generateDuplicateTitle } from "@/lib/cvTitleUtils";
+
 /**
  * Duplicate a CV in MySQL.
  */
@@ -133,10 +135,13 @@ export async function duplicateHistoryItem(id: string): Promise<CVHistoryItem | 
   try {
     const existing = await cvApi.getById(id);
     if (!existing) return null;
+    const currentList = await getCloudHistory();
+    const existingTitles = currentList.map((c) => c.title);
+    const newTitle = generateDuplicateTitle(existing.title || "Untitled Resume", existingTitles);
     const cloned: CVData = normalizeCVData({
       ...existing,
       id: undefined,
-      title: `${existing.title || "Untitled Resume"} (Copy)`,
+      title: newTitle,
       updatedAt: new Date().toISOString(),
     });
     const created = await cvApi.create(cloned);

@@ -23,6 +23,7 @@ import { useCV } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { cvApi, jobRoleApi } from "@/lib/api";
 import { HISTORY_STORAGE_KEY } from "@/lib/storageKeys";
+import { generateDuplicateTitle, ensureUniqueTitle } from "@/lib/cvTitleUtils";
 
 function getRoleDisplayName(rcv: any, roleMap: Map<string, string>): string {
   const isUuid = (val?: string) =>
@@ -113,7 +114,7 @@ export default function HistoryPage() {
             return {
               id: rcv.id,
               cvId: rcv.id,
-              title: rcv.title || "Untitled CV",
+              title: rcv.title || "Untitled Resume",
               targetRole: getRoleDisplayName(rcv, newRoleMap),
               fullName: rcv.fullName || "Candidate",
               status,
@@ -156,10 +157,12 @@ export default function HistoryPage() {
     try {
       const existing = await cvApi.getById(id);
       if (!existing) return;
+      const existingTitles = historyItems.map((h) => h.title);
+      const newTitle = generateDuplicateTitle(existing.title || "Untitled Resume", existingTitles);
       const cloned = normalizeCVData({
         ...existing,
         id: undefined,
-        title: `${existing.title || "Untitled CV"} (Copy)`,
+        title: newTitle,
         updatedAt: new Date().toISOString(),
       });
       await cvApi.create(cloned);
@@ -169,7 +172,7 @@ export default function HistoryPage() {
           remoteCvs.map((rcv) => ({
             id: rcv.id,
             cvId: rcv.id,
-            title: rcv.title || "Untitled CV",
+            title: rcv.title || "Untitled Resume",
             targetRole: getRoleDisplayName(rcv, roleMap),
             fullName: rcv.fullName || "Candidate",
             status: typeof rcv.atsScore === "number" ? "audited" : "draft",
@@ -182,6 +185,29 @@ export default function HistoryPage() {
       }
     } catch (err) {
       console.warn("Failed to duplicate CV in MySQL:", err);
+    }
+  };
+
+  const handleRename = async (id: string, newTitle: string) => {
+    try {
+      const otherTitles = historyItems.filter((h) => h.id !== id).map((h) => h.title);
+      const uniqueTitle = ensureUniqueTitle(newTitle, otherTitles);
+
+      // Optimistically update local list state
+      setHistoryItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, title: uniqueTitle } : item))
+      );
+
+      const existing = await cvApi.getById(id);
+      if (existing) {
+        const normalized = normalizeCVData({
+          ...existing,
+          title: uniqueTitle,
+        });
+        await cvApi.update(id, normalized);
+      }
+    } catch (err) {
+      console.warn("Failed to rename CV in MySQL:", err);
     }
   };
 
@@ -373,6 +399,7 @@ export default function HistoryPage() {
                 item={item}
                 onDuplicate={handleDuplicate}
                 onDelete={handleDelete}
+                onRename={handleRename}
               />
             ))}
           </div>

@@ -811,4 +811,77 @@ A comprehensive audit of the 15 modified files across `module/cv-editor` to veri
 
 ---
 
+### 19.7 History Card Audit Button Hover Neutralization (`HistoryCard.tsx`)
+- Removed the blue hover styles (`hover:bg-sky-50`, `hover:text-sky-700`, `hover:border-sky-300`) on the "Audit" button in favor of neutral slate styling (`hover:bg-slate-50`, `hover:text-slate-900`, `hover:border-slate-300`).
+
+### 19.8 Unified Flow: Routing Features & Editor CTAs to Template Selection First (`Header.tsx`, `page.tsx`, `Footer.tsx`, `FAQSection.tsx`)
+- To match the canonical onboarding flow where template selection is Step 1, all top-level entry points for "CV Editor" ("Features" dropdown, Landing page "Our Features" card, Hero CTA, Footer, and FAQ CTA) now navigate directly to `/editor/templates` instead of bypassing straight to the authoring canvas.
+
+### 19.9 Breadcrumb Hover State Polish & Upload Dropzone Cleanup (`ExportStage.tsx`, `UploadDropzone.tsx`)
+- **Breadcrumb Link Hover Icons:** Added `group-hover:text-sky-600 transition-colors` to the `ArrowLeft` and `PenLine` icons in the breadcrumbs on `ExportStage.tsx` so the icons match the text color change on hover.
+- **Dropzone Recommended Note Removal:** Removed the `"Digital PDF with selectable text recommended"` information badge and unused `FileText` import from `UploadDropzone.tsx` to simplify the resume import drag-and-drop zone.
+
+### 19.10 Dedicated About Us Page Draft (`app/about/page.tsx`, `Header.tsx`, `Footer.tsx`)
+- **Mission-Driven Narrative:** Built `/about` detailing the core motivation behind CareerPrepster — relieving university and graduate students from the time-consuming and often ATS-incompatible burden of graphic design (Canva/multi-column templates) by providing 100% machine-parsable, Ivy League-standard CV structures.
+- **Blank Image Placeholders for Real Team Photos:**
+  - **Horizontal Team Hero Photo Slot:** Implemented an aspect ratio container (`16:9` mobile, `21:9` desktop) designed for team collaboration group photography. Left with clean dashed-border placeholder UI ready to receive real image files.
+- **Team Photos Linked (`frontend/public/team/`):**
+  - Group photograph wired into the expanded banner: `/team/hero.jpg` (container set to `max-w-6xl` with `aspect-[3/2] sm:aspect-[16/9]`, calibrated to show the team photo in a widescreen format without taking up excessive vertical viewport space).
+  - Individual profile avatars wired for each member:
+    - Sihac Ny: `/team/ny-sihac.png`
+    - Kuy Visal: `/team/kuy-visal.png`
+    - Kouch Bunpor: `/team/kuoch-bunpor.png`
+    - Ros Rendo: `/team/ros-rendo.png`
+- **Badge & Card Icon Wrapper Cleanup:**
+  - Removed the outer pill border/background wrapper around `"Built by Students, for Students"` in the hero, leaving a clean inline yellow/amber icon (`HeartHandshake`, `w-5 h-5 text-amber-500`) and colored text label.
+  - Removed the rounded box wrappers (`w-10 h-10 rounded-xl bg-... border`) from the 3 problem/solution cards ("The Design Trap", "The ATS Black Hole", "The Solution: Content First"), rendering clean standalone colored icons (`Layers` amber, `ShieldCheck` rose, `Sparkles` emerald green).
+- **Role Wrapper Removal:** Removed the pill wrapper entirely from the member role label, rendering it as clean text (`<p className="text-xs font-semibold text-sky-600 mt-1">{member.role}</p>`).
+- **Team Card Simplification:** Removed the "CamTech University" line and data field from all team member cards, streamlining the card layout directly between the role pill and the bio.
+- **Hero Corner Antialiasing Artifact Resolution:** Replaced `bg-slate-900` on the hero banner container with `bg-white` and soft neutral border `border-slate-200/80`. This eliminates the dark black sub-pixel arc that was bleeding around the rounded corners of the photo.
+- **Hero Image Animation Stabilization:** Removed the hover zoom effect (`group-hover:scale-[1.02]`) so the team hero photo remains completely still and stable on hover.
+
+### 19.11 Footer Realignment & Feature Streamlining (`Footer.tsx`)
+- **Eliminated Placeholder/Dead Links:** Removed unbuilt/mock items (`Harvard Resume Guide`, `Student Career Services`, `Data & Privacy Policy`, `Terms of Service`, `Google XYZ Metric Formula`, etc.).
+- **Aligned to Active Project Features:**
+  - **CV Studio:** `Choose a Template` (`/editor/templates`), `Interactive CV Editor` (`/editor`), `4-Pillar ATS Diagnostic` (`/editor/ats`), `Vector PDF Export` (`/editor/export`), `Resume & Audit History` (`/history`).
+  - **AI Interview Coach:** `Mock Interview Studio` (`/interview`), `STAR Method Practice` (`/interview`), `Real-time Audio Feedback` (`/interview`), `Performance Scorecards` (`/interview`).
+  - **About & Explore:** `About Our Team & Mission` (`/about`), `Meet the Builders` (`/about#team`), `How It Works` (`/#how-it-works`), `Frequently Asked Questions` (`/#faq`).
+- **Preserved Social Links:** Kept GitHub, LinkedIn, and Twitter/X social buttons intact in the brand column ready to receive live profile URLs.
+
+### 19.12 Interview Coach Headline Styling (`interview/page.tsx`)
+- Applied the canonical yellow underline highlight from the landing page (`underline decoration-yellow-300 underline-offset-4`) to **"Real-Time STAR Coaching"** in the main hero heading on the Interview Coach hub page.
+
+### 19.13 Interview Setup Target Role Decoupling & Stale Role Clearing (`SessionSetupModal.tsx`)
+- **Decoupled from CV Filename/Title:** Previously, selecting a CV in the interview setup modal pre-filled `targetRoleTitle` with `cv.title` (the CV document filename, e.g. "My Tech Resume"). Implemented `extractTargetRole(cv)` to check and populate only from the CV's actual `targetRole` (or `targetRole.title`).
+- **Clearing Stale Role When CV Has No Role:** When a user switches to a CV without a target role (or selects "No CV"), `targetRoleTitle` is now immediately cleared to empty `""` rather than retaining the role from the previously selected CV.
+
+### 19.14 Resume Title Renaming & Numbered Duplication Convention (`cvTitleUtils.ts`, `HistoryCard.tsx`, `history/page.tsx`, `historyStore.ts`)
+- **Inline Resume Title Editing in History Dashboard:**
+  - Added direct inline renaming to the History page cards. Users can click on the resume title or click the hover pencil icon (`Pencil`) to edit the title with an auto-focused `<input maxLength={60}>`.
+  - Supports keyboard shortcuts (`Enter` to save, `Escape` to cancel), emerald check (`Check`) and crimson red cancel cross (`X`, `text-red-500 hover:text-red-600 hover:bg-red-50`) buttons, and auto-save on blur.
+  - Changes are optimistically updated in UI state and persisted to the MySQL backend via `cvApi.update(id, normalized)`.
+- **Numbered Suffix Convention Replacing "- copy" / "(Copy)":**
+  - Built utility helper module `frontend/src/lib/cvTitleUtils.ts`:
+    - `getRootTitle(title)`: strips trailing `(Copy)`, `- copy`, and `(N)` to determine the root base title.
+    - `generateDuplicateTitle(baseTitle, existingTitles)`: finds the lowest unused `(N)` sequence starting at `(1)`.
+    - `ensureUniqueTitle(targetTitle, otherTitles)`: if a chosen title collides with existing CV titles, appends the next available `(1)`, `(2)`, etc.
+  - When duplicating a resume (e.g. "Untitled Resume"), the duplicate is automatically titled `"Untitled Resume (1)"`, then `"(2)"`, `"(3)"`, etc., completely replacing the old `"- copy"` and `"(Copy)"` conventions.
+  - Standardized the canonical default resume title to `"Untitled Resume"` across all services.
+
+### 19.15 Removal of "Skip to Editor" Button on Import Flow (`StageActions.tsx`)
+- Removed the secondary `"Skip to Editor"` button (`<PenLine />`) from the ATS audit bottom action bar during document import flows (`/editor/ats?from=upload`).
+- Streamlined the upload progression so imported CVs cleanly advance to **"Choose Template & Edit"** (`/editor/templates?from=upload`), enforcing template selection as the canonical next step while preserving the left `"Back to Editor"` navigation link.
+
+### 19.16 Imported CV Persistence & Non-UUID Draft Promotion (`store.tsx`, `cv.service.ts`)
+- **Root Cause of 404 on Import Save:**
+  - `cvParser.ts` generated temporary client-side IDs formatted as `imported-${Date.now()}`.
+  - In `store.tsx`, `isLocalDraftId(id)` previously only checked for prefixes `cv-draft-`, `cv-copy-`, and `cv-\d+`. As a result, `imported-*` was erroneously classified as an existing server-side cloud CV ID.
+  - When saving (`saveDraft()`), the client sent `PUT /api/cvs/imported-<timestamp>` to update the CV in MySQL rather than `POST /api/cvs` to create it. MySQL had no record for that ID, throwing a `404 CV_NOT_FOUND`.
+- **Architectural Resolution:**
+  - **UUID-Aware Draft Detection (`store.tsx`):** Updated `isLocalDraftId(id)` to check against standard UUID format (`/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`). Any non-UUID (including `imported-*`, `cv-new`, `draft-*`) is treated as a local draft, triggering `POST /api/cvs` (`cvApi.create()`) to persist the document and receive a valid MySQL UUID.
+  - **Client-Side 404 Recovery (`store.tsx`):** If a `PUT /api/cvs/:id` ever encounters a 404, `saveDraft` now catches it and falls back to `cvApi.create(normalized)` to seamlessly recover and save the document.
+  - **Server-Side Fallback Promotion (`cv.service.ts`):** In `CvService.updateCv()`, if an update request is sent for an ID that does not exist in the database and matches a client draft pattern (`imported-*`, `cv-*`, or non-UUID), the backend automatically promotes it by delegating to `CvService.createCv()`, returning the newly persisted CV instead of failing with 404.
+
+---
+
 *Report generated and validated for the CareerPrepster Frontend Module (`careerprepster-frontend@0.1.0`).*

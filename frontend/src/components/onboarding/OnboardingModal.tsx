@@ -27,7 +27,7 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     setCVData({
       ...BLANK_CV,
       id: `cv-${Date.now()}`,
-      title: "New Student Resume",
+      title: "Untitled Resume",
       updatedAt: new Date().toISOString(),
     });
     onClose();

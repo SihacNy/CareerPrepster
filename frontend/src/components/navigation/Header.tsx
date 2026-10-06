@@ -93,21 +93,21 @@ export function Header({ }: HeaderProps) {
               {isFeaturesOpen && (
                 <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-52 bg-white rounded-xl shadow-lg border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <Link
-                    href="/editor"
+                    href="/editor/templates"
                     onClick={() => setIsFeaturesOpen(false)}
                     className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                      pathname?.startsWith("/editor") && !isTemplatesActive
+                      pathname?.startsWith("/editor")
                         ? "bg-sky-50"
                         : "hover:bg-slate-50"
                     }`}
                   >
                     <FileText className={`w-4 h-4 transition-colors ${
-                      pathname?.startsWith("/editor") && !isTemplatesActive
+                      pathname?.startsWith("/editor")
                         ? "text-sky-600"
                         : "text-slate-400 group-hover:text-sky-600"
                     }`} />
                     <p className={`text-sm font-semibold ${
-                      pathname?.startsWith("/editor") && !isTemplatesActive ? "text-sky-700" : "text-slate-800"
+                      pathname?.startsWith("/editor") ? "text-sky-700" : "text-slate-800"
                     }`}>
                       CV Editor
                     </p>
@@ -144,8 +144,12 @@ export function Header({ }: HeaderProps) {
               <span>How It Works</span>
             </Link>
             <Link
-              href="/#about"
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-bold text-slate-600 hover:text-sky-600 hover:bg-sky-500/10 transition-colors"
+              href="/about"
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
+                pathname === "/about"
+                  ? "text-sky-600 bg-sky-500/10"
+                  : "text-slate-600 hover:text-sky-600 hover:bg-sky-500/10"
+              }`}
             >
               <Info className="w-4 h-4" />
               <span>About Us</span>

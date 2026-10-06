@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   FileText,
@@ -10,6 +10,8 @@ import {
   Check,
   Award,
   Layers,
+  Pencil,
+  X,
 } from "lucide-react";
 import { CVHistoryItem } from "@/types/cv";
 import { getTemplateById } from "@/types/templates";
@@ -18,12 +20,55 @@ interface HistoryCardProps {
   item: CVHistoryItem;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onRename?: (id: string, newTitle: string) => void;
 }
 
-export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
+export function HistoryCard({ item, onDuplicate, onDelete, onRename }: HistoryCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(item.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Sync edited title with prop updates
+  useEffect(() => {
+    setEditedTitle(item.title);
+  }, [item.title]);
+
+  const handleStartEditing = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditingTitle(true);
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }, 50);
+  };
+
+  const handleSaveTitle = (e?: React.SyntheticEvent) => {
+    if (e) e.stopPropagation();
+    const trimmed = editedTitle.trim();
+    if (trimmed && trimmed !== item.title) {
+      onRename?.(item.id, trimmed);
+    } else {
+      setEditedTitle(item.title);
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleCancelEditing = (e?: React.SyntheticEvent) => {
+    if (e) e.stopPropagation();
+    setEditedTitle(item.title);
+    setIsEditingTitle(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSaveTitle();
+    } else if (e.key === "Escape") {
+      handleCancelEditing();
+    }
+  };
 
   const handleOpenEditor = () => {
     router.push(`/editor?id=${item.id}`);
@@ -92,10 +137,62 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
           </span>
         </div>
 
-        {/* Resume Title */}
-        <h3 className="text-base font-semibold text-slate-900 tracking-tight group-hover:text-sky-600 transition-colors line-clamp-1 mb-1">
-          {item.title}
-        </h3>
+        {/* Resume Title (Editable) */}
+        {isEditingTitle ? (
+          <div className="flex items-center gap-1.5 mb-1" onClick={(e) => e.stopPropagation()}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={() => handleSaveTitle()}
+              className="text-sm font-semibold text-slate-900 bg-white border border-sky-400 rounded-lg px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              maxLength={60}
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSaveTitle();
+              }}
+              className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
+              title="Save name"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleCancelEditing();
+              }}
+              className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              title="Cancel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-1 group/title mb-1">
+            <h3
+              onClick={handleStartEditing}
+              className="text-base font-semibold text-slate-900 tracking-tight group-hover:text-sky-600 transition-colors line-clamp-1 cursor-pointer flex-1"
+              title="Click to rename"
+            >
+              {item.title}
+            </h3>
+            <button
+              type="button"
+              onClick={handleStartEditing}
+              className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-md transition-all shrink-0"
+              title="Rename resume"
+              aria-label="Rename resume"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Candidate & Target Role */}
         <div className="text-xs text-slate-600 mb-2.5 space-y-0.5">
@@ -178,7 +275,7 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
           <button
             type="button"
             onClick={handleOpenAts}
-            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-slate-700 hover:text-sky-700 border border-slate-200 hover:border-sky-300 shadow-2xs transition-colors"
+            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 hover:border-slate-300 shadow-2xs transition-colors"
             title="Inspect ATS Score & Feedback"
           >
             Audit

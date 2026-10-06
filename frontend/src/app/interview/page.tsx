@@ -66,7 +66,9 @@ export default function InterviewHubPage() {
           <div className="max-w-3xl space-y-5 relative z-10">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
               Master Your Interview Answers with{" "}
-              <span className="text-sky-600">Real-Time STAR Coaching</span>
+              <span className="text-sky-600 underline decoration-yellow-300 underline-offset-4">
+                Real-Time STAR Coaching
+              </span>
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 leading-relaxed">

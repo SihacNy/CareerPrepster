@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { UploadCloud, FileText, AlertCircle, Loader2 } from "lucide-react";
+import { UploadCloud, AlertCircle, Loader2 } from "lucide-react";
 
 interface UploadDropzoneProps {
   onFileSelected: (file: File) => void;
@@ -106,11 +106,6 @@ export function UploadDropzone({ onFileSelected, isLoading = false, serverError 
               <p className="text-xs text-slate-500 mt-1">
                 Supported formats: PDF or DOCX (Max 5MB)
               </p>
-            </div>
-
-            <div className="inline-flex items-center px-2.5 py-1 rounded text-[11px] font-medium bg-white text-slate-600 border border-slate-200">
-              <FileText className="w-3.5 h-3.5 mr-1 text-slate-400" />
-              Digital PDF with selectable text recommended
             </div>
           </div>
         )}

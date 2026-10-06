@@ -2,23 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { 
-  FileText, 
-  Github, 
-  Linkedin, 
-  Twitter, 
-  Heart, 
-  CheckCircle2, 
-  ShieldCheck, 
-  Sparkles,
-  ArrowUpRight
-} from "lucide-react";
+import { Github, Linkedin, Twitter } from "lucide-react";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer id="about" className="bg-slate-950 text-slate-400 border-t border-slate-800 text-xs relative overflow-hidden scroll-mt-16">
+    <footer className="bg-slate-950 text-slate-400 border-t border-slate-800 text-xs relative overflow-hidden">
       {/* Top Footer Links & Columns */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
@@ -31,10 +21,11 @@ export function Footer() {
             </Link>
 
             <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
-              Empowering university students and graduates to author high-impact, ATS-optimized CVs that pass screeners and land interviews at top tech companies.
+              Empowering university students and graduates to author high-impact, ATS-optimized CVs and practice technical &amp; behavioral interviews with AI.
             </p>
 
-            <div className="flex items-center space-x-4 pt-1">
+            {/* Social Links (links to be provided) */}
+            <div className="flex items-center space-x-3 pt-1">
               <a
                 href="https://github.com"
                 target="_blank"
@@ -65,15 +56,20 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Column 1: Studio & Templates */}
+          {/* Column 1: CV Studio */}
           <div className="space-y-3">
             <h4 className="font-semibold text-white text-sm uppercase tracking-wider">
               CV Studio
             </h4>
             <ul className="space-y-2.5">
               <li>
+                <Link href="/editor/templates" className="hover:text-white transition-colors">
+                  Choose a Template
+                </Link>
+              </li>
+              <li>
                 <Link href="/editor" className="hover:text-white transition-colors">
-                  Author CV Studio
+                  Interactive CV Editor
                 </Link>
               </li>
               <li>
@@ -87,82 +83,67 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/editor" className="hover:text-white transition-colors">
-                  Harvard Classic Template
-                </Link>
-              </li>
-              <li>
-                <Link href="/editor" className="hover:text-white transition-colors">
-                  Jake&apos;s Tech Template
+                <Link href="/history" className="hover:text-white transition-colors">
+                  Resume &amp; Audit History
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 2: ATS & AI Features */}
+          {/* Column 2: AI Interview Coach */}
           <div className="space-y-3">
             <h4 className="font-semibold text-white text-sm uppercase tracking-wider">
-              ATS &amp; Frameworks
+              AI Interview Coach
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  Google XYZ Metric Formula
-                </span>
+                <Link href="/interview" className="hover:text-white transition-colors">
+                  Mock Interview Studio
+                </Link>
               </li>
               <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  STAR Bullet Method
-                </span>
+                <Link href="/interview" className="hover:text-white transition-colors">
+                  STAR Method Practice
+                </Link>
               </li>
               <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  Job Description Matcher
-                </span>
+                <Link href="/interview" className="hover:text-white transition-colors">
+                  Real-time Audio Feedback
+                </Link>
               </li>
               <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  Parsability Auditing
-                </span>
-              </li>
-              <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  Brevity &amp; Page Balance
-                </span>
+                <Link href="/interview" className="hover:text-white transition-colors">
+                  Performance Scorecards
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: Resources & Support */}
+          {/* Column 3: About & Explore */}
           <div className="space-y-3">
             <h4 className="font-semibold text-white text-sm uppercase tracking-wider">
-              Resources
+              About &amp; Explore
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <a href="#faq" className="hover:text-white transition-colors">
-                  FAQ &amp; Knowledge Base
-                </a>
+                <Link href="/about" className="hover:text-white transition-colors">
+                  About Our Team &amp; Mission
+                </Link>
               </li>
               <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  Harvard Resume Guide
-                </span>
+                <Link href="/about#team" className="hover:text-white transition-colors">
+                  Meet the Builders
+                </Link>
               </li>
               <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  Student Career Services
-                </span>
+                <Link href="/#how-it-works" className="hover:text-white transition-colors">
+                  How It Works
+                </Link>
               </li>
               <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  Data &amp; Privacy Policy
-                </span>
-              </li>
-              <li>
-                <span className="text-slate-400 hover:text-white transition-colors cursor-default">
-                  Terms of Service
-                </span>
+                <Link href="/#faq" className="hover:text-white transition-colors">
+                  Frequently Asked Questions
+                </Link>
               </li>
             </ul>
           </div>
