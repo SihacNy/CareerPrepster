@@ -53,6 +53,6 @@ export function registerPdfFonts() {
 
     fontsRegistered = true;
   } catch (err) {
-    console.warn("Failed to register Plus Jakarta Sans with @react-pdf/renderer:", err);
+    console.warn("Failed to register fonts with @react-pdf/renderer:", err);
   }
 }

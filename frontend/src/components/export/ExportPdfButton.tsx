@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
 import { useCV } from "@/lib/store";
+import { cvApi } from "@/lib/api";
 import { CVData } from "@/types/cv";
 import { pdf } from "@react-pdf/renderer";
 import { ClassicPdfDocument } from "@/lib/pdf/ClassicPdfDocument";
@@ -14,6 +15,7 @@ import { registerPdfFonts } from "@/lib/pdf/registerFonts";
 interface ExportPdfButtonProps {
   variant?: "primary" | "secondary";
   className?: string;
+  fileName?: string;
 }
 
 /**
@@ -97,6 +99,7 @@ function getDocumentElement(data: CVData): React.ReactElement {
 export function ExportPdfButton({
   variant = "primary",
   className = "",
+  fileName,
 }: ExportPdfButtonProps) {
   const { cvData } = useCV();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -150,9 +153,15 @@ export function ExportPdfButton({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      const cleanName = (cvData.personalInfo.fullName || "Resume")
-        .replace(/[^a-zA-Z0-9]/g, "_");
-      link.download = `${cleanName}_ATS_Resume.pdf`;
+      let downloadFileName = fileName?.trim();
+      if (!downloadFileName) {
+        const cleanName = (cvData.personalInfo.fullName || "Resume")
+          .replace(/[^a-zA-Z0-9_-]/g, "_");
+        downloadFileName = `${cleanName}_ATS_Resume.pdf`;
+      } else if (!downloadFileName.toLowerCase().endsWith(".pdf")) {
+        downloadFileName = `${downloadFileName}.pdf`;
+      }
+      link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -161,6 +170,22 @@ export function ExportPdfButton({
       if (typeof window !== "undefined") {
         sessionStorage.setItem("careerprepster_pdf_downloaded", "true");
         window.dispatchEvent(new CustomEvent("careerprepster:pdf-downloaded"));
+
+        try {
+          const cvId = cvData.id;
+          if (cvId) {
+            const raw = localStorage.getItem("careerprepster_exported_cv_ids");
+            const set = new Set(raw ? JSON.parse(raw) : []);
+            set.add(cvId);
+            localStorage.setItem("careerprepster_exported_cv_ids", JSON.stringify(Array.from(set)));
+
+            if (!cvId.startsWith("draft-") && !cvId.startsWith("cv-")) {
+              cvApi.markExported(cvId).catch(() => {});
+            }
+          }
+        } catch {
+          // Ignore storage errors
+        }
       }
     } catch (error) {
       console.error("PDF generation failed:", error);

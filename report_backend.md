@@ -720,5 +720,21 @@ Due to Google Gemini regional access controls, API key service restrictions (`AP
 
 ---
 
-*Report generated and validated for the CareerPrepster Backend API Module (`careerprepster-backend@1.0.0`).*
+## 18. Export State Persistence & History ATS Score Aggregation
 
+### 18.1 Database Schema Migration (`schema.prisma`)
+- Added `isExported Boolean @default(false)` column to `model CV` in `backend/prisma/schema.prisma` and applied via MySQL `ALTER TABLE cvs ADD COLUMN isExported BOOLEAN NOT NULL DEFAULT FALSE`.
+- Re-generated Prisma Client binaries via `npx prisma generate`.
+
+### 18.2 Export State Endpoint (`cv.controller.ts`, `cv.routes.ts`)
+- Added `POST /api/cvs/:id/export` route invoking `CvController.markExported`.
+- Updates `cv.isExported = true` for authenticated users and returns the updated status flag.
+
+### 18.3 History Diagnostic Aggregation (`cv.service.ts`)
+- In `listUserCvs`, added relational selection for `atsReports: { orderBy: { createdAt: 'desc' }, take: 1, select: { overallScore: true } }` and `isExported: true`.
+- Mapped returned records so `atsScore: cv.atsReports[0]?.overallScore` is provided directly to the client.
+- Eliminated eager auto-scoring during list queries to preserve the authentic `Draft` status for un-audited resumes.
+
+---
+
+*Report generated and validated for the CareerPrepster Backend API Module (`careerprepster-backend@1.0.0`).*

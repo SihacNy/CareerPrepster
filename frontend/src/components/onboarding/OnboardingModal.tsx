@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PlusCircle, UploadCloud, X, ArrowRight } from "lucide-react";
+import { PlusCircle, UploadCloud, X, ArrowRight, ArrowLeft } from "lucide-react";
 import { UploadDropzone } from "./UploadDropzone";
 import { useCV } from "@/lib/store";
 import { BLANK_CV } from "@/types/cv";
@@ -128,10 +128,12 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
           <div>
             <div className="mb-4">
               <button
+                type="button"
                 onClick={() => setSelectedPath("choice")}
-                className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center mb-2"
+                className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1.5 mb-2 transition-colors"
               >
-                ← Back to options
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to options</span>
               </button>
               <h2 className="text-xl font-bold text-slate-900">
                 Upload Your Existing Resume

@@ -290,7 +290,7 @@ export function CVForm() {
     }
     setTimeout(() => focusTarget(`section-${sectionKey}`), 80);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [persistence.validationErrors]);
+  }, [persistence.validationErrors, persistence.validationRunId]);
 
   return (
     <div className="w-full pb-16">

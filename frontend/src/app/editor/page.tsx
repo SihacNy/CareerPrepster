@@ -123,10 +123,10 @@ function EditorContent() {
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
               <Link
                 href="/editor/templates"
-                className="inline-flex items-center justify-center p-1 -ml-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors group"
+                className="inline-flex items-center justify-center p-1 -ml-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-lg transition-colors"
                 title="Back to Template Selection"
               >
-                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                <ArrowLeft className="w-4 h-4" />
               </Link>
               <span>Workspace:</span>
               <span className="text-slate-700 font-semibold">

@@ -766,4 +766,49 @@ A comprehensive audit of the 15 modified files across `module/cv-editor` to veri
 
 ---
 
+## 19. Recent UX Refinements, Template Gallery Optimization, and History Enhancements
+
+### 19.1 History Card ATS Score Indicator & State Separation (`HistoryCard.tsx`, `history/page.tsx`)
+1. **Persistent ATS Diagnostic Visibility:**
+   - History cards in `frontend/src/components/history/HistoryCard.tsx` now display a dedicated middle banner presenting the ATS score (`item.atsScore`) whenever audited.
+   - Designed with clear visual hierarchy: `Award` icon and `"ATS Score"` label on the left (`text-xs font-semibold text-slate-700`), raw colored score value on the right (`82/100`, `text-xs font-bold tracking-tight`), enclosed in a rounded pill (`my-2.5 py-1.5 px-3 rounded-xl bg-slate-50/90 border border-slate-200/70`).
+   - Unaudited items clearly display `"Not Audited"` in neutral slate typography (`text-[11px] font-medium text-slate-400`).
+2. **Draft vs. Audited vs. Exported Status Flow:**
+   - Eliminated eager backend auto-scoring on list queries so fresh drafts stay strictly in `Draft` status until explicitly audited on `/editor/ats`.
+   - Status badge styling stripped of redundant border outlines, using clean borderless pills: `Draft` (neutral slate), `ATS Audited` (sky blue), and `Exported PDF` (emerald green).
+   - "New Resume" button on the history page redirects directly to `/editor/templates` to preserve the canonical onboarding path.
+
+### 19.2 Exported State Tracking Integration (`ExportPdfButton.tsx`, `api.ts`)
+1. **Dual Local & Cloud Export Tracking:**
+   - In `frontend/src/components/export/ExportPdfButton.tsx`, successful PDF downloads trigger `cvApi.markExported(cvId)` (`POST /api/cvs/:id/export`).
+   - Simultaneously writes to `localStorage` key `careerprepster_exported_cv_ids` to ensure instant client-side status reflection regardless of network latency or guest mode.
+2. **History Page Integration (`history/page.tsx`):**
+   - Merges server `isExported` field with local exported cache to compute `status: "exported" | "audited" | "draft"`.
+
+### 19.3 Template Gallery Decoupled Color Staging (`editor/templates/page.tsx`)
+1. **Independent Color Staging (`templateColors`):**
+   - Previously, clicking any color swatch on a template card immediately selected the template (`setTemplateId(template.id)`), making the "Select Template" button redundant and disrupting template browsing.
+   - Refactored color picker with a local staging map `const [templateColors, setTemplateColors] = useState<Record<string, string>>({})`.
+   - Picking a color updates the live card and modal previews in real time without selecting the template (`cvData.templateId` remains untouched).
+   - The user must explicitly click the **"Select Template"** button to commit both the template choice and its staged accent color.
+2. **Template Card Remounting & Bounce Fix:**
+   - **Root Cause:** `TemplateCardPreview` and `renderTemplateComponent` were previously declared inside `TemplateGalleryContent`. Every state update caused React to treat them as new component types, completely unmounting the DOM tree and resetting the scale factor to `0.45` before `ResizeObserver` re-scaled it, animating the jump via `transition-transform duration-200`.
+   - **Resolution:** Moved `TemplateCardPreview` and `renderTemplateComponent` outside the page component and removed `transition-transform` from the preview container. Card previews now update instantaneously without remounting or jumping.
+3. **Color Swatch Micro-interactions:**
+   - Added hover animation specifically to color swatches (`transition-transform duration-150 ease-out hover:scale-125 active:scale-95`).
+   - Selecting a color toggles the ring border without modifying the base scale, ensuring zero layout shift when picking colors.
+
+### 19.4 Interview Scorecard Simplification (`interview/[id]/scorecard/page.tsx`)
+- Removed the experimental **"Apply Feedback in CV Editor"** button and its unused `FileText` import from the top header actions bar, streamlining the post-interview scorecard view.
+
+### 19.5 Export Stage Toolbar Polish (`ExportStage.tsx`)
+- **Icon-Only Preview Button:** Converted the `"Interactive Preview"` button into a clean, icon-only button with `Maximize2`, subtle hover highlighting, and an accessible tooltip.
+- **Prefix Removal:** Removed the redundant `"FILE:"` text prefix from the editable filename bar.
+
+### 19.6 Navigation Arrow Animation Stabilization (`editor/page.tsx`, `OnboardingModal.tsx`)
+- Removed sliding translation animations (`group-hover:-translate-x-0.5 transition-transform`) from back arrow buttons in the Editor toolbar ("Back to Template Selection") and the Onboarding Modal ("Back to options").
+- Back buttons now remain completely still on hover with only subtle color and background highlighting.
+
+---
+
 *Report generated and validated for the CareerPrepster Frontend Module (`careerprepster-frontend@0.1.0`).*

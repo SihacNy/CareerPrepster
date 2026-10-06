@@ -23,8 +23,18 @@ const config: Config = {
         },
       },
       fontFamily: {
-        kantumruy: ["var(--font-kantumruy)", "sans-serif"],
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+        kantumruy: ["var(--font-kantumruy, 'Kantumruy Pro')", "'Plus Jakarta Sans'", "sans-serif"],
+        sans: [
+          "var(--font-sans, 'Plus Jakarta Sans')",
+          "'Plus Jakarta Sans'",
+          "var(--font-kantumruy, 'Kantumruy Pro')",
+          "system-ui",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "'Segoe UI'",
+          "Roboto",
+          "sans-serif",
+        ],
       },
       boxShadow: {
         subtle: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",

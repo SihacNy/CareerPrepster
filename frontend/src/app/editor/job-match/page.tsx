@@ -1,27 +1,45 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/navigation/Header";
 import { EditorStepper } from "@/components/navigation/EditorStepper";
 import { Target, ArrowLeft, Sparkles, CheckCircle2, Search, FileText } from "lucide-react";
 import { useCV } from "@/lib/store";
+import { validateCV } from "@/lib/cvValidation";
 
 export default function JobMatchPage() {
   const router = useRouter();
-  const { targetJobDescription, setTargetJobDescription, saveDraft } = useCV();
+  const { cvData, isHydrated, targetJobDescription, setTargetJobDescription, saveDraft } = useCV();
 
+  useEffect(() => {
+    if (isHydrated && !validateCV(cvData).valid) {
+      router.replace("/editor");
+    }
+  }, [isHydrated, cvData, router]);
 
-  const handleContinue = () => {
-    saveDraft();
+  const handleContinue = async () => {
+    const saved = await saveDraft();
+    if (!saved) {
+      router.push("/editor");
+      return;
+    }
     router.push("/editor/ats");
   };
 
-  const handleSkip = () => {
-    saveDraft();
+  const handleSkip = async () => {
+    const saved = await saveDraft();
+    if (!saved) {
+      router.push("/editor");
+      return;
+    }
     router.push("/editor/ats");
   };
+
+  if (isHydrated && !validateCV(cvData).valid) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50">

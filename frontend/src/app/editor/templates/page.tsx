@@ -31,6 +31,68 @@ import {
   Camera,
 } from "lucide-react";
 
+type PreviewCVData = typeof SAMPLE_CV_FOR_PREVIEW & { accentColor?: string };
+
+function renderTemplateComponent(templateId: string, data: PreviewCVData) {
+  switch (templateId) {
+    case "executive-accent":
+      return <ExecutiveAccent data={data} />;
+    case "modern-photo":
+      return <ModernPhoto data={data} />;
+    case "modern":
+      return <ModernCompact data={data} />;
+    case "classic":
+    default:
+      return <ClassicAts data={data} />;
+  }
+}
+
+function TemplateCardPreview({
+  templateId,
+  data,
+}: {
+  templateId: string;
+  data: PreviewCVData;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState<number>(0.45);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateScale = () => {
+      const width = el.clientWidth;
+      if (width > 0) {
+        // Standard template target width is 794px (A4 format).
+        // Scale to fit card container with exact boundary fit
+        setScale(width / 794);
+      }
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-full relative overflow-hidden bg-white select-none pointer-events-none flex items-start justify-center"
+    >
+      <div
+        className="w-[794px] min-w-[794px] max-w-[794px] origin-top bg-white"
+        style={{
+          transform: `scale(${scale})`,
+        }}
+      >
+        {renderTemplateComponent(templateId, data)}
+      </div>
+    </div>
+  );
+}
+
 function TemplateGalleryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,6 +101,24 @@ function TemplateGalleryContent() {
 
   const [activeArchetype, setActiveArchetype] = useState<"all" | TemplateArchetype>("all");
   const [modalTemplate, setModalTemplate] = useState<TemplateDefinition | null>(null);
+
+  // Track chosen color for each template before it is officially selected
+  const [templateColors, setTemplateColors] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    if (cvData.accentColor && cvData.templateId) {
+      initial[cvData.templateId] = cvData.accentColor;
+    }
+    return initial;
+  });
+
+  const getTemplateColor = (template: TemplateDefinition) => {
+    return (
+      templateColors[template.id] ||
+      (cvData.templateId === template.id ? cvData.accentColor : undefined) ||
+      template.defaultColor ||
+      "#0284c7"
+    );
+  };
 
   // Filter templates
   const filteredTemplates = TEMPLATE_CATALOG.filter((t) => {
@@ -51,76 +131,13 @@ function TemplateGalleryContent() {
   const activeTemplate =
     TEMPLATE_CATALOG.find((t) => t.id === cvData.templateId) || TEMPLATE_CATALOG[0];
 
-  const selectedAccentColor = cvData.accentColor || activeTemplate.defaultColor || "#0284c7";
-
-  const previewCV = {
-    ...SAMPLE_CV_FOR_PREVIEW,
-    accentColor: selectedAccentColor,
-  };
-
   const handleSelectTemplate = (templateId: TemplateDefinition["id"]) => {
+    const targetTemplate =
+      TEMPLATE_CATALOG.find((t) => t.id === templateId) || TEMPLATE_CATALOG[0];
+    const chosenColor = getTemplateColor(targetTemplate);
     setTemplateId(templateId);
+    setAccentColor(chosenColor);
   };
-
-  const renderTemplateComponent = (templateId: string, data: typeof previewCV) => {
-    switch (templateId) {
-      case "executive-accent":
-        return <ExecutiveAccent data={data} />;
-      case "modern-photo":
-        return <ModernPhoto data={data} />;
-      case "modern":
-        return <ModernCompact data={data} />;
-      case "classic":
-      default:
-        return <ClassicAts data={data} />;
-    }
-  };
-
-  function TemplateCardPreview({
-    templateId,
-    data,
-  }: {
-    templateId: string;
-    data: typeof previewCV;
-  }) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [scale, setScale] = useState<number>(0.45);
-
-    useEffect(() => {
-      const el = containerRef.current;
-      if (!el) return;
-
-      const updateScale = () => {
-        const width = el.clientWidth;
-        if (width > 0) {
-          // Standard template target width is 794px (A4 format).
-          // Scale to fit card container with exact boundary fit
-          setScale(width / 794);
-        }
-      };
-
-      updateScale();
-      const observer = new ResizeObserver(updateScale);
-      observer.observe(el);
-      return () => observer.disconnect();
-    }, []);
-
-    return (
-      <div
-        ref={containerRef}
-        className="w-full h-full relative overflow-hidden bg-white select-none pointer-events-none flex items-start justify-center"
-      >
-        <div
-          className="w-[794px] min-w-[794px] max-w-[794px] origin-top bg-white transition-transform duration-200"
-          style={{
-            transform: `scale(${scale})`,
-          }}
-        >
-          {renderTemplateComponent(templateId, data)}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 relative selection:bg-sky-100">
@@ -209,10 +226,7 @@ function TemplateGalleryContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 justify-items-center">
           {filteredTemplates.map((template) => {
             const isSelected = cvData.templateId === template.id;
-            const cardAccentColor =
-              (isSelected ? cvData.accentColor : undefined) ||
-              template.defaultColor ||
-              "#0284c7";
+            const cardAccentColor = getTemplateColor(template);
             const cardPreviewCV = {
               ...SAMPLE_CV_FOR_PREVIEW,
               accentColor: cardAccentColor,
@@ -306,9 +320,7 @@ function TemplateGalleryContent() {
                         </span>
                         <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-xl backdrop-blur-md border border-white/15">
                           {COLOR_PALETTES.map((palette) => {
-                            const isCurrent =
-                              (cvData.accentColor || template.defaultColor) === palette.hex &&
-                              cvData.templateId === template.id;
+                            const isCurrent = cardAccentColor === palette.hex;
                             return (
                               <button
                                 key={palette.id}
@@ -316,11 +328,13 @@ function TemplateGalleryContent() {
                                 title={palette.name}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setTemplateId(template.id);
-                                  setAccentColor(palette.hex);
+                                  setTemplateColors((prev) => ({
+                                    ...prev,
+                                    [template.id]: palette.hex,
+                                  }));
                                 }}
-                                className={`w-5 h-5 rounded-full transition-transform hover:scale-125 flex items-center justify-center cursor-pointer shadow-xs ${
-                                  isCurrent ? "ring-2 ring-white scale-110" : ""
+                                className={`w-5 h-5 rounded-full flex items-center justify-center cursor-pointer shadow-xs transition-transform duration-150 ease-out hover:scale-125 active:scale-95 ${
+                                  isCurrent ? "ring-2 ring-white ring-offset-1 ring-offset-slate-900" : ""
                                 }`}
                                 style={{ backgroundColor: palette.hex }}
                               >
@@ -344,9 +358,22 @@ function TemplateGalleryContent() {
                     <button
                       type="button"
                       onClick={() => handleSelectTemplate(template.id)}
-                      className="w-full py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md bg-sky-600 hover:bg-sky-700 text-white"
+                      className={`w-full py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+                        isSelected && cardAccentColor === cvData.accentColor
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          : "bg-sky-600 hover:bg-sky-700 text-white"
+                      }`}
                     >
-                      <span>Select Template</span>
+                      {isSelected && cardAccentColor === cvData.accentColor ? (
+                        <>
+                          <Check className="w-4 h-4 stroke-[3]" />
+                          <span>Selected</span>
+                        </>
+                      ) : isSelected ? (
+                        <span>Apply Color</span>
+                      ) : (
+                        <span>Select Template</span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -406,7 +433,10 @@ function TemplateGalleryContent() {
               {/* Left: Interactive Live Document Viewport */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-slate-100 flex justify-center items-start">
                 <div className="w-full max-w-3xl bg-white shadow-xl border border-slate-300 rounded-sm transition-all">
-                  {renderTemplateComponent(modalTemplate.id, previewCV)}
+                  {renderTemplateComponent(modalTemplate.id, {
+                    ...SAMPLE_CV_FOR_PREVIEW,
+                    accentColor: getTemplateColor(modalTemplate),
+                  })}
                 </div>
               </div>
 
@@ -422,21 +452,27 @@ function TemplateGalleryContent() {
                           <span>Accent Color</span>
                         </div>
                         <span className="text-[11px] font-semibold text-slate-500">
-                          {COLOR_PALETTES.find((p) => p.hex === selectedAccentColor)?.name || "Custom"}
+                          {COLOR_PALETTES.find((p) => p.hex === getTemplateColor(modalTemplate))?.name || "Custom"}
                         </span>
                       </div>
 
                       <div className="grid grid-cols-6 gap-2">
                         {COLOR_PALETTES.map((palette) => {
-                          const isCurrent = (cvData.accentColor || modalTemplate.defaultColor) === palette.hex;
+                          const modalColor = getTemplateColor(modalTemplate);
+                          const isCurrent = modalColor === palette.hex;
                           return (
                             <button
                               key={palette.id}
                               type="button"
                               title={palette.name}
-                              onClick={() => setAccentColor(palette.hex)}
-                              className={`w-9 h-9 rounded-xl transition-all hover:scale-110 flex items-center justify-center cursor-pointer shadow-xs ${
-                                isCurrent ? "ring-2 ring-offset-2 ring-slate-800 scale-105" : ""
+                              onClick={() => {
+                                setTemplateColors((prev) => ({
+                                  ...prev,
+                                  [modalTemplate.id]: palette.hex,
+                                }));
+                              }}
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer shadow-xs transition-transform duration-150 ease-out hover:scale-110 active:scale-95 ${
+                                isCurrent ? "ring-2 ring-offset-2 ring-slate-800" : ""
                               }`}
                               style={{ backgroundColor: palette.hex }}
                             >
@@ -543,9 +579,9 @@ function TemplateGalleryContent() {
                       handleSelectTemplate(modalTemplate.id);
                       setModalTemplate(null);
                     }}
-                    className="w-full py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                    className="w-full py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
                   >
-                    Keep Browsing Gallery
+                    Select Template
                   </button>
                 </div>
               </div>

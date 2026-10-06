@@ -61,4 +61,16 @@ export class CvController {
       return next(error);
     }
   }
+
+  static async markExported(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await CvService.markExported(req.params.id, req.user!.userId);
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
 }

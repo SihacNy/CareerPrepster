@@ -1,15 +1,29 @@
 "use client";
 
-import React, { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/navigation/Header";
 import { EditorStepper } from "@/components/navigation/EditorStepper";
 import { ATSScoringStage } from "@/components/ats/ATSScoringStage";
+import { useCV } from "@/lib/store";
+import { validateCV } from "@/lib/cvValidation";
 import { Loader2 } from "lucide-react";
 
 function ATSPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const isFromUpload = searchParams.get("from") === "upload";
+  const { cvData, isHydrated } = useCV();
+
+  useEffect(() => {
+    if (!isFromUpload && isHydrated && !validateCV(cvData).valid) {
+      router.replace("/editor");
+    }
+  }, [isFromUpload, isHydrated, cvData, router]);
+
+  if (!isFromUpload && isHydrated && !validateCV(cvData).valid) {
+    return null;
+  }
 
   return (
     <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">

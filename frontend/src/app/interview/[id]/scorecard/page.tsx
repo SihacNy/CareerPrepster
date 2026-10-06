@@ -9,7 +9,6 @@ import {
   Sparkles,
   Loader2,
   AlertCircle,
-  FileText,
   CheckCircle2,
 } from "lucide-react";
 import { Header } from "@/components/navigation/Header";
@@ -112,16 +111,6 @@ export default function InterviewScorecardPage() {
               <RotateCcw className="w-4 h-4" />
               <span>Practice Another Drill</span>
             </Link>
-
-            {session.cvId && (
-              <a
-                href={`/editor?cvId=${session.cvId}`}
-                className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold transition-all shadow-xs"
-              >
-                <FileText className="w-4 h-4" />
-                <span>Apply Feedback in CV Editor</span>
-              </a>
-            )}
           </div>
         </div>
       </div>

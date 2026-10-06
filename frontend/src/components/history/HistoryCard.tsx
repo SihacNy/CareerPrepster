@@ -54,50 +54,24 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
     year: "numeric",
   });
 
-  const getScoreBadge = (score?: number) => {
-    if (score === undefined) return null;
-    if (score >= 80) {
-      return (
-        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <Award className="w-3 h-3 text-emerald-600" />
-          <span>ATS: {score}/100</span>
-        </span>
-      );
-    }
-    if (score >= 50) {
-      return (
-        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-          <Award className="w-3 h-3 text-amber-600" />
-          <span>ATS: {score}/100</span>
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-        <Award className="w-3 h-3 text-rose-600" />
-        <span>ATS: {score}/100</span>
-      </span>
-    );
-  };
-
   const getStatusBadge = () => {
     switch (item.status) {
       case "exported":
         return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700">
             Exported PDF
           </span>
         );
       case "audited":
         return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-sky-50 text-sky-700 border border-sky-200/80">
+          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-sky-50 text-sky-700">
             ATS Audited
           </span>
         );
       case "draft":
       default:
         return (
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200/80">
+          <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700">
             Draft
           </span>
         );
@@ -111,7 +85,6 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
         <div className="flex items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-1.5 flex-wrap">
             {getStatusBadge()}
-            {getScoreBadge(item.atsScore)}
           </div>
           <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 shrink-0">
             <Clock className="w-3 h-3 text-slate-400" />
@@ -125,7 +98,7 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
         </h3>
 
         {/* Candidate & Target Role */}
-        <div className="text-xs text-slate-600 mb-3 space-y-0.5">
+        <div className="text-xs text-slate-600 mb-2.5 space-y-0.5">
           <p className="font-medium text-slate-800 truncate">
             {item.fullName || "Unnamed Candidate"}
           </p>
@@ -137,6 +110,41 @@ export function HistoryCard({ item, onDuplicate, onDelete }: HistoryCardProps) {
                 : "General"}
             </span>
           </p>
+        </div>
+
+        {/* Middle ATS Score Display */}
+        <div className="my-2.5 py-1.5 px-3 rounded-xl bg-slate-50/90 border border-slate-200/70 flex items-center justify-between group-hover:border-slate-300 transition-colors">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+            <Award
+              className={`w-3.5 h-3.5 ${
+                item.atsScore === undefined
+                  ? "text-slate-400"
+                  : item.atsScore >= 80
+                  ? "text-emerald-600"
+                  : item.atsScore >= 50
+                  ? "text-amber-500"
+                  : "text-rose-500"
+              }`}
+            />
+            <span>ATS Score</span>
+          </div>
+          {item.atsScore !== undefined ? (
+            <span
+              className={`text-xs font-bold tracking-tight ${
+                item.atsScore >= 80
+                  ? "text-emerald-600"
+                  : item.atsScore >= 50
+                  ? "text-amber-600"
+                  : "text-rose-600"
+              }`}
+            >
+              {item.atsScore}/100
+            </span>
+          ) : (
+            <span className="text-[11px] font-medium text-slate-400">
+              Not Audited
+            </span>
+          )}
         </div>
 
         {/* Metadata Specs */}

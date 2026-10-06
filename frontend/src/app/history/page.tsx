@@ -86,18 +86,43 @@ export default function HistoryPage() {
           setRoleMap(newRoleMap);
         }
 
+        const localExportedIds = new Set<string>();
+        if (typeof window !== "undefined") {
+          try {
+            const raw = localStorage.getItem("careerprepster_exported_cv_ids");
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                parsed.forEach((id) => localExportedIds.add(id));
+              }
+            }
+          } catch {
+            // Ignore storage errors
+          }
+        }
+
         if (isMounted && Array.isArray(remoteCvs)) {
-          const items: CVHistoryItem[] = remoteCvs.map((rcv) => ({
-            id: rcv.id,
-            cvId: rcv.id,
-            title: rcv.title || "Untitled CV",
-            targetRole: getRoleDisplayName(rcv, newRoleMap),
-            fullName: rcv.fullName || "Candidate",
-            status: "draft",
-            templateId: (rcv.templateId as any) || "classic",
-            createdAt: rcv.createdAt,
-            updatedAt: rcv.updatedAt,
-          }));
+          const items: CVHistoryItem[] = remoteCvs.map((rcv) => {
+            const isExported = Boolean(rcv.isExported || localExportedIds.has(rcv.id));
+            const status: CVHistoryStatus = isExported
+              ? "exported"
+              : typeof rcv.atsScore === "number"
+                ? "audited"
+                : "draft";
+
+            return {
+              id: rcv.id,
+              cvId: rcv.id,
+              title: rcv.title || "Untitled CV",
+              targetRole: getRoleDisplayName(rcv, newRoleMap),
+              fullName: rcv.fullName || "Candidate",
+              status,
+              templateId: (rcv.templateId as any) || "classic",
+              atsScore: rcv.atsScore,
+              createdAt: rcv.createdAt,
+              updatedAt: rcv.updatedAt,
+            };
+          });
           setHistoryItems(items);
         }
       } catch (err) {
@@ -115,7 +140,7 @@ export default function HistoryPage() {
 
   const handleCreateNew = () => {
     clearAll();
-    router.push("/editor");
+    router.push("/editor/templates");
   };
 
   const handleDelete = async (id: string) => {
@@ -147,8 +172,9 @@ export default function HistoryPage() {
             title: rcv.title || "Untitled CV",
             targetRole: getRoleDisplayName(rcv, roleMap),
             fullName: rcv.fullName || "Candidate",
-            status: "draft",
+            status: typeof rcv.atsScore === "number" ? "audited" : "draft",
             templateId: (rcv.templateId as any) || "classic",
+            atsScore: rcv.atsScore,
             createdAt: rcv.createdAt,
             updatedAt: rcv.updatedAt,
           }))
@@ -272,44 +298,40 @@ export default function HistoryPage() {
             <button
               type="button"
               onClick={() => setSelectedStatus("all")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                selectedStatus === "all"
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${selectedStatus === "all"
                   ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               All ({historyItems.length})
             </button>
             <button
               type="button"
               onClick={() => setSelectedStatus("draft")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                selectedStatus === "draft"
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${selectedStatus === "draft"
                   ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               Drafts ({historyItems.filter((i) => i.status === "draft").length})
             </button>
             <button
               type="button"
               onClick={() => setSelectedStatus("audited")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                selectedStatus === "audited"
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${selectedStatus === "audited"
                   ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               Audited ({historyItems.filter((i) => i.status === "audited").length})
             </button>
             <button
               type="button"
               onClick={() => setSelectedStatus("exported")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                selectedStatus === "exported"
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${selectedStatus === "exported"
                   ? "bg-white text-slate-900 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               Exported ({historyItems.filter((i) => i.status === "exported").length})
             </button>
@@ -364,7 +386,7 @@ export default function HistoryPage() {
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-6">
               {searchQuery
                 ? `No resumes match your search query "${searchQuery}". Try clearing your search.`
-                : "You don't have any saved resumes in MySQL yet. Start drafting or import an existing document."}
+                : "You don't have any saved resumes yet. Start drafting or import an existing document."}
             </p>
             <div className="flex items-center justify-center gap-3">
               {searchQuery ? (

@@ -160,6 +160,8 @@ export interface CVListItem {
   fullName: string;
   targetRoleId?: string | null;
   targetRole?: string | { id: string; title: string } | null;
+  atsScore?: number;
+  isExported?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -168,6 +170,11 @@ export const cvApi = {
   list: () =>
     fetchApi<CVListItem[]>("/cvs", {
       method: "GET",
+    }),
+
+  markExported: (id: string) =>
+    fetchApi<{ id: string; isExported: boolean }>(`/cvs/${id}/export`, {
+      method: "POST",
     }),
 
   getById: (id: string) =>

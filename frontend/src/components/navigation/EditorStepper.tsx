@@ -2,13 +2,30 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PenLine, CheckCircle2, Download, Check } from "lucide-react";
+import { useCV } from "@/lib/store";
 
 interface EditorStepperProps {
   currentStage: 1 | 2 | 3;
 }
 
 export function EditorStepper({ currentStage }: EditorStepperProps) {
+  const router = useRouter();
+  const { saveDraft } = useCV();
+
+  const handleStepClick = async (e: React.MouseEvent, targetStep: { id: number; href: string }) => {
+    if (targetStep.id <= currentStage) {
+      return;
+    }
+    e.preventDefault();
+    const saved = await saveDraft();
+    if (!saved) {
+      return;
+    }
+    router.push(targetStep.href);
+  };
+
   const steps = [
     {
       id: 1,
@@ -140,6 +157,7 @@ export function EditorStepper({ currentStage }: EditorStepperProps) {
                   <li className="flex items-center flex-shrink-0">
                     <Link
                       href={step.href}
+                      onClick={(e) => handleStepClick(e, step)}
                       className={`flex items-center space-x-1.5 sm:space-x-2.5 text-xs sm:text-sm font-medium transition-colors ${
                         isActive
                           ? "text-sky-700"

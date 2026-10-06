@@ -14,5 +14,6 @@ router.post('/', validate(createCvSchema), CvController.createCv);
 router.get('/:id', CvController.getCvById);
 router.put('/:id', validate(updateCvSchema), CvController.updateCv);
 router.delete('/:id', CvController.deleteCv);
+router.post('/:id/export', CvController.markExported);
 
 export const cvRoutes = router;

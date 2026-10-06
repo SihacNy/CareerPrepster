@@ -39,23 +39,60 @@ export class CvService {
             title: true,
           },
         },
+        atsReports: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            overallScore: true,
+          },
+        },
+        isExported: true,
         createdAt: true,
         updatedAt: true,
         accentColor: true,
       },
     });
 
-    return cvs.map((cv: any) => ({
-      id: cv.id,
-      title: cv.title,
-      templateId: cv.templateId,
-      fullName: cv.fullName,
-      targetRoleId: cv.targetRoleId,
-      targetRole: cv.targetRole?.title || null,
-      accentColor: cv.accentColor || '#0284c7',
-      createdAt: cv.createdAt,
-      updatedAt: cv.updatedAt,
-    }));
+    return cvs.map((cv: any) => {
+      const latestReport = cv.atsReports?.[0];
+      const score = latestReport?.overallScore;
+
+      return {
+        id: cv.id,
+        title: cv.title,
+        templateId: cv.templateId,
+        fullName: cv.fullName,
+        targetRoleId: cv.targetRoleId,
+        targetRole: cv.targetRole?.title || null,
+        atsScore: typeof score === 'number' ? score : undefined,
+        isExported: cv.isExported ?? false,
+        accentColor: cv.accentColor || '#0284c7',
+        createdAt: cv.createdAt,
+        updatedAt: cv.updatedAt,
+      };
+    });
+  }
+
+  static async markExported(cvId: string, userId: string) {
+    logger.info('CvService', `Marking CV as exported [ID: ${cvId}] for user [${userId}]`);
+    const cv = await prisma.cV.findUnique({
+      where: { id: cvId },
+      select: { id: true, userId: true },
+    });
+
+    if (!cv) {
+      throw new AppError('CV not found', 404, 'CV_NOT_FOUND');
+    }
+
+    if (cv.userId !== userId) {
+      throw new AppError('You do not have permission to modify this CV', 403, 'FORBIDDEN');
+    }
+
+    return prisma.cV.update({
+      where: { id: cvId },
+      data: { isExported: true },
+      select: { id: true, isExported: true },
+    });
   }
 
   static async createCv(userId: string, input: CreateCvInput) {

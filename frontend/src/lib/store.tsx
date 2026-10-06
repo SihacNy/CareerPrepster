@@ -112,6 +112,7 @@ interface CVContextType {
   restoreDraft: () => boolean;
   hasSavedDraft: boolean;
   persistence: PersistenceState;
+  isHydrated: boolean;
 }
 
 const CVContext = createContext<CVContextType | null>(null);
@@ -753,6 +754,7 @@ export function CVProvider({ children }: { children: React.ReactNode }) {
         restoreDraft,
         hasSavedDraft,
         persistence,
+        isHydrated,
       }}
     >
       {children}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, ZoomIn, ZoomOut, Printer } from "lucide-react";
+import { X, ZoomIn, ZoomOut, Printer, Pencil, Check } from "lucide-react";
 import { useCV } from "@/lib/store";
 import { CVTemplateRenderer } from "@/components/preview/CVTemplateRenderer";
 import { getTemplateById } from "@/types/templates";
@@ -10,19 +10,55 @@ import { ExportPdfButton } from "./ExportPdfButton";
 interface DraftViewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  fileName?: string;
+  onFileNameChange?: (name: string) => void;
 }
 
-export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
+export function DraftViewModal({
+  isOpen,
+  onClose,
+  fileName: externalFileName,
+  onFileNameChange,
+}: DraftViewModalProps) {
   const { cvData } = useCV();
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [isEditingFileName, setIsEditingFileName] = useState<boolean>(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const defaultBaseName = (cvData.personalInfo?.fullName || "Resume")
+    .trim()
+    .replace(/[^a-zA-Z0-9_\s-]/g, "")
+    .replace(/\s+/g, "_") + "_ATS_Resume";
+
+  const resolvedFileName = externalFileName || `${defaultBaseName}.pdf`;
+  const [tempBaseName, setTempBaseName] = useState<string>(() =>
+    resolvedFileName.replace(/\.pdf$/i, "")
+  );
+
+  useEffect(() => {
+    if (!isEditingFileName) {
+      setTempBaseName(resolvedFileName.replace(/\.pdf$/i, ""));
+    }
+  }, [resolvedFileName, isEditingFileName]);
+
+  const handleSaveFileName = () => {
+    const clean = tempBaseName.trim().replace(/[^a-zA-Z0-9_\s-]/g, "").replace(/\s+/g, "_");
+    const finalName = clean ? `${clean}.pdf` : `${defaultBaseName}.pdf`;
+    onFileNameChange?.(finalName);
+    setIsEditingFileName(false);
+  };
 
   const resumeRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number>(1123);
 
-  // Close on Escape key
+  // Close on Escape key (unless editing file name)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (isEditingFileName) {
+          setIsEditingFileName(false);
+          return;
+        }
         onClose();
       }
     };
@@ -34,7 +70,7 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
       window.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "auto";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, isEditingFileName]);
 
   useEffect(() => {
     if (resumeRef.current) {
@@ -57,10 +93,56 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
       {/* Top Modal Header */}
       <div className="w-full bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between shadow-subtle flex-shrink-0">
         <div>
-          <h2 className="text-xs sm:text-sm font-semibold text-slate-900">
-            {cvData.personalInfo.fullName || "CV Draft Preview"}
-          </h2>
+          {isEditingFileName ? (
+            <div className="flex items-center gap-1.5 py-0.5">
+              <div className="flex items-center bg-white border border-sky-500 rounded px-2 py-0.5 ring-1 ring-sky-500 shadow-xs">
+                <input
+                  ref={nameInputRef}
+                  type="text"
+                  value={tempBaseName}
+                  onChange={(e) => setTempBaseName(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === "Enter") {
+                      handleSaveFileName();
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      setTempBaseName(resolvedFileName.replace(/\.pdf$/i, ""));
+                      setIsEditingFileName(false);
+                    }
+                  }}
+                  onBlur={handleSaveFileName}
+                  placeholder="File name"
+                  className="text-xs sm:text-sm font-semibold text-slate-900 outline-none max-w-[160px] sm:max-w-[240px] bg-transparent"
+                  autoFocus
+                />
+                <span className="text-xs text-slate-400 select-none">.pdf</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveFileName}
+                className="p-1 text-sky-600 hover:text-sky-700 hover:bg-sky-50 rounded transition-colors"
+                title="Save file name"
+              >
+                <Check className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setTempBaseName(resolvedFileName.replace(/\.pdf$/i, ""));
+                setIsEditingFileName(true);
+              }}
+              className="group flex items-center gap-1.5 text-left text-xs sm:text-sm font-semibold text-slate-900 hover:text-sky-600 transition-colors py-0.5 cursor-pointer"
+              title="Click to rename export file"
+            >
+              <span>{resolvedFileName}</span>
+              <Pencil className="w-3 h-3 text-slate-400 group-hover:text-sky-600 transition-colors opacity-70 group-hover:opacity-100" />
+            </button>
+          )}
           <p className="text-[10px] text-slate-500">
+            {cvData.personalInfo?.fullName ? `${cvData.personalInfo.fullName} • ` : ""}
             {getTemplateById(cvData.templateId).name} • {getTemplateById(cvData.templateId).subtitle}
           </p>
         </div>
@@ -106,7 +188,7 @@ export function DraftViewModal({ isOpen, onClose }: DraftViewModalProps) {
           </button>
 
           {/* Download button */}
-          <ExportPdfButton variant="primary" />
+          <ExportPdfButton variant="primary" fileName={resolvedFileName} />
 
           {/* Close button */}
           <button
