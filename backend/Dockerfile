@@ -25,4 +25,4 @@ RUN npx prisma generate
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "npx prisma db push && npx prisma db seed && npm run dev"]
+CMD ["sh", "-c", "npm run build --prefix /app --workspace=@careerprepster/shared && npx prisma db push && npx prisma db seed && npm run dev"]
