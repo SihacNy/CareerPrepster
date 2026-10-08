@@ -81,7 +81,7 @@ export class InterviewService {
     });
 
     // Create session and question 1 in MySQL transaction
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       const session = await tx.interviewSession.create({
         data: {
           userId,
@@ -401,8 +401,8 @@ export class InterviewService {
     }
 
     // Aggregate answered turns
-    const turns = session.questions.flatMap((q) =>
-      q.responses.map((r) => ({
+    const turns = session.questions.flatMap((q: any) =>
+      q.responses.map((r: any) => ({
         questionText: q.questionText,
         competency: q.competency,
         responseText: r.responseText,
@@ -440,7 +440,7 @@ export class InterviewService {
     });
 
     // Save scorecard and update session score
-    const scorecard = await prisma.$transaction(async (tx) => {
+    const scorecard = await prisma.$transaction(async (tx: any) => {
       const sc = await tx.interviewScorecard.create({
         data: {
           sessionId,
@@ -499,7 +499,7 @@ export class InterviewService {
       }),
     ]);
 
-    const mappedSessions = sessions.map((s) => ({
+    const mappedSessions = sessions.map((s: any) => ({
       id: s.id,
       targetRoleTitle: s.targetRoleTitle,
       track: s.track,

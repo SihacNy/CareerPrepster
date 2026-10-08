@@ -1,21 +1,25 @@
-FROM node:22-slim AS base
+# Multi-stage production Dockerfile for CareerPrepster Next.js Frontend
+FROM node:20-alpine AS base
+
+# Install build dependencies
+RUN apk add --no-cache libc6-compat python3 make g++
 
 WORKDIR /app
 
-# Copy package manifests for workspace installation
+# Copy root workspace manifests
 COPY package*.json ./
 COPY shared/package*.json ./shared/
 COPY frontend/package*.json ./frontend/
 
-RUN npm install --workspace=@careerprepster/shared --workspace=careerprepster-frontend && \
-    npm install --workspace=careerprepster-frontend @next/swc-linux-x64-gnu@14.2.21
+# Install workspace dependencies
+RUN npm ci
 
-# Copy and build shared library
-COPY shared ./shared/
-RUN npm run build --workspace=@careerprepster/shared
+# Copy shared library & frontend source code
+COPY shared ./shared
+COPY frontend ./frontend
 
-# Copy frontend source code
-COPY frontend ./frontend/
+# Build shared package first
+RUN npm run build --prefix /app --workspace=@careerprepster/shared
 
 WORKDIR /app/frontend
 

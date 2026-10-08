@@ -36,14 +36,15 @@ export async function callGroqChatCompletion(params: {
 
   if (!response.ok) {
     const errorText = await response.text();
-    logger.error('GroqClient', `Groq API error [${response.status}]: ${errorText}`);
-    throw new Error(`Groq API error [${response.status}]: ${errorText}`);
+    logger.error('GroqClient', `[GroqApiErrors] Groq API error [${response.status}]: ${errorText}`);
+    throw new Error(`[GroqApiErrors] Groq API error [${response.status}]: ${errorText}`);
   }
 
   const data: any = await response.json();
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error('Groq API returned empty completion message');
+    logger.error('GroqClient', '[GroqApiErrors] Groq API returned empty completion message');
+    throw new Error('[GroqApiErrors] Groq API returned empty completion message');
   }
 
   return content;

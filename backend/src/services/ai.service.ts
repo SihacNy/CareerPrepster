@@ -195,7 +195,7 @@ Please rewrite this draft bullet into 3 options adhering strictly to the fact-pr
         });
 
         if (retries >= maxRetries) {
-          logger.error('AIService', 'Gemini API retry budget exhausted', err);
+          logger.error('AIService', '[CRITICAL_AI_OUTAGE] Gemini API retry budget exhausted', err);
           throw new AppError(
             'AI wording service is temporarily busy. Please try again in a few moments.',
             503,

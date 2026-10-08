@@ -15,6 +15,10 @@ const envSchema = z.object({
   GROQ_API_KEY: z.string().optional().default(''),
   GROQ_MODEL: z.string().default('openai/gpt-oss-120b'),
   GOOGLE_CLIENT_ID: z.string().optional().default(''),
+  AWS_REGION: z.string().optional().default('ap-southeast-1'),
+  AWS_ACCESS_KEY_ID: z.string().optional().default(''),
+  AWS_SECRET_ACCESS_KEY: z.string().optional().default(''),
+  AWS_S3_BUCKET_NAME: z.string().optional().default(''),
 });
 
 const parseEnv = () => {

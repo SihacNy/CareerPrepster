@@ -390,9 +390,9 @@ export class CvService {
           where: { cvId },
           select: { id: true },
         });
-        const existingSectionIds = new Set(existingSections.map((s) => s.id));
+        const existingSectionIds = new Set(existingSections.map((s: { id: string }) => s.id));
         const retainedSectionIds = input.sections
-          .map((s) => s.id)
+          .map((s: { id?: string }) => s.id)
           .filter((id): id is string => Boolean(id && existingSectionIds.has(id)));
 
         await tx.cVSection.deleteMany({
@@ -435,9 +435,9 @@ export class CvService {
               where: { sectionId },
               select: { id: true },
             });
-            const existingItemIds = new Set(existingItems.map((i) => i.id));
+            const existingItemIds = new Set(existingItems.map((i: { id: string }) => i.id));
             const retainedItemIds = sec.items
-              .map((i) => i.id)
+              .map((i: { id?: string }) => i.id)
               .filter((id): id is string => Boolean(id && existingItemIds.has(id)));
 
             await tx.cVItem.deleteMany({
@@ -488,9 +488,9 @@ export class CvService {
                   where: { itemId },
                   select: { id: true },
                 });
-                const existingBulletIds = new Set(existingBullets.map((b) => b.id));
+                const existingBulletIds = new Set(existingBullets.map((b: { id: string }) => b.id));
                 const retainedBulletIds = item.bulletPoints
-                  .map((b) => b.id)
+                  .map((b: { id?: string }) => b.id)
                   .filter((id): id is string => Boolean(id && existingBulletIds.has(id)));
 
                 await tx.bulletPoint.deleteMany({
@@ -540,9 +540,9 @@ export class CvService {
           where: { cvId },
           select: { id: true },
         });
-        const existingSgIds = new Set(existingSkillGroups.map((sg) => sg.id));
+        const existingSgIds = new Set(existingSkillGroups.map((sg: { id: string }) => sg.id));
         const retainedSgIds = input.skillGroups
-          .map((sg) => sg.id)
+          .map((sg: { id?: string }) => sg.id)
           .filter((id): id is string => Boolean(id && existingSgIds.has(id)));
 
         await tx.skillGroup.deleteMany({
