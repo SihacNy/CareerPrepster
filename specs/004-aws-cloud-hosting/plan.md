@@ -25,7 +25,7 @@ This implementation plan delivers **Section 1 (AWS Design & Configuration)** and
 - **Primary Region**: `ap-southeast-1` (Singapore)
 - **Domain Strategy**: AWS Default Domains (CloudFront `https://<distribution-id>.cloudfront.net` with native AWS wildcard SSL; no custom domain / Route 53 needed)
 - **VPC CIDR**: `10.0.0.0/16` across 2 Availability Zones (`ap-southeast-1a`, `ap-southeast-1b`)
-- **Subnets**: 6 Subnets (2 Public, 2 Private App, 2 Private DB)
+- **Subnets**: 6 Subnets (2 Public, 2 Private Web, 2 Private DB)
 - **Compute Orchestrator**: Amazon ECS on AWS Fargate (Serverless, Auto-Scaling 2 to 6 tasks)
 - **Database**: Amazon RDS MySQL 8.0/8.4 (`db.t4g.micro` / `db.t4g.small`, gp3 storage, Multi-AZ capable)
 - **Object Storage**: Amazon S3 (`careerprepster-media-*`) with Block Public Access and KMS CMK encryption
@@ -56,7 +56,7 @@ This implementation plan delivers **Section 1 (AWS Design & Configuration)** and
 | :--- | :--- | :--- |
 | **`careerprepster-vpc`** | CIDR: `10.0.0.0/16`, DNS Hostnames/Resolution: `true` | Provides 65,536 private IPs and enables internal service name resolution. |
 | **Public Subnets (1a, 1b)** | `10.0.1.0/24`, `10.0.2.0/24` | Houses public ALB nodes and NAT Gateway to handle incoming internet traffic. |
-| **Private App Subnets (1a, 1b)** | `10.0.10.0/24`, `10.0.11.0/24` | Shields ECS Fargate container instances from direct internet attacks. |
+| **Private Web Subnets (1a, 1b)** | `10.0.10.0/24`, `10.0.11.0/24` | Shields ECS Fargate container instances from direct internet attacks. |
 | **Private DB Subnets (1a, 1b)** | `10.0.20.0/24`, `10.0.21.0/24` | Completely isolates RDS MySQL with no internet route table entry. |
 | **Internet Gateway (`igw`)** | Attached to VPC, default route in `rt-public` | Allows ALB to accept public HTTPS requests and NAT Gateway to reach the internet. |
 | **NAT Gateway (`nat-1a`)** | Single NAT deployed in `public-subnet-1a` with Elastic IP | Gives private ECS tasks outbound internet access (Groq/Gemini AI, Google OAuth) without incoming exposure. |
@@ -251,7 +251,7 @@ Step-by-step walkthrough for the live in-class demonstration:
 
 ### Phase 2: Core VPC Networking (Section 2 & 3)
 - **Task 2.1**: Provision VPC (`10.0.0.0/16`) across `ap-southeast-1a` and `ap-southeast-1b`.
-- **Task 2.2**: Provision 6 subnets (2 Public, 2 Private App, 2 Private DB) with Internet Gateway and single NAT Gateway in `public-subnet-1a`.
+- **Task 2.2**: Provision 6 subnets (2 Public, 2 Private Web, 2 Private DB) with Internet Gateway and single NAT Gateway in `public-subnet-1a`.
 - **Task 2.3**: Codify the 4 Security Groups (`sg-alb`, `sg-ecs-frontend`, `sg-ecs-backend`, `sg-rds`) following the least-privilege matrix.
 
 ### Phase 3: Storage & Secrets (Section 4 & 5)

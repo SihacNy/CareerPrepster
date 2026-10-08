@@ -22,8 +22,13 @@ WORKDIR /app/frontend
 # Environment setup
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV NODE_ENV=production
 ENV NEXT_IGNORE_INCORRECT_LOCKFILE=1
+
+# Pre-compile the production bundle ahead-of-time
+RUN npm run build
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "([ -f /app/shared/dist/index.js ] || npm run build --prefix /app --workspace=@careerprepster/shared); [ -d node_modules/@next/swc-linux-x64-gnu ] || [ -d ../node_modules/@next/swc-linux-x64-gnu ] || npm install --no-save @next/swc-linux-x64-gnu@14.2.21; npm run dev"]
+# Run production server
+CMD ["npm", "run", "start"]

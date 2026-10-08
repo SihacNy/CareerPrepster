@@ -65,7 +65,7 @@ This research document evaluates the architectural design decisions, trade-offs,
     - Peak internship season: ~3,000 students/week with **300 concurrent students** concentrated from 19:00 to 23:00.
   - *Fixed Capacity*: Provisioning 6 tasks 24/7 costs ~$108/month for compute alone. Provisioning 2 tasks saves money ($36/mo) but causes queue saturation, slow AI response times, and 504 Gateway Timeouts during evening rushes.
 - **Decision**: **Automatic Scaling (Target Tracking Scaling Policy on AWS Fargate)**.
-  - **Baseline**: 2 Fargate tasks (1 in `private-app-subnet-1a`, 1 in `private-app-subnet-1b`) for continuous Multi-AZ high availability.
+  - **Baseline**: 2 Fargate tasks (1 in `private-web-subnet-1a`, 1 in `private-web-subnet-1b`) for continuous Multi-AZ high availability.
   - **Scale-Out Trigger**:
     - Average CPU Utilization exceeds 70% for 2 minutes, OR
     - ALB `RequestCountPerTarget` exceeds 150 requests/minute.

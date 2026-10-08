@@ -20,8 +20,8 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `public-subnet-1a` | `ap-southeast-1a` | `10.0.1.0/24` | `0.0.0.0/0` -> Internet Gateway (`careerprepster-igw`) | ALB Node A, NAT Gateway |
 | `public-subnet-1b` | `ap-southeast-1b` | `10.0.2.0/24` | `0.0.0.0/0` -> Internet Gateway (`careerprepster-igw`) | ALB Node B |
-| `private-app-subnet-1a` | `ap-southeast-1a` | `10.0.10.0/24` | `0.0.0.0/0` -> NAT Gateway (`nat-gateway-1a`) | ECS Fargate Backend & Frontend Tasks |
-| `private-app-subnet-1b` | `ap-southeast-1b` | `10.0.11.0/24` | `0.0.0.0/0` -> NAT Gateway (`nat-gateway-1a`) | ECS Fargate Backend & Frontend Tasks |
+| `private-web-subnet-1a` | `ap-southeast-1a` | `10.0.10.0/24` | `0.0.0.0/0` -> NAT Gateway (`nat-gateway-1a`) | ECS Fargate Backend & Frontend Tasks |
+| `private-web-subnet-1b` | `ap-southeast-1b` | `10.0.11.0/24` | `0.0.0.0/0` -> NAT Gateway (`nat-gateway-1a`) | ECS Fargate Backend & Frontend Tasks |
 | `private-db-subnet-1a` | `ap-southeast-1a` | `10.0.20.0/24` | Isolated (`10.0.0.0/16` local only) | RDS MySQL Primary Instance |
 | `private-db-subnet-1b` | `ap-southeast-1b` | `10.0.21.0/24` | Isolated (`10.0.0.0/16` local only) | RDS MySQL Multi-AZ Standby / Read Replica |
 
